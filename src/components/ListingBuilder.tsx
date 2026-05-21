@@ -44,6 +44,13 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import ListingPhotos from './ListingPhotos'
 import NetSheetModal, { NetSheet, formatCurrency } from './NetSheetModal'
+import PublishStatusModal, {
+  ListingStatus,
+  StatusHistoryEntry,
+  StatusHistoryTimeline,
+  statusBadgeClasses,
+  statusLabel,
+} from './PublishStatusModal'
 
 type ComingSoonListing = {
   id: string
@@ -84,9 +91,24 @@ export default function ListingBuilder({
     setServicePackage(deal.service_package)
   }, [deal.service_package])
 
+  // P9.12.3: listing_status owned locally for the same reason. The deal type
+  // doesn't yet declare this column, so we widen + default to 'draft'.
+  const initialStatus =
+    ((deal as Deal & { listing_status?: ListingStatus }).listing_status as ListingStatus) ||
+    'draft'
+  const [listingStatus, setListingStatus] = useState<ListingStatus>(initialStatus)
+  useEffect(() => {
+    const next =
+      ((deal as Deal & { listing_status?: ListingStatus }).listing_status as ListingStatus) ||
+      'draft'
+    setListingStatus(next)
+  }, [deal])
+  const [statusHistory, setStatusHistory] = useState<StatusHistoryEntry[]>([])
+
   const refresh = useCallback(async () => {
     setLoading(true)
-    const [photoRes, listingRes, taxRes, floorRes, netRes, editsRes] = await Promise.all([
+    const [photoRes, listingRes, taxRes, floorRes, netRes, editsRes, historyRes] =
+      await Promise.all([
       supabase
         .from('listing_photos')
         .select('id, is_hero')
@@ -121,6 +143,12 @@ export default function ListingBuilder({
         .eq('deal_id', deal.id)
         .order('created_at', { ascending: false })
         .limit(20),
+      supabase
+        .from('listing_status_history')
+        .select('*')
+        .eq('deal_id', deal.id)
+        .order('happened_at', { ascending: false })
+        .limit(20),
     ])
     const photoRows = (photoRes.data || []) as Array<{ id: string; is_hero: boolean }>
     setPhotos({
@@ -132,6 +160,7 @@ export default function ListingBuilder({
     setFloorPlans((floorRes.data as DocumentRecord[]) || [])
     setNetSheets((netRes.data as NetSheet[]) || [])
     setPendingEdits((editsRes.data as ListingEdit[]) || [])
+    setStatusHistory((historyRes.data as StatusHistoryEntry[]) || [])
     setLoading(false)
   }, [deal.id, deal.coming_soon_listing_id])
 
@@ -161,7 +190,14 @@ export default function ListingBuilder({
   const netSheetState: CardState = netSheets.length > 0 ? 'complete' : 'not_started'
   const servicePkgState: CardState =
     servicePackage && servicePackage !== 'tbd' ? 'complete' : 'in_progress'
-  const publishState: CardState = 'not_started' // P9.12.4
+  const publishState: CardState =
+    listingStatus === 'sold'
+      ? 'complete'
+      : listingStatus === 'soft_launch' ||
+          listingStatus === 'active' ||
+          listingStatus === 'pending'
+        ? 'in_progress'
+        : 'not_started'
 
   const states: CardState[] = [
     photoState,
@@ -270,7 +306,15 @@ export default function ListingBuilder({
               state={servicePkgState}
               onChange={setServicePackage}
             />
-            <PublishStatusCard state={publishState} />
+            <PublishStatusCard
+              deal={deal}
+              mode={mode}
+              currentStatus={listingStatus}
+              history={statusHistory}
+              state={publishState}
+              onChange={setListingStatus}
+              onChanged={refresh}
+            />
           </div>
 
           {/* Agent-only: approval queue (only if there's something to act on) */}
@@ -973,29 +1017,110 @@ function StrategyModal({
   )
 }
 
-function PublishStatusCard({ state }: { state: CardState }) {
+function PublishStatusCard({
+  deal,
+  mode,
+  currentStatus,
+  history,
+  state,
+  onChange,
+  onChanged,
+}: {
+  deal: Deal
+  mode: 'agent' | 'client'
+  currentStatus: ListingStatus
+  history: StatusHistoryEntry[]
+  state: CardState
+  onChange: (next: ListingStatus) => void
+  onChanged: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [showHistory, setShowHistory] = useState(false)
+
+  const sinceLatest = history[0]?.happened_at
+  const summary =
+    currentStatus === 'draft'
+      ? 'Building behind the scenes. Move to Soft Launch when photos and copy are ready.'
+      : currentStatus === 'soft_launch'
+        ? 'Visible to your warm buyer pool. No MLS clock yet.'
+        : currentStatus === 'active'
+          ? 'Live on MLS, syndicated everywhere. Days-on-market clock is running.'
+          : currentStatus === 'pending'
+            ? 'Under contract. Escrow in progress.'
+            : currentStatus === 'sold'
+              ? 'Closed and archived.'
+              : currentStatus === 'expired'
+                ? 'Listing period ended without a sale. Eligible for re-engagement.'
+                : 'Pulled by seller. Can re-launch any time.'
+
   return (
-    <Card
-      state={state}
-      icon={SendIcon}
-      title="Publish status"
-      summary="Once everything’s ready, publish to make this listing live on mcmullen.properties."
-      spanFull
-    >
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <span className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest bg-ink-100 text-ink-600 px-2 py-1">
-          Draft
-        </span>
-        <button
-          disabled
-          title="Publishing pipeline coming in P9.12.4"
-          className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-400 cursor-not-allowed"
-        >
-          <SendIcon className="w-3 h-3" />
-          Publishing pipeline coming next sprint
-        </button>
-      </div>
-    </Card>
+    <>
+      <Card
+        state={state}
+        icon={SendIcon}
+        title="Publish status"
+        summary={summary}
+        spanFull
+      >
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span
+              className={`inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest px-2 py-1 ${statusBadgeClasses(
+                currentStatus,
+              )}`}
+            >
+              {statusLabel(currentStatus)}
+            </span>
+            {sinceLatest && (
+              <span className="text-2xs uppercase tracking-widest text-ink-500">
+                · changed{' '}
+                {new Date(sinceLatest).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {history[0]?.changed_by_type && ` by ${history[0].changed_by_type}`}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            {history.length > 0 && (
+              <button
+                onClick={() => setShowHistory((v) => !v)}
+                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+              >
+                {showHistory ? 'Hide history' : `History (${history.length})`}
+              </button>
+            )}
+            <button
+              onClick={() => setOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+            >
+              <SendIcon className="w-3 h-3" strokeWidth={2} />
+              Update status
+            </button>
+          </div>
+        </div>
+
+        {showHistory && history.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-ink-100">
+            <StatusHistoryTimeline entries={history} />
+          </div>
+        )}
+      </Card>
+
+      {open && (
+        <PublishStatusModal
+          deal={deal}
+          mode={mode}
+          currentStatus={currentStatus}
+          onClose={() => setOpen(false)}
+          onChanged={(next) => {
+            onChange(next) // optimistic local update
+            onChanged() // refetch history etc.
+          }}
+        />
+      )}
+    </>
   )
 }
 
