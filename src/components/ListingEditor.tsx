@@ -1,11 +1,18 @@
 // P8.3 — Client-facing listing editor with agent approval workflow.
-// Client edits don't write directly to coming_soon_listings — they create a
-// listing_edits row with status='pending'. Agent approves/rejects from the
-// matching deal's view, which applies the change to the live listing.
+// P9.11 — Extended to render ListingPhotos in BOTH exports:
+//   • default ListingEditor (client side, rendered in Portal "My listing")
+//   • ListingEditApprovals (agent side, rendered in Clients.tsx Listing tab)
+//
+// Client edits to copy don't write directly to coming_soon_listings — they
+// create a listing_edits row with status='pending'. Agent approves/rejects
+// from the matching deal's view, which applies the change to the live
+// listing. Photos, in contrast, are written directly (no approval gate)
+// since dragging in a bad photo is reversible and approvals add friction.
 import { useEffect, useState, FormEvent } from 'react'
 import { Loader2, Edit3, Check, X, AlertCircle } from 'lucide-react'
 import { supabase, Deal, ListingEdit } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
+import ListingPhotos from './ListingPhotos'
 
 type ComingSoonListing = {
   id: string
@@ -16,6 +23,9 @@ type ComingSoonListing = {
   features_html: string | null
 }
 
+// ============================================================================
+// CLIENT-SIDE — propose listing copy + manage photos
+// ============================================================================
 export default function ListingEditor({ deal }: { deal: Deal }) {
   const { user } = useAuth()
   const [listing, setListing] = useState<ComingSoonListing | null>(null)
@@ -109,128 +119,138 @@ export default function ListingEditor({ deal }: { deal: Deal }) {
     }
   }
 
-  if (loading) {
-    return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
-  }
-
-  if (!listing) {
-    return (
-      <p className="text-sm text-ink-600">
-        Your listing details aren't set up yet — check back after your agent posts the initial info.
-      </p>
-    )
-  }
-
+  // ---- Render: photos always shown, then the copy editor (or its empty state)
   return (
-    <div className="border-t border-ink-200 pt-10 mt-10">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
-            Tell us about your home
-          </div>
-          <h2 className="font-display text-2xl text-ink-900">Your input shapes the listing.</h2>
-        </div>
-        {!editing && !pendingEdit && (
-          <button
-            onClick={() => setEditing(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 transition-colors"
-          >
-            <Edit3 className="w-3.5 h-3.5" />
-            Edit
-          </button>
-        )}
-      </div>
+    <>
+      <ListingPhotos deal={deal} mode="client" />
 
-      {pendingEdit && (
-        <div className="border border-amber-200 bg-amber-50 p-4 flex items-start gap-3 mb-6">
-          <AlertCircle className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" strokeWidth={1.5} />
-          <div className="text-sm text-amber-900 flex-1">
-            <strong>Pending review.</strong> Your latest edits were submitted{' '}
-            {new Date(pendingEdit.created_at).toLocaleString('en-US', {
-              month: 'short',
-              day: 'numeric',
-              hour: 'numeric',
-              minute: '2-digit',
-            })}{' '}
-            and are awaiting your agent's approval before going live. We'll notify you when reviewed.
-          </div>
+      {loading ? (
+        <div className="mt-10">
+          <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
         </div>
-      )}
-
-      {editing ? (
-        <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
-          <div>
-            <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
-              What makes your home special?
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={6}
-              placeholder="A few paragraphs about what you love about this home — the morning light in the kitchen, the rooftop deck at sunset, the way the neighbors all leave their porch lights on at Halloween…"
-              className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900 leading-relaxed"
-            />
-          </div>
-          <div>
-            <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
-              Features and highlights
-            </label>
-            <textarea
-              value={features}
-              onChange={(e) => setFeatures(e.target.value)}
-              rows={4}
-              placeholder="Updated kitchen 2023, in-unit laundry, garage parking, deeded storage, dog-friendly building…"
-              className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900"
-            />
-          </div>
-          <div>
-            <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
-              Preferred showing times
-            </label>
-            <input
-              type="text"
-              value={showingTimes}
-              onChange={(e) => setShowingTimes(e.target.value)}
-              placeholder="Weekends 11am–4pm, weekday evenings after 6pm, no Mondays…"
-              className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900"
-            />
-          </div>
-          <div className="flex items-center justify-end gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => {
-                setEditing(false)
-                refresh()
-              }}
-              className="px-4 py-2 text-sm text-ink-600 hover:text-ink-900"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 disabled:opacity-50 transition-colors flex items-center gap-2"
-            >
-              {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
-              Submit for review
-            </button>
-          </div>
-        </form>
+      ) : !listing ? (
+        <p className="text-sm text-ink-600 mt-10">
+          Your listing details aren't set up yet — check back after your agent posts the initial
+          info.
+        </p>
       ) : (
-        <div className="space-y-6 max-w-3xl">
-          <ReadOnlyField
-            label="What makes your home special"
-            value={stripHtml(listing.description_html || '')}
-            empty="Not yet provided. Click Edit to add your perspective."
-          />
-          <ReadOnlyField
-            label="Features and highlights"
-            value={stripHtml(listing.features_html || '')}
-            empty="Not yet provided."
-          />
+        <div className="border-t border-ink-200 pt-10 mt-10">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+                Tell us about your home
+              </div>
+              <h2 className="font-display text-2xl text-ink-900">
+                Your input shapes the listing.
+              </h2>
+            </div>
+            {!editing && !pendingEdit && (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-2 px-3 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 transition-colors"
+              >
+                <Edit3 className="w-3.5 h-3.5" />
+                Edit
+              </button>
+            )}
+          </div>
+
+          {pendingEdit && (
+            <div className="border border-amber-200 bg-amber-50 p-4 flex items-start gap-3 mb-6">
+              <AlertCircle
+                className="w-4 h-4 text-amber-700 shrink-0 mt-0.5"
+                strokeWidth={1.5}
+              />
+              <div className="text-sm text-amber-900 flex-1">
+                <strong>Pending review.</strong> Your latest edits were submitted{' '}
+                {new Date(pendingEdit.created_at).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}{' '}
+                and are awaiting your agent's approval before going live. We'll notify you when
+                reviewed.
+              </div>
+            </div>
+          )}
+
+          {editing ? (
+            <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+              <div>
+                <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
+                  What makes your home special?
+                </label>
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={6}
+                  placeholder="A few paragraphs about what you love about this home — the morning light in the kitchen, the rooftop deck at sunset, the way the neighbors all leave their porch lights on at Halloween…"
+                  className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900 leading-relaxed"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
+                  Features and highlights
+                </label>
+                <textarea
+                  value={features}
+                  onChange={(e) => setFeatures(e.target.value)}
+                  rows={4}
+                  placeholder="Updated kitchen 2023, in-unit laundry, garage parking, deeded storage, dog-friendly building…"
+                  className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900"
+                />
+              </div>
+              <div>
+                <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
+                  Preferred showing times
+                </label>
+                <input
+                  type="text"
+                  value={showingTimes}
+                  onChange={(e) => setShowingTimes(e.target.value)}
+                  placeholder="Weekends 11am–4pm, weekday evenings after 6pm, no Mondays…"
+                  className="w-full px-3 py-2 border border-ink-200 text-sm focus:outline-none focus:border-ink-900"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditing(false)
+                    refresh()
+                  }}
+                  className="px-4 py-2 text-sm text-ink-600 hover:text-ink-900"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 disabled:opacity-50 transition-colors flex items-center gap-2"
+                >
+                  {submitting && <Loader2 className="w-3 h-3 animate-spin" />}
+                  Submit for review
+                </button>
+              </div>
+            </form>
+          ) : (
+            <div className="space-y-6 max-w-3xl">
+              <ReadOnlyField
+                label="What makes your home special"
+                value={stripHtml(listing.description_html || '')}
+                empty="Not yet provided. Click Edit to add your perspective."
+              />
+              <ReadOnlyField
+                label="Features and highlights"
+                value={stripHtml(listing.features_html || '')}
+                empty="Not yet provided."
+              />
+            </div>
+          )}
         </div>
       )}
-    </div>
+    </>
   )
 }
 
@@ -263,7 +283,7 @@ function paragraphsToHtml(text: string): string {
 }
 
 // ============================================================================
-// AGENT-SIDE — review and approve pending listing edits
+// AGENT-SIDE — manage photos + review pending copy edits
 // ============================================================================
 
 export function ListingEditApprovals({ deal }: { deal: Deal }) {
@@ -346,20 +366,25 @@ export function ListingEditApprovals({ deal }: { deal: Deal }) {
   }
 
   const pending = edits.filter((e) => e.status === 'pending')
-  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
-  if (pending.length === 0 && edits.length === 0) return null
 
+  // P9.11: photos always shown for agents, even when no copy edits are pending.
   return (
-    <section className="mt-12">
-      <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-4">
-        Client edits {pending.length > 0 && `(${pending.length} pending)`}
-      </h3>
-      <div className="space-y-3">
-        {edits.map((edit) => (
-          <EditRow key={edit.id} edit={edit} onReview={review} />
-        ))}
-      </div>
-    </section>
+    <>
+      <ListingPhotos deal={deal} mode="agent" />
+
+      {loading ? null : (pending.length === 0 && edits.length === 0) ? null : (
+        <section className="mt-12">
+          <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-4">
+            Client edits {pending.length > 0 && `(${pending.length} pending)`}
+          </h3>
+          <div className="space-y-3">
+            {edits.map((edit) => (
+              <EditRow key={edit.id} edit={edit} onReview={review} />
+            ))}
+          </div>
+        </section>
+      )}
+    </>
   )
 }
 
