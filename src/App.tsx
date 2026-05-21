@@ -14,14 +14,11 @@ import Placeholder from '@/pages/Placeholder'
 import Portal from '@/pages/Portal'
 import NewCMA from '@/pages/NewCMA'
 import CMAViewer from '@/components/CMAViewer'
-import {
-  Search,
-  Send,
-  Home,
-  PenLine,
-  Globe,
-  BarChart3,
-} from 'lucide-react'
+// P9.13.0-.2: public pages (no auth required)
+import ListingsIndex from '@/pages/public/ListingsIndex'
+import PublicListingDetail from '@/pages/public/PublicListingDetail'
+import TenantHome from '@/pages/public/TenantHome'
+import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
   return (
@@ -30,6 +27,11 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
+          {/* P9.13.0-.2: public-facing routes, no auth */}
+          <Route path="/listings" element={<ListingsIndex />} />
+          <Route path="/listings/:slug" element={<PublicListingDetail />} />
+          <Route path="/t/:tenantSlug" element={<TenantHome />} />
+          {/* Everything else goes through the auth gate */}
           <Route path="*" element={<AuthGate />} />
         </Routes>
       </BrowserRouter>
@@ -82,18 +84,7 @@ function AuthGate() {
           }
         />
         <Route path="/campaigns/*" element={<Campaigns />} />
-        <Route
-          path="/listings"
-          element={
-            <Placeholder
-              title="Listings"
-              description="MLS sync via RESO Web API once broker-licensed. Zillow Premier Agent lead routing. Per-listing landing pages with built-in lead capture. Status workflow: Coming Soon → Active → Pending → Sold."
-              Icon={Home}
-              phase="P7"
-              replaces="Showcase IDX / iHomeFinder"
-            />
-          }
-        />
+        {/* /listings is now a PUBLIC route (handled above, outside AuthGate). */}
         <Route
           path="/content"
           element={
