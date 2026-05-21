@@ -43,6 +43,7 @@ import {
 } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import ListingPhotos from './ListingPhotos'
+import NetSheetModal, { NetSheet, formatCurrency } from './NetSheetModal'
 
 type ComingSoonListing = {
   id: string
@@ -70,6 +71,7 @@ export default function ListingBuilder({
   const [photos, setPhotos] = useState<{ count: number; heroSet: boolean } | null>(null)
   const [taxRecords, setTaxRecords] = useState<DocumentRecord[]>([])
   const [floorPlans, setFloorPlans] = useState<DocumentRecord[]>([])
+  const [netSheets, setNetSheets] = useState<NetSheet[]>([])
   const [pendingEdits, setPendingEdits] = useState<ListingEdit[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -84,7 +86,7 @@ export default function ListingBuilder({
 
   const refresh = useCallback(async () => {
     setLoading(true)
-    const [photoRes, listingRes, taxRes, floorRes, editsRes] = await Promise.all([
+    const [photoRes, listingRes, taxRes, floorRes, netRes, editsRes] = await Promise.all([
       supabase
         .from('listing_photos')
         .select('id, is_hero')
@@ -109,6 +111,11 @@ export default function ListingBuilder({
         .eq('category', 'floor_plan')
         .order('created_at', { ascending: false }),
       supabase
+        .from('net_sheets')
+        .select('*')
+        .eq('deal_id', deal.id)
+        .order('created_at', { ascending: false }),
+      supabase
         .from('listing_edits')
         .select('*')
         .eq('deal_id', deal.id)
@@ -123,6 +130,7 @@ export default function ListingBuilder({
     setListing((listingRes.data as ComingSoonListing) || null)
     setTaxRecords((taxRes.data as DocumentRecord[]) || [])
     setFloorPlans((floorRes.data as DocumentRecord[]) || [])
+    setNetSheets((netRes.data as NetSheet[]) || [])
     setPendingEdits((editsRes.data as ListingEdit[]) || [])
     setLoading(false)
   }, [deal.id, deal.coming_soon_listing_id])
@@ -150,7 +158,7 @@ export default function ListingBuilder({
 
   const taxState: CardState = taxRecords.length > 0 ? 'complete' : 'not_started'
   const floorState: CardState = floorPlans.length > 0 ? 'complete' : 'not_started'
-  const netSheetState: CardState = 'not_started' // P9.12.3
+  const netSheetState: CardState = netSheets.length > 0 ? 'complete' : 'not_started'
   const servicePkgState: CardState =
     servicePackage && servicePackage !== 'tbd' ? 'complete' : 'in_progress'
   const publishState: CardState = 'not_started' // P9.12.4
@@ -248,7 +256,13 @@ export default function ListingBuilder({
               icon={FileText}
               onChanged={refresh}
             />
-            <NetSheetCard state={netSheetState} />
+            <NetSheetCard
+              deal={deal}
+              mode={mode}
+              scenarios={netSheets}
+              state={netSheetState}
+              onChanged={refresh}
+            />
             <ServicePackageCard
               deal={deal}
               mode={mode}
@@ -566,19 +580,59 @@ function DocumentCard({
   )
 }
 
-function NetSheetCard({ state }: { state: CardState }) {
-  const summary = 'Estimate what you take home after every closing cost.'
+function NetSheetCard({
+  deal,
+  mode,
+  scenarios,
+  state,
+  onChanged,
+}: {
+  deal: Deal
+  mode: 'agent' | 'client'
+  scenarios: NetSheet[]
+  state: CardState
+  onChanged: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const latest = scenarios[0]
+  const isSellDeal = deal.deal_type === 'sell'
+
+  const summary = !isSellDeal
+    ? 'Net sheets are for sell-side engagements.'
+    : !latest
+      ? 'Estimate what you take home after every closing cost.'
+      : `Latest: ${latest.name || 'Scenario'} · ${formatCurrency(latest.computed_net)} net${
+          scenarios.length > 1 ? ` (${scenarios.length} scenarios)` : ''
+        }`
+
   return (
-    <Card state={state} icon={Calculator} title="Net sheet" summary={summary}>
-      <button
-        disabled
-        title="Coming in P9.12.3"
-        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-400 cursor-not-allowed"
-      >
-        <Sparkles className="w-3 h-3" />
-        Calculator coming next sprint
-      </button>
-    </Card>
+    <>
+      <Card state={state} icon={Calculator} title="Net sheet" summary={summary}>
+        {isSellDeal ? (
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-700 hover:text-ink-900"
+          >
+            <Calculator className="w-3 h-3" />
+            {!latest ? 'Build net sheet' : 'New scenario or edit'}
+          </button>
+        ) : (
+          <span className="text-2xs uppercase tracking-widest text-ink-400">
+            Not applicable for buy-side deals
+          </span>
+        )}
+      </Card>
+
+      {open && isSellDeal && (
+        <NetSheetModal
+          deal={deal}
+          mode={mode}
+          scenarios={scenarios}
+          onClose={() => setOpen(false)}
+          onSaved={onChanged}
+        />
+      )}
+    </>
   )
 }
 
