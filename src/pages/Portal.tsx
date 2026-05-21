@@ -14,6 +14,8 @@ import {
   Calendar,
   FileBarChart2,
   Heart,
+  ArrowUpRight,
+  MapPin,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -71,6 +73,7 @@ export default function Portal() {
         <Route path="cmas" element={<PortalCMAs />} />
         <Route path="cmas/:slug" element={<CMAViewer embedded />} />
         <Route path="saved" element={<PortalSaved />} />
+        <Route path="schedule" element={<PortalSchedule />} />
         <Route path="war-room" element={<PortalWarRoom />} />
         <Route path="documents" element={<PortalDocuments />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
@@ -111,6 +114,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
           <PortalNavLink to="/portal/listing" icon={Home} label="My listing" />
           <PortalNavLink to="/portal/cmas" icon={FileBarChart2} label="CMAs" />
           <PortalNavLink to="/portal/saved" icon={Heart} label="Saved" />
+          <PortalNavLink to="/portal/schedule" icon={Calendar} label="Schedule" />
           <PortalNavLink to="/portal/war-room" icon={MessageSquare} label="War room" />
           <PortalNavLink to="/portal/documents" icon={FileText} label="Documents" />
         </nav>
@@ -254,7 +258,7 @@ function PortalHome() {
       {/* Status grid: 2x2 */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
         <StatusCard
-          to="/portal/saved"
+          to="/portal/schedule"
           icon={Calendar}
           label="Tour requests"
           primary={
@@ -270,10 +274,10 @@ function PortalHome() {
             tourRequests.length === 0
               ? 'Find a Zillow listing you like and request a tour.'
               : confirmedTourCount > 0 && pendingTourCount > 0
-              ? `${confirmedTourCount} confirmed`
+              ? `${confirmedTourCount} confirmed · view schedule`
               : pendingTourCount > 0
               ? 'Your agent will respond soon.'
-              : 'See full list'
+              : 'View full schedule'
           }
         />
 
@@ -839,6 +843,296 @@ function PortalSaved() {
         tenantId={clientProfile.tenant_id}
         viewerType="client"
       />
+    </div>
+  )
+}
+
+// ===========================================================================
+// Portal Schedule — P9.5 (upcoming + past tour requests)
+// ===========================================================================
+
+type ScheduleTourRow = {
+  id: string
+  external_listing_id: string | null
+  war_room_id: string | null
+  property_address: string | null
+  property_photo_url: string | null
+  property_price: number | null
+  property_url: string | null
+  preferred_date: string | null
+  preferred_time: string | null
+  alternate_date: string | null
+  alternate_time: string | null
+  scheduled_at: string | null
+  notes: string | null
+  agent_response: string | null
+  status: 'requested' | 'confirmed' | 'rescheduled' | 'toured' | 'cancelled'
+  created_at: string
+}
+
+function PortalSchedule() {
+  const { clientProfile } = useAuth()
+  const [tours, setTours] = useState<ScheduleTourRow[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!clientProfile) return
+    let cancelled = false
+    const cid = clientProfile.id
+    setLoading(true)
+    supabase
+      .from('tour_requests')
+      .select(
+        'id, external_listing_id, war_room_id, property_address, property_photo_url, property_price, property_url, preferred_date, preferred_time, alternate_date, alternate_time, scheduled_at, notes, agent_response, status, created_at',
+      )
+      .eq('client_id', cid)
+      .order('preferred_date', { ascending: true, nullsFirst: false })
+      .then(({ data }) => {
+        if (cancelled) return
+        setTours((data as ScheduleTourRow[]) || [])
+        setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [clientProfile])
+
+  if (!clientProfile) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+
+  const today = new Date().toISOString().slice(0, 10)
+  const isPast = (t: ScheduleTourRow) =>
+    t.status === 'toured' ||
+    t.status === 'cancelled' ||
+    (t.preferred_date != null && t.preferred_date < today)
+
+  const upcoming = tours
+    .filter((t) => !isPast(t))
+    .sort((a, b) => (a.preferred_date || '').localeCompare(b.preferred_date || ''))
+  const past = tours
+    .filter(isPast)
+    .sort((a, b) => (b.preferred_date || '').localeCompare(a.preferred_date || ''))
+
+  return (
+    <div>
+      <div className="mb-10">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">Schedule</div>
+        <h1 className="font-display text-3xl text-ink-900 leading-tight mb-3">
+          Your tour schedule.
+        </h1>
+        <p className="text-ink-600 max-w-2xl">
+          Every tour you’ve requested, confirmed, or completed. Tour requests need at least 24 hours
+          notice — your agent confirms the time or proposes an alternate based on listing-agent
+          access.
+        </p>
+      </div>
+
+      {loading ? (
+        <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+      ) : (
+        <>
+          {/* Upcoming */}
+          <section className="mb-12">
+            <PortalSectionLabel>
+              Upcoming{upcoming.length > 0 ? ` · ${upcoming.length}` : ''}
+            </PortalSectionLabel>
+            {upcoming.length === 0 ? (
+              <div className="border border-ink-200 p-8 text-center bg-cream">
+                <Calendar
+                  className="w-8 h-8 text-ink-300 mx-auto mb-3"
+                  strokeWidth={1.5}
+                />
+                <p className="text-sm text-ink-600 mb-4 max-w-md mx-auto">
+                  No upcoming tours yet. Saved a property you’d like to see? Request a tour from
+                  the Saved tab.
+                </p>
+                <Link
+                  to="/portal/saved"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+                >
+                  <Heart className="w-3.5 h-3.5" />
+                  Go to saved properties
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcoming.map((t) => (
+                  <ScheduleTourCard key={t.id} tour={t} mode="upcoming" />
+                ))}
+              </div>
+            )}
+          </section>
+
+          {/* Past */}
+          {past.length > 0 && (
+            <section className="mb-12">
+              <PortalSectionLabel>Past · {past.length}</PortalSectionLabel>
+              <div className="space-y-3">
+                {past.map((t) => (
+                  <ScheduleTourCard key={t.id} tour={t} mode="past" />
+                ))}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+function ScheduleTourCard({
+  tour,
+  mode,
+}: {
+  tour: ScheduleTourRow
+  mode: 'upcoming' | 'past'
+}) {
+  const isPast = mode === 'past'
+  const showAlternate =
+    !isPast && tour.alternate_date && tour.status !== 'confirmed' && tour.status !== 'toured'
+  // If agent set a different scheduled_at than the preferred slot, surface it
+  const scheduledOverridesPreferred =
+    tour.scheduled_at &&
+    tour.preferred_date &&
+    new Date(tour.scheduled_at).toISOString().slice(0, 10) !== tour.preferred_date
+
+  return (
+    <article
+      className={`border border-ink-200 bg-white p-5 ${
+        isPast ? 'opacity-80' : ''
+      }`}
+    >
+      <div className="flex items-start gap-4">
+        {tour.property_photo_url ? (
+          <img
+            src={tour.property_photo_url}
+            alt=""
+            className="w-20 h-20 object-cover border border-ink-200 shrink-0"
+          />
+        ) : (
+          <div className="w-20 h-20 bg-ink-100 border border-ink-200 shrink-0 flex items-center justify-center">
+            <Home className="w-6 h-6 text-ink-400" strokeWidth={1.5} />
+          </div>
+        )}
+
+        <div className="flex-1 min-w-0">
+          {/* Header row */}
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <div className="min-w-0">
+              {tour.property_url ? (
+                <a
+                  href={tour.property_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="font-medium text-ink-900 hover:underline flex items-start gap-1"
+                >
+                  <MapPin className="w-3.5 h-3.5 mt-1 text-ink-400 shrink-0" strokeWidth={1.5} />
+                  <span className="truncate">{tour.property_address || 'Property'}</span>
+                </a>
+              ) : (
+                <div className="font-medium text-ink-900 flex items-start gap-1">
+                  <MapPin className="w-3.5 h-3.5 mt-1 text-ink-400 shrink-0" strokeWidth={1.5} />
+                  <span className="truncate">{tour.property_address || 'Property'}</span>
+                </div>
+              )}
+              {tour.property_price && (
+                <div className="text-xs text-ink-500 mt-0.5 ml-[1.125rem]">
+                  ${tour.property_price.toLocaleString()}
+                </div>
+              )}
+            </div>
+            <TourStatusBadge status={tour.status} />
+          </div>
+
+          {/* Date / time grid */}
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 mt-3 text-xs">
+            <ScheduleField
+              label={isPast ? 'Tour date' : 'Preferred'}
+              value={
+                tour.preferred_date
+                  ? `${formatPortalDate(tour.preferred_date)}${
+                      tour.preferred_time ? ` · ${tour.preferred_time}` : ''
+                    }`
+                  : 'TBD'
+              }
+            />
+
+            {showAlternate && tour.alternate_date && (
+              <ScheduleField
+                label="Alternate"
+                value={`${formatPortalDate(tour.alternate_date)}${
+                  tour.alternate_time ? ` · ${tour.alternate_time}` : ''
+                }`}
+              />
+            )}
+
+            {scheduledOverridesPreferred && tour.scheduled_at && (
+              <ScheduleField
+                label={tour.status === 'confirmed' ? 'Confirmed for' : 'Rescheduled to'}
+                value={new Date(tour.scheduled_at).toLocaleString('en-US', {
+                  weekday: 'short',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })}
+                emphasized
+              />
+            )}
+
+            <ScheduleField
+              label="Requested"
+              value={portalTimeAgo(tour.created_at)}
+            />
+          </dl>
+
+          {/* Notes */}
+          {tour.notes && (
+            <div className="mt-3 border-l-2 border-ink-200 pl-3 text-xs text-ink-700 leading-relaxed">
+              <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+                Your note
+              </div>
+              <p className="whitespace-pre-wrap">{tour.notes}</p>
+            </div>
+          )}
+
+          {tour.agent_response && (
+            <div className="mt-3 border-l-2 border-ink-900 pl-3 text-xs text-ink-700 leading-relaxed">
+              <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+                From your agent
+              </div>
+              <p className="whitespace-pre-wrap">{tour.agent_response}</p>
+            </div>
+          )}
+
+          {/* Footer link */}
+          <div className="mt-4 flex items-center gap-3 text-2xs uppercase tracking-widest">
+            <Link
+              to="/portal/war-room"
+              className="text-ink-600 hover:text-ink-900 inline-flex items-center gap-1"
+            >
+              Discuss in war room
+              <ArrowUpRight className="w-3 h-3" strokeWidth={1.5} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </article>
+  )
+}
+
+function ScheduleField({
+  label,
+  value,
+  emphasized,
+}: {
+  label: string
+  value: string
+  emphasized?: boolean
+}) {
+  return (
+    <div>
+      <dt className="text-2xs uppercase tracking-widest text-ink-500 mb-0.5">{label}</dt>
+      <dd className={emphasized ? 'text-ink-900 font-medium' : 'text-ink-700'}>{value}</dd>
     </div>
   )
 }
