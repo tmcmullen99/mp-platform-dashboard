@@ -4,6 +4,7 @@ import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import Today from '@/pages/Today'
 import Schedule from '@/pages/Schedule'
+import Settings from '@/pages/Settings'
 import CRM from '@/pages/CRM'
 import CSVImport from '@/pages/CSVImport'
 import Clients from '@/pages/Clients'
@@ -19,7 +20,6 @@ import {
   PenLine,
   Globe,
   BarChart3,
-  Settings,
 } from 'lucide-react'
 
 export default function App() {
@@ -128,18 +128,7 @@ function AuthGate() {
             />
           }
         />
-        <Route
-          path="/settings"
-          element={
-            <Placeholder
-              title="Settings & Integrations"
-              description="Branding (logo, colors, typography, hero copy, social links, service areas, DRE), team management with per-tenant roles, third-party connections (Resend, ATTOM Data, Zillow Premier Agent, Instagram Business, LinkedIn, MLS), billing, and the audit log."
-              Icon={Settings}
-              phase="P1.5"
-              replaces="—"
-            />
-          }
-        />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="/portal/*" element={<Portal />} />
       <Route path="*" element={<Navigate to="/" replace />} />
