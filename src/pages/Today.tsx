@@ -1,65 +1,142 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  Calendar,
+  MessageCircle,
+  FileBarChart2,
+  Users,
+  Plus,
+  UserPlus,
+  Send,
+  ArrowUpRight,
+  type LucideIcon,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, AuditLogEntry } from '@/lib/supabase'
-import { Activity, Briefcase, User, MapPin, Users, Folder, Send, BarChart3 } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+
+type PendingTour = {
+  id: string
+  client_id: string
+  property_address: string | null
+  preferred_date: string | null
+  preferred_time: string | null
+  notes: string | null
+  created_at: string
+  clients: { name: string } | null
+}
+
+type UnreadThread = {
+  id: string
+  client_id: string
+  name: string
+  unread_agent: number
+  last_message_at: string | null
+  clients: { name: string; tenant_id: string } | null
+}
+
+type RecentCMA = {
+  id: string
+  slug: string | null
+  name: string | null
+  property_address: string | null
+  status: string
+  client_id: string | null
+  created_at: string
+  clients: { name: string } | null
+}
+
+type RecentClient = {
+  id: string
+  name: string
+  email: string | null
+  client_type: string | null
+  stage: string | null
+  created_at: string
+}
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export default function Today() {
-  const { currentTenant, currentBranding, profile } = useAuth()
-  const [auditEntries, setAuditEntries] = useState<AuditLogEntry[]>([])
-  const [loadingEntries, setLoadingEntries] = useState(true)
-  const [contactCount, setContactCount] = useState<number | null>(null)
-  const [listCount, setListCount] = useState<number | null>(null)
-  const [campaignCount, setCampaignCount] = useState<number | null>(null)
-  const [sentCount, setSentCount] = useState<number | null>(null)
+  const { currentTenant, profile } = useAuth()
+  const [pendingTours, setPendingTours] = useState<PendingTour[]>([])
+  const [unreadThreads, setUnreadThreads] = useState<UnreadThread[]>([])
+  const [recentCMAs, setRecentCMAs] = useState<RecentCMA[]>([])
+  const [recentClients, setRecentClients] = useState<RecentClient[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!currentTenant) return
-    setLoadingEntries(true)
-    supabase
-      .from('audit_log')
-      .select('*')
-      .eq('tenant_id', currentTenant.id)
-      .order('happened_at', { ascending: false })
-      .limit(10)
-      .then(({ data }) => {
-        setAuditEntries((data as AuditLogEntry[]) || [])
-        setLoadingEntries(false)
-      })
+    let cancelled = false
+    setLoading(true)
+    const sevenDaysAgo = new Date(Date.now() - SEVEN_DAYS_MS).toISOString()
 
-    supabase
-      .from('contacts')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', currentTenant.id)
-      .then(({ count }) => setContactCount(count ?? 0))
+    Promise.all([
+      supabase
+        .from('tour_requests')
+        .select(
+          'id, client_id, property_address, preferred_date, preferred_time, notes, created_at, clients!inner(name)',
+        )
+        .eq('tenant_id', currentTenant.id)
+        .eq('status', 'requested')
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('war_rooms')
+        .select(
+          'id, client_id, name, unread_agent, last_message_at, clients!inner(name, tenant_id)',
+        )
+        .eq('clients.tenant_id', currentTenant.id)
+        .gt('unread_agent', 0)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .limit(10),
+      supabase
+        .from('cmas')
+        .select(
+          'id, slug, name, property_address, status, client_id, created_at, clients(name)',
+        )
+        .eq('tenant_id', currentTenant.id)
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('clients')
+        .select('id, name, email, client_type, stage, created_at')
+        .eq('tenant_id', currentTenant.id)
+        .gte('created_at', sevenDaysAgo)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ]).then(([toursResp, roomsResp, cmasResp, clientsResp]) => {
+      if (cancelled) return
 
-    supabase
-      .from('contact_lists')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', currentTenant.id)
-      .then(({ count }) => setListCount(count ?? 0))
+      // Supabase joined relations sometimes come back as arrays; normalize to object.
+      const normalize = <T extends { clients?: unknown }>(rows: T[]): T[] =>
+        rows.map((r) => ({
+          ...r,
+          clients: Array.isArray(r.clients) ? r.clients[0] ?? null : r.clients ?? null,
+        }))
 
-    supabase
-      .from('campaigns')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', currentTenant.id)
-      .then(({ count }) => setCampaignCount(count ?? 0))
+      setPendingTours(normalize((toursResp.data || []) as PendingTour[]))
+      setUnreadThreads(normalize((roomsResp.data || []) as UnreadThread[]))
+      setRecentCMAs(normalize((cmasResp.data || []) as RecentCMA[]))
+      setRecentClients((clientsResp.data || []) as RecentClient[])
+      setLoading(false)
+    })
 
-    supabase
-      .from('campaigns')
-      .select('id', { count: 'exact', head: true })
-      .eq('tenant_id', currentTenant.id)
-      .eq('status', 'sent')
-      .then(({ count }) => setSentCount(count ?? 0))
+    return () => {
+      cancelled = true
+    }
   }, [currentTenant])
 
-  if (!currentTenant || !currentBranding || !profile) {
+  if (!currentTenant || !profile) {
     return <div className="p-12 text-ink-500 text-sm">Loading tenant context…</div>
   }
+
+  const totalActionItems = pendingTours.length + unreadThreads.length
 
   return (
     <div className="p-12 max-w-6xl">
       {/* Hero */}
-      <div className="mb-16">
+      <div className="mb-14">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
           {new Date().toLocaleDateString('en-US', {
             weekday: 'long',
@@ -72,181 +149,274 @@ export default function Today() {
           {greeting()}, {profile.first_name || 'there'}.
         </h1>
         <p className="mt-5 text-ink-600 text-lg font-light leading-relaxed max-w-2xl">
-          The foundation is live. This is the operating console for{' '}
-          <span className="text-ink-900">{currentTenant.display_name}</span>. Eight more surfaces
-          ship in subsequent phases — chat is wired next.
+          {loading ? (
+            'Loading today’s queue…'
+          ) : totalActionItems === 0 ? (
+            <>
+              You’re caught up. Nothing pending across{' '}
+              <span className="text-ink-900">{currentTenant.display_name}</span>.
+            </>
+          ) : (
+            <>
+              You have{' '}
+              <span className="text-ink-900 font-normal">{totalActionItems}</span>{' '}
+              {totalActionItems === 1 ? 'item' : 'items'} waiting —{' '}
+              {pendingTours.length} tour{' '}
+              {pendingTours.length === 1 ? 'request' : 'requests'} and{' '}
+              {unreadThreads.length} unread war room{' '}
+              {unreadThreads.length === 1 ? 'thread' : 'threads'}.
+            </>
+          )}
         </p>
       </div>
 
-      {/* Cards row */}
-      <section className="mb-16">
-        <SectionLabel>Tenant Context</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Action queue */}
+      <section className="mb-14">
+        <SectionLabel>Action queue</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Pending tour requests */}
           <Card>
-            <div className="flex items-start gap-5">
-              <Briefcase className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-2xl text-ink-900 mb-1">
-                  {currentTenant.display_name}
-                </div>
-                <div className="text-sm text-ink-500 mb-7">
-                  {currentBranding.brokerage_affiliation} ·{' '}
-                  <span className="capitalize">{currentTenant.tier.replace('_', ' ')}</span>
-                </div>
-                <dl className="space-y-3.5 text-sm">
-                  <Row label="Slug" value={currentTenant.slug} mono />
-                  <Row label="Domain" value={currentTenant.custom_domain || '—'} />
-                  <Row label="Status" value={currentTenant.status} />
-                  <Row label="DRE" value={currentBranding.dre_license || '—'} mono />
-                </dl>
-              </div>
-            </div>
+            <CardHeader
+              icon={Calendar}
+              label="Pending tour requests"
+              count={pendingTours.length}
+            />
+            {loading ? (
+              <CardEmpty>Loading…</CardEmpty>
+            ) : pendingTours.length === 0 ? (
+              <CardEmpty>No pending requests.</CardEmpty>
+            ) : (
+              <ul className="divide-y divide-ink-100">
+                {pendingTours.map((t) => (
+                  <li key={t.id}>
+                    <Link
+                      to={`/clients/${t.client_id}`}
+                      className="block py-3.5 hover:bg-ink-50/60 -mx-2 px-2 transition-colors group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-ink-900 truncate">
+                            {t.property_address || 'Untitled property'}
+                          </div>
+                          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+                            <span className="text-ink-700">
+                              {t.clients?.name || 'Unknown client'}
+                            </span>
+                            {t.preferred_date && (
+                              <>
+                                <span className="text-ink-300">·</span>
+                                <span>
+                                  {formatShortDate(t.preferred_date)}
+                                  {t.preferred_time ? ` ${t.preferred_time}` : ''}
+                                </span>
+                              </>
+                            )}
+                            <span className="text-ink-300">·</span>
+                            <span>requested {timeAgo(t.created_at)}</span>
+                          </div>
+                        </div>
+                        <ArrowUpRight
+                          className="w-4 h-4 text-ink-300 group-hover:text-ink-900 transition-colors shrink-0 mt-1"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
 
+          {/* Unread war room threads */}
           <Card>
-            <div className="flex items-start gap-5">
-              <User className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-2xl text-ink-900 mb-1">
-                  {currentBranding.agent_name || profile.email}
-                </div>
-                <div className="text-sm text-ink-500 mb-7">
-                  {profile.is_brokerage_admin ? 'Brokerage Admin' : currentBranding.agent_title}
-                </div>
-                <dl className="space-y-3.5 text-sm">
-                  <Row label="Email" value={profile.email} />
-                  <Row
-                    label="Role"
-                    value={profile.is_brokerage_admin ? 'brokerage_admin' : 'owner'}
-                    mono
-                  />
-                  <Row label="User ID" value={profile.id.slice(0, 8) + '…'} mono />
-                </dl>
-              </div>
-            </div>
+            <CardHeader
+              icon={MessageCircle}
+              label="Unread war rooms"
+              count={unreadThreads.length}
+            />
+            {loading ? (
+              <CardEmpty>Loading…</CardEmpty>
+            ) : unreadThreads.length === 0 ? (
+              <CardEmpty>Inbox zero.</CardEmpty>
+            ) : (
+              <ul className="divide-y divide-ink-100">
+                {unreadThreads.map((r) => (
+                  <li key={r.id}>
+                    <Link
+                      to={`/clients/${r.client_id}`}
+                      className="block py-3.5 hover:bg-ink-50/60 -mx-2 px-2 transition-colors group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-ink-900 truncate">
+                            {r.clients?.name || r.name || 'Unknown client'}
+                          </div>
+                          <div className="text-xs text-ink-500 mt-1">
+                            {r.last_message_at
+                              ? `Last message ${timeAgo(r.last_message_at)}`
+                              : r.name}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-2xs font-mono bg-ink-900 text-cream px-1.5 py-0.5 tabular-nums">
+                            {r.unread_agent}
+                          </span>
+                          <ArrowUpRight
+                            className="w-4 h-4 text-ink-300 group-hover:text-ink-900 transition-colors mt-0.5"
+                            strokeWidth={1.5}
+                          />
+                        </div>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </div>
       </section>
 
-      {/* Service areas */}
-      {currentBranding.service_areas.length > 0 && (
-        <section className="mb-16">
-          <SectionLabel>Service Areas</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {currentBranding.service_areas.map((area) => (
-              <span
-                key={area}
-                className="inline-flex items-center gap-1.5 border border-ink-200 px-3 py-1.5 text-sm text-ink-700 bg-white"
-              >
-                <MapPin className="w-3 h-3 text-ink-400" strokeWidth={2} />
-                {area}
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* CRM snapshot */}
-      <section className="mb-16">
-        <SectionLabel>CRM Snapshot</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      {/* Last 7 days */}
+      <section className="mb-14">
+        <SectionLabel>Last 7 days</SectionLabel>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Recent CMAs */}
           <Card>
-            <div className="flex items-start gap-5">
-              <Users className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-4xl text-ink-900 mb-1 tabular-nums">
-                  {contactCount === null ? '—' : contactCount.toLocaleString()}
-                </div>
-                <div className="text-2xs uppercase tracking-widest text-ink-500">Contacts</div>
-              </div>
-            </div>
+            <CardHeader
+              icon={FileBarChart2}
+              label="Recent CMAs"
+              count={recentCMAs.length}
+            />
+            {loading ? (
+              <CardEmpty>Loading…</CardEmpty>
+            ) : recentCMAs.length === 0 ? (
+              <CardEmpty>
+                No CMAs this week.{' '}
+                <Link to="/cmas/new" className="underline hover:text-ink-900">
+                  Build one
+                </Link>
+                .
+              </CardEmpty>
+            ) : (
+              <ul className="divide-y divide-ink-100">
+                {recentCMAs.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      to={c.slug ? `/cmas/${c.slug}` : '#'}
+                      className="block py-3.5 hover:bg-ink-50/60 -mx-2 px-2 transition-colors group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-ink-900 truncate">
+                            {c.property_address || c.name || 'Untitled CMA'}
+                          </div>
+                          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+                            {c.clients?.name && (
+                              <>
+                                <span className="text-ink-700">{c.clients.name}</span>
+                                <span className="text-ink-300">·</span>
+                              </>
+                            )}
+                            <CMAStatusBadge status={c.status} />
+                            <span className="text-ink-300">·</span>
+                            <span>{timeAgo(c.created_at)}</span>
+                          </div>
+                        </div>
+                        <ArrowUpRight
+                          className="w-4 h-4 text-ink-300 group-hover:text-ink-900 transition-colors shrink-0 mt-1"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
+
+          {/* New clients */}
           <Card>
-            <div className="flex items-start gap-5">
-              <Folder className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-4xl text-ink-900 mb-1 tabular-nums">
-                  {listCount === null ? '—' : listCount.toLocaleString()}
-                </div>
-                <div className="text-2xs uppercase tracking-widest text-ink-500">Lists</div>
-              </div>
-            </div>
+            <CardHeader icon={Users} label="New clients" count={recentClients.length} />
+            {loading ? (
+              <CardEmpty>Loading…</CardEmpty>
+            ) : recentClients.length === 0 ? (
+              <CardEmpty>No new clients this week.</CardEmpty>
+            ) : (
+              <ul className="divide-y divide-ink-100">
+                {recentClients.map((c) => (
+                  <li key={c.id}>
+                    <Link
+                      to={`/clients/${c.id}`}
+                      className="block py-3.5 hover:bg-ink-50/60 -mx-2 px-2 transition-colors group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm text-ink-900 truncate">{c.name}</div>
+                          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+                            {c.client_type && (
+                              <span className="capitalize">{c.client_type}</span>
+                            )}
+                            {c.stage && (
+                              <>
+                                <span className="text-ink-300">·</span>
+                                <span className="capitalize">
+                                  {c.stage.replace('_', ' ')}
+                                </span>
+                              </>
+                            )}
+                            <span className="text-ink-300">·</span>
+                            <span>{timeAgo(c.created_at)}</span>
+                          </div>
+                        </div>
+                        <ArrowUpRight
+                          className="w-4 h-4 text-ink-300 group-hover:text-ink-900 transition-colors shrink-0 mt-1"
+                          strokeWidth={1.5}
+                        />
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </div>
       </section>
 
-      {/* Campaigns snapshot */}
-      <section className="mb-16">
-        <SectionLabel>Campaigns Snapshot</SectionLabel>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <Card>
-            <div className="flex items-start gap-5">
-              <Send className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-4xl text-ink-900 mb-1 tabular-nums">
-                  {campaignCount === null ? '—' : campaignCount.toLocaleString()}
-                </div>
-                <div className="text-2xs uppercase tracking-widest text-ink-500">Total Campaigns</div>
-              </div>
-            </div>
-          </Card>
-          <Card>
-            <div className="flex items-start gap-5">
-              <BarChart3 className="w-5 h-5 text-ink-400 mt-1 shrink-0" strokeWidth={1.5} />
-              <div className="flex-1 min-w-0">
-                <div className="font-display text-4xl text-ink-900 mb-1 tabular-nums">
-                  {sentCount === null ? '—' : sentCount.toLocaleString()}
-                </div>
-                <div className="text-2xs uppercase tracking-widest text-ink-500">Sent</div>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </section>
-
-      {/* Audit log */}
+      {/* Quick actions */}
       <section>
-        <SectionLabel>Recent Platform Activity</SectionLabel>
-        <Card>
-          {loadingEntries ? (
-            <div className="text-sm text-ink-500 py-4">Loading…</div>
-          ) : auditEntries.length === 0 ? (
-            <div className="text-sm text-ink-500 py-4">No activity yet.</div>
-          ) : (
-            <ul className="divide-y divide-ink-100">
-              {auditEntries.map((entry) => (
-                <li key={entry.id} className="py-4 first:pt-0 last:pb-0 flex items-start gap-4">
-                  <Activity className="w-4 h-4 text-ink-300 mt-1 shrink-0" strokeWidth={2} />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-mono text-sm text-ink-900">{entry.action}</div>
-                    <div className="text-xs text-ink-500 mt-1">
-                      {entry.actor_kind} · {entry.entity_kind || 'system'}
-                      {typeof entry.metadata?.reason === 'string'
-                        ? ` · ${entry.metadata.reason}`
-                        : ''}
-                    </div>
-                  </div>
-                  <div className="text-xs text-ink-400 font-mono whitespace-nowrap">
-                    {new Date(entry.happened_at).toLocaleString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Card>
+        <SectionLabel>Quick actions</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <QuickAction
+            to="/cmas/new"
+            icon={Plus}
+            label="New CMA"
+            sub="Upload a PDF, review, publish"
+          />
+          <QuickAction
+            to="/clients"
+            icon={UserPlus}
+            label="New client"
+            sub="Add or browse the list"
+          />
+          <QuickAction
+            to="/campaigns"
+            icon={Send}
+            label="Send campaign"
+            sub="Bulk email via Resend"
+          />
+        </div>
       </section>
     </div>
   )
 }
 
+// ===========================================================================
+// UI primitives
+// ===========================================================================
+
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-3 mb-6">
+    <div className="flex items-center gap-3 mb-5">
       <div className="text-2xs uppercase tracking-widest text-ink-500">{children}</div>
       <div className="flex-1 h-px bg-ink-100" />
     </div>
@@ -254,27 +424,101 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 }
 
 function Card({ children }: { children: React.ReactNode }) {
-  return <div className="bg-white border border-ink-100 p-8">{children}</div>
+  return <div className="bg-white border border-ink-100 p-7">{children}</div>
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+function CardHeader({
+  icon: Icon,
+  label,
+  count,
+}: {
+  icon: LucideIcon
+  label: string
+  count: number
+}) {
   return (
-    <div className="flex justify-between items-baseline gap-4">
-      <dt className="text-2xs uppercase tracking-widest text-ink-500 shrink-0">{label}</dt>
-      <dd
-        className={`text-ink-900 truncate ${
-          mono ? 'font-mono text-xs' : 'text-sm'
-        }`}
-      >
-        {value}
-      </dd>
+    <div className="flex items-center justify-between mb-4 pb-4 border-b border-ink-100">
+      <div className="flex items-center gap-3">
+        <Icon className="w-4 h-4 text-ink-400" strokeWidth={1.5} />
+        <div className="text-sm text-ink-900">{label}</div>
+      </div>
+      <div className="font-display text-2xl text-ink-900 tabular-nums">{count}</div>
     </div>
   )
 }
+
+function CardEmpty({ children }: { children: React.ReactNode }) {
+  return <div className="text-sm text-ink-500 py-2">{children}</div>
+}
+
+function QuickAction({
+  to,
+  icon: Icon,
+  label,
+  sub,
+}: {
+  to: string
+  icon: LucideIcon
+  label: string
+  sub: string
+}) {
+  return (
+    <Link
+      to={to}
+      className="bg-white border border-ink-100 p-6 hover:border-ink-900 transition-colors group"
+    >
+      <Icon
+        className="w-5 h-5 text-ink-400 group-hover:text-ink-900 transition-colors mb-4"
+        strokeWidth={1.5}
+      />
+      <div className="font-display text-xl text-ink-900 mb-1">{label}</div>
+      <div className="text-xs text-ink-500">{sub}</div>
+    </Link>
+  )
+}
+
+function CMAStatusBadge({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    draft: 'bg-ink-100 text-ink-700',
+    published: 'bg-emerald-50 text-emerald-700',
+    archived: 'bg-ink-100 text-ink-400',
+  }
+  return (
+    <span
+      className={`text-2xs uppercase tracking-widest px-1.5 py-0.5 ${
+        colors[status] || colors.draft
+      }`}
+    >
+      {status}
+    </span>
+  )
+}
+
+// ===========================================================================
+// Helpers
+// ===========================================================================
 
 function greeting(): string {
   const h = new Date().getHours()
   if (h < 12) return 'Good morning'
   if (h < 18) return 'Good afternoon'
   return 'Good evening'
+}
+
+function formatShortDate(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (isNaN(then)) return iso
+  const diff = Date.now() - then
+  if (diff < 60_000) return 'just now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+  const days = Math.floor(diff / 86_400_000)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
