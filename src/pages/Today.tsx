@@ -9,17 +9,25 @@ import {
   UserPlus,
   Send,
   ArrowUpRight,
+  Check,
+  X,
+  Loader2,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/lib/supabase'
+import { supabase, EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 
 type PendingTour = {
   id: string
+  tenant_id: string
   client_id: string
+  war_room_id: string | null
   property_address: string | null
+  property_photo_url: string | null
   preferred_date: string | null
   preferred_time: string | null
+  alternate_date: string | null
+  alternate_time: string | null
   notes: string | null
   created_at: string
   clients: { name: string } | null
@@ -57,12 +65,17 @@ type RecentClient = {
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export default function Today() {
-  const { currentTenant, profile } = useAuth()
+  const { currentTenant, profile, session } = useAuth()
   const [pendingTours, setPendingTours] = useState<PendingTour[]>([])
   const [unreadThreads, setUnreadThreads] = useState<UnreadThread[]>([])
   const [recentCMAs, setRecentCMAs] = useState<RecentCMA[]>([])
   const [recentClients, setRecentClients] = useState<RecentClient[]>([])
   const [loading, setLoading] = useState(true)
+  const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const PENDING_TOUR_SELECT =
+    'id, tenant_id, client_id, war_room_id, property_address, property_photo_url, preferred_date, preferred_time, alternate_date, alternate_time, notes, created_at, clients!inner(name)'
 
   useEffect(() => {
     if (!currentTenant) return
@@ -73,9 +86,7 @@ export default function Today() {
     Promise.all([
       supabase
         .from('tour_requests')
-        .select(
-          'id, client_id, property_address, preferred_date, preferred_time, notes, created_at, clients!inner(name)',
-        )
+        .select(PENDING_TOUR_SELECT)
         .eq('tenant_id', currentTenant.id)
         .eq('status', 'requested')
         .order('created_at', { ascending: false })
@@ -126,6 +137,116 @@ export default function Today() {
       cancelled = true
     }
   }, [currentTenant])
+
+  async function refreshPendingTours() {
+    if (!currentTenant) return
+    const { data } = await supabase
+      .from('tour_requests')
+      .select(PENDING_TOUR_SELECT)
+      .eq('tenant_id', currentTenant.id)
+      .eq('status', 'requested')
+      .order('created_at', { ascending: false })
+      .limit(10)
+    const normalized = (data || []).map((r: { clients?: unknown } & Record<string, unknown>) => ({
+      ...r,
+      clients: Array.isArray(r.clients) ? r.clients[0] ?? null : r.clients ?? null,
+    })) as unknown as PendingTour[]
+    setPendingTours(normalized)
+  }
+
+  async function postTourStatusMessage(tour: PendingTour, newStatus: 'confirmed' | 'cancelled') {
+    if (!tour.war_room_id || !session?.access_token) return
+    const dateLabel =
+      newStatus === 'confirmed'
+        ? formatScheduledLabel(tour.preferred_date, tour.preferred_time)
+        : null
+    const body =
+      newStatus === 'confirmed'
+        ? `Tour confirmed for ${tour.property_address || 'the property'}${
+            dateLabel ? ` on ${dateLabel}` : ''
+          }.`
+        : `Tour request for ${tour.property_address || 'the property'} declined. Reach out in the war room to find a better time.`
+    const { data: msg, error } = await supabase
+      .from('war_room_messages')
+      .insert({
+        tenant_id: tour.tenant_id,
+        war_room_id: tour.war_room_id,
+        sender_type: 'system',
+        body,
+        metadata: {
+          type: 'tour_status_change',
+          tour_request_id: tour.id,
+          new_status: newStatus,
+        },
+      })
+      .select()
+      .single()
+    if (error) {
+      console.warn('Could not post tour status message:', error.message)
+      return
+    }
+    if (msg) {
+      // Fire-and-forget email to the client via existing notify Edge Function
+      fetch(`${EDGE_FUNCTIONS_BASE_URL}/notify_war_room_message`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message_id: msg.id }),
+      }).catch(() => {})
+    }
+  }
+
+  async function handleConfirmTour(tour: PendingTour) {
+    if (actingOnTourId) return
+    setActingOnTourId(tour.id)
+    setActionError(null)
+    try {
+      const scheduledAt = combineDateTimeToISO(tour.preferred_date, tour.preferred_time)
+      const { error } = await supabase
+        .from('tour_requests')
+        .update({
+          status: 'confirmed',
+          scheduled_at: scheduledAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tour.id)
+      if (error) throw error
+      await postTourStatusMessage(tour, 'confirmed')
+      await refreshPendingTours()
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setActingOnTourId(null)
+    }
+  }
+
+  async function handleDeclineTour(tour: PendingTour) {
+    if (actingOnTourId) return
+    const ok = window.confirm(
+      `Decline tour request for ${tour.property_address || 'this property'}? The client will be notified.`,
+    )
+    if (!ok) return
+    setActingOnTourId(tour.id)
+    setActionError(null)
+    try {
+      const { error } = await supabase
+        .from('tour_requests')
+        .update({
+          status: 'cancelled',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tour.id)
+      if (error) throw error
+      await postTourStatusMessage(tour, 'cancelled')
+      await refreshPendingTours()
+    } catch (e) {
+      setActionError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setActingOnTourId(null)
+    }
+  }
 
   if (!currentTenant || !profile) {
     return <div className="p-12 text-ink-500 text-sm">Loading tenant context…</div>
@@ -188,42 +309,84 @@ export default function Today() {
             ) : (
               <ul className="divide-y divide-ink-100">
                 {pendingTours.map((t) => (
-                  <li key={t.id}>
-                    <Link
-                      to={`/clients/${t.client_id}`}
-                      className="block py-3.5 hover:bg-ink-50/60 -mx-2 px-2 transition-colors group"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="text-sm text-ink-900 truncate">
-                            {t.property_address || 'Untitled property'}
-                          </div>
-                          <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
-                            <span className="text-ink-700">
-                              {t.clients?.name || 'Unknown client'}
-                            </span>
-                            {t.preferred_date && (
-                              <>
-                                <span className="text-ink-300">·</span>
-                                <span>
-                                  {formatShortDate(t.preferred_date)}
-                                  {t.preferred_time ? ` ${t.preferred_time}` : ''}
-                                </span>
-                              </>
-                            )}
-                            <span className="text-ink-300">·</span>
-                            <span>requested {timeAgo(t.created_at)}</span>
-                          </div>
-                        </div>
-                        <ArrowUpRight
-                          className="w-4 h-4 text-ink-300 group-hover:text-ink-900 transition-colors shrink-0 mt-1"
-                          strokeWidth={1.5}
+                  <li key={t.id} className="py-4 first:pt-0 last:pb-0">
+                    <div className="flex items-start gap-3">
+                      {t.property_photo_url ? (
+                        <img
+                          src={t.property_photo_url}
+                          alt=""
+                          className="w-12 h-12 object-cover border border-ink-100 shrink-0"
                         />
+                      ) : (
+                        <div className="w-12 h-12 bg-ink-50 border border-ink-100 shrink-0 flex items-center justify-center">
+                          <Calendar
+                            className="w-4 h-4 text-ink-300"
+                            strokeWidth={1.5}
+                          />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm text-ink-900 truncate">
+                          {t.property_address || 'Untitled property'}
+                        </div>
+                        <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+                          <span className="text-ink-700">
+                            {t.clients?.name || 'Unknown client'}
+                          </span>
+                          {t.preferred_date && (
+                            <>
+                              <span className="text-ink-300">·</span>
+                              <span>
+                                {formatShortDate(t.preferred_date)}
+                                {t.preferred_time ? ` ${t.preferred_time}` : ''}
+                              </span>
+                            </>
+                          )}
+                          <span className="text-ink-300">·</span>
+                          <span>requested {timeAgo(t.created_at)}</span>
+                        </div>
+                        <div className="flex items-center gap-2 mt-3">
+                          <button
+                            onClick={() => handleConfirmTour(t)}
+                            disabled={actingOnTourId !== null}
+                            className="inline-flex items-center gap-1.5 bg-ink-900 text-cream px-3 py-1.5 text-xs hover:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {actingOnTourId === t.id ? (
+                              <Loader2
+                                className="w-3 h-3 animate-spin"
+                                strokeWidth={2}
+                              />
+                            ) : (
+                              <Check className="w-3 h-3" strokeWidth={2} />
+                            )}
+                            Confirm
+                          </button>
+                          <button
+                            onClick={() => handleDeclineTour(t)}
+                            disabled={actingOnTourId !== null}
+                            className="inline-flex items-center gap-1.5 border border-ink-200 text-ink-700 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <X className="w-3 h-3" strokeWidth={2} />
+                            Decline
+                          </button>
+                          <Link
+                            to={`/clients/${t.client_id}`}
+                            className="ml-auto text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 inline-flex items-center gap-1"
+                          >
+                            Open
+                            <ArrowUpRight className="w-3 h-3" strokeWidth={1.5} />
+                          </Link>
+                        </div>
                       </div>
-                    </Link>
+                    </div>
                   </li>
                 ))}
               </ul>
+            )}
+            {actionError && (
+              <div className="mt-3 text-xs text-red-700 bg-red-50 px-3 py-2">
+                Couldn’t complete action: {actionError}
+              </div>
             )}
           </Card>
 
@@ -521,4 +684,40 @@ function timeAgo(iso: string): string {
   const days = Math.floor(diff / 86_400_000)
   if (days < 7) return `${days}d ago`
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function combineDateTimeToISO(date: string | null, time: string | null): string | null {
+  if (!date) return null
+  const baseTime = parseTimeToHHMM(time) ?? '09:00'
+  const iso = new Date(`${date}T${baseTime}`)
+  return isNaN(iso.getTime()) ? null : iso.toISOString()
+}
+
+function parseTimeToHHMM(time: string | null): string | null {
+  if (!time) return null
+  // 24-hour: "10:00" or "10:00:00"
+  const iso = time.match(/^(\d{1,2}):(\d{2})/)
+  if (iso) return `${iso[1].padStart(2, '0')}:${iso[2]}`
+  // 12-hour with am/pm: "10:00 AM" or "10:00pm"
+  const ampm = time.match(/^(\d{1,2}):(\d{2})\s*(AM|PM|am|pm)$/)
+  if (ampm) {
+    let h = parseInt(ampm[1], 10)
+    const period = ampm[3].toLowerCase()
+    if (period === 'pm' && h < 12) h += 12
+    if (period === 'am' && h === 12) h = 0
+    return `${String(h).padStart(2, '0')}:${ampm[2]}`
+  }
+  return null
+}
+
+function formatScheduledLabel(date: string | null, time: string | null): string | null {
+  if (!date) return null
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return null
+  const dateLabel = d.toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  })
+  return time ? `${dateLabel} at ${time}` : dateLabel
 }
