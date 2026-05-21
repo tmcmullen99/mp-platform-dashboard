@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
+import Signup from '@/pages/Signup'
 import Today from '@/pages/Today'
 import Schedule from '@/pages/Schedule'
 import Settings from '@/pages/Settings'
@@ -28,6 +29,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<AuthGate />} />
         </Routes>
       </BrowserRouter>
