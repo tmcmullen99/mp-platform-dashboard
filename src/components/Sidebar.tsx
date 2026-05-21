@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import {
   Sun,
+  Calendar,
   Users,
   Briefcase,
   Search,
@@ -19,6 +20,7 @@ type NavItem = { to: string; label: string; Icon: LucideIcon }
 
 const navItems: NavItem[] = [
   { to: '/', label: 'Today', Icon: Sun },
+  { to: '/schedule', label: 'Schedule', Icon: Calendar },
   { to: '/crm', label: 'CRM', Icon: Users },
   { to: '/clients', label: 'Clients', Icon: Briefcase },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
@@ -72,7 +74,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.11 · P9.4
+        Platform v0.14 · P9.7
       </div>
     </aside>
   )
