@@ -199,6 +199,24 @@ export default function Today() {
         body: JSON.stringify({ message_id: msg.id }),
       }).catch(() => {})
     }
+
+    // P9.8: bell notification for the client
+    const titleConfirmed = `Tour confirmed: ${tour.property_address || 'property'}${
+      dateLabel ? ` · ${dateLabel}` : ''
+    }`
+    const titleCancelled = `Tour declined: ${tour.property_address || 'property'}`
+    await supabase.from('notifications').insert({
+      tenant_id: tour.tenant_id,
+      recipient_type: 'client',
+      recipient_id: tour.client_id,
+      notification_type: newStatus === 'confirmed' ? 'tour_confirmed' : 'tour_cancelled',
+      title: newStatus === 'confirmed' ? titleConfirmed : titleCancelled,
+      body:
+        newStatus === 'confirmed'
+          ? 'Your agent confirmed the tour. See it in your Schedule.'
+          : "Your agent couldn't confirm at the requested time. Open the war room to find an alternative.",
+      link_url: '/portal/schedule',
+    })
   }
 
   async function handleConfirmTour(tour: PendingTour) {
@@ -352,7 +370,7 @@ export default function Today() {
                           <button
                             onClick={() => handleConfirmTour(t)}
                             disabled={actingOnTourId !== null}
-                            className="inline-flex items-center gap-1.5 bg-ink-900 text-cream px-3 py-1.5 text-xs hover:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 min-w-[130px] whitespace-nowrap bg-ink-900 text-cream px-3 py-1.5 text-xs hover:bg-ink-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             {actingOnTourId === t.id ? (
                               <Loader2
@@ -367,7 +385,7 @@ export default function Today() {
                           <button
                             onClick={() => setProposingFor(t)}
                             disabled={actingOnTourId !== null}
-                            className="inline-flex items-center gap-1.5 border border-ink-300 text-ink-800 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 min-w-[130px] whitespace-nowrap border border-ink-300 text-ink-800 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <CalendarPlus className="w-3 h-3" strokeWidth={2} />
                             Suggest times
@@ -375,7 +393,7 @@ export default function Today() {
                           <button
                             onClick={() => handleDeclineTour(t)}
                             disabled={actingOnTourId !== null}
-                            className="inline-flex items-center gap-1.5 border border-ink-200 text-ink-700 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center justify-center gap-1.5 min-w-[130px] whitespace-nowrap border border-ink-200 text-ink-700 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                           >
                             <X className="w-3 h-3" strokeWidth={2} />
                             Decline
@@ -853,6 +871,19 @@ function ProposeAlternatesDialog({
           }).catch(() => {})
         }
       }
+
+      // P9.8: bell notification for the client
+      await supabase.from('notifications').insert({
+        tenant_id: tour.tenant_id,
+        recipient_type: 'client',
+        recipient_id: tour.client_id,
+        notification_type: 'tour_alternates_proposed',
+        title: `Pick a tour time: ${tour.property_address || 'property'}`,
+        body: `Your agent suggested ${proposedAlternates.length} alternative time${
+          proposedAlternates.length === 1 ? '' : 's'
+        }.`,
+        link_url: '/portal/schedule',
+      })
 
       onSubmitted()
     } catch (e) {
