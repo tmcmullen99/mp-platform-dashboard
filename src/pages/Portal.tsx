@@ -1087,6 +1087,32 @@ function ScheduleTourCard({
           }).catch(() => {})
         }
       }
+
+      // P9.8: bell notification for the agent(s) of this tenant
+      try {
+        const { data: adminIds } = await supabase.rpc('get_tenant_admin_user_ids', {
+          p_tenant_id: tour.tenant_id,
+        })
+        const ids = (adminIds || []) as string[]
+        if (ids.length > 0) {
+          const slotLabel =
+            formatPortalDate(slot.date) + (slot.time ? ` at ${slot.time}` : '')
+          await supabase.from('notifications').insert(
+            ids.map((adminId) => ({
+              tenant_id: tour.tenant_id,
+              recipient_type: 'agent' as const,
+              recipient_id: adminId,
+              notification_type: 'tour_confirmed_by_client',
+              title: `Tour confirmed: ${tour.property_address || 'property'}`,
+              body: `Client accepted ${slotLabel} for the tour.`,
+              link_url: '/schedule',
+            })),
+          )
+        }
+      } catch {
+        // Non-fatal — email path already fired above
+      }
+
       onAccepted()
     } catch (e) {
       setAcceptError(e instanceof Error ? e.message : String(e))
