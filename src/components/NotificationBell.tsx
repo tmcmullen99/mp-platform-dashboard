@@ -1,8 +1,9 @@
-// P8.3 — Notification bell. Subscribes to inserts on `notifications`
+// P8.3 + P9.8 — Notification bell. Subscribes to inserts on `notifications`
 // where the recipient is the current user (agent via tenant, client via clientProfile).
+// P9.8: bell badge upgraded from red dot to numeric count.
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Bell, X } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Bell } from 'lucide-react'
 import { supabase, NotificationRecord } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -102,7 +103,12 @@ export default function NotificationBell() {
       >
         <Bell className="w-4 h-4" strokeWidth={1.5} />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+          <span
+            className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-ink-900 text-cream text-2xs font-mono tabular-nums flex items-center justify-center rounded-full leading-none"
+            aria-label={`${unreadCount} unread notifications`}
+          >
+            {unreadCount > 9 ? '9+' : unreadCount}
+          </span>
         )}
       </button>
       {open && (
