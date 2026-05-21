@@ -1173,7 +1173,10 @@ function RequestTourDialog({
   const addressLine =
     [listing.address, listing.city, listing.state].filter(Boolean).join(', ') ||
     'this property'
-  const today = new Date().toISOString().slice(0, 10)
+  // 24-hour minimum advance notice — earliest allowed date is tomorrow.
+  // (A true sub-24-hour check needs combined date+time validation; this is the
+  //  pragmatic floor that prevents same-day requests.)
+  const minDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
   async function handleSubmit() {
     if (!preferredDate) {
@@ -1220,7 +1223,8 @@ function RequestTourDialog({
       <p className="text-sm text-ink-600 mb-5">
         Schedule a tour of{' '}
         <span className="text-ink-900 font-medium">{addressLine}</span>. Your agent gets an
-        email immediately and confirms (or proposes a new time) in the war room.
+        email immediately and confirms (or proposes a new time) in the war room. Tours need at
+        least 24 hours notice — earliest available is tomorrow.
       </p>
 
       <div className="grid grid-cols-2 gap-3 mb-4">
@@ -1228,7 +1232,7 @@ function RequestTourDialog({
           <input
             type="date"
             value={preferredDate}
-            min={today}
+            min={minDate}
             onChange={(e) => setPreferredDate(e.target.value)}
             className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
           />
@@ -1245,7 +1249,7 @@ function RequestTourDialog({
           <input
             type="date"
             value={alternateDate}
-            min={today}
+            min={minDate}
             onChange={(e) => setAlternateDate(e.target.value)}
             className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
           />
