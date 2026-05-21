@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -169,6 +169,15 @@ export default function Login() {
                 Or send a magic link instead
               </button>
             </div>
+
+            <div className="mt-4 text-center">
+              <Link
+                to="/signup"
+                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors"
+              >
+                New here? Create your brokerage →
+              </Link>
+            </div>
           </form>
         ) : (
           <div className="bg-white border border-ink-100 p-10">
@@ -221,7 +230,7 @@ export default function Login() {
         )}
 
         <div className="mt-10 text-center text-2xs uppercase tracking-widest text-ink-400">
-          Platform v0.15 · P9.8
+          Platform v0.16 · P9.10
         </div>
       </div>
     </div>
