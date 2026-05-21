@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   Calendar,
+  CalendarPlus,
   MessageCircle,
   FileBarChart2,
   Users,
@@ -12,6 +13,7 @@ import {
   Check,
   X,
   Loader2,
+  Minus,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -73,6 +75,7 @@ export default function Today() {
   const [loading, setLoading] = useState(true)
   const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [proposingFor, setProposingFor] = useState<PendingTour | null>(null)
 
   const PENDING_TOUR_SELECT =
     'id, tenant_id, client_id, war_room_id, property_address, property_photo_url, preferred_date, preferred_time, alternate_date, alternate_time, notes, created_at, clients!inner(name)'
@@ -362,6 +365,14 @@ export default function Today() {
                             Confirm
                           </button>
                           <button
+                            onClick={() => setProposingFor(t)}
+                            disabled={actingOnTourId !== null}
+                            className="inline-flex items-center gap-1.5 border border-ink-300 text-ink-800 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            <CalendarPlus className="w-3 h-3" strokeWidth={2} />
+                            Suggest times
+                          </button>
+                          <button
                             onClick={() => handleDeclineTour(t)}
                             disabled={actingOnTourId !== null}
                             className="inline-flex items-center gap-1.5 border border-ink-200 text-ink-700 px-3 py-1.5 text-xs hover:border-ink-900 hover:text-ink-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
@@ -569,6 +580,19 @@ export default function Today() {
           />
         </div>
       </section>
+
+      {/* Propose-alternates dialog (P9.6) */}
+      {proposingFor && (
+        <ProposeAlternatesDialog
+          tour={proposingFor}
+          accessToken={session?.access_token || ''}
+          onClose={() => setProposingFor(null)}
+          onSubmitted={() => {
+            setProposingFor(null)
+            refreshPendingTours()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -720,4 +744,261 @@ function formatScheduledLabel(date: string | null, time: string | null): string 
     day: 'numeric',
   })
   return time ? `${dateLabel} at ${time}` : dateLabel
+}
+
+// ===========================================================================
+// P9.6 — Propose alternative tour times dialog
+// ===========================================================================
+function ProposeAlternatesDialog({
+  tour,
+  accessToken,
+  onClose,
+  onSubmitted,
+}: {
+  tour: PendingTour
+  accessToken: string
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const [slots, setSlots] = useState<Array<{ date: string; time: string }>>([
+    { date: '', time: '' },
+    { date: '', time: '' },
+    { date: '', time: '' },
+  ])
+  const [agentNote, setAgentNote] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // 24-hour minimum advance for proposed slots too
+  const minDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
+
+  function updateSlot(idx: number, key: 'date' | 'time', value: string) {
+    setSlots((prev) => prev.map((s, i) => (i === idx ? { ...s, [key]: value } : s)))
+  }
+
+  function clearSlot(idx: number) {
+    setSlots((prev) => prev.map((s, i) => (i === idx ? { date: '', time: '' } : s)))
+  }
+
+  async function handleSubmit() {
+    const filledSlots = slots.filter((s) => s.date)
+    if (filledSlots.length === 0) {
+      setError('Add at least one suggested time.')
+      return
+    }
+    if (!accessToken) {
+      setError('Not signed in.')
+      return
+    }
+    setError(null)
+    setSubmitting(true)
+
+    try {
+      // 1. Update tour_requests with proposed alternates + agent_response + status
+      const proposedAlternates = filledSlots.map((s) => ({
+        date: s.date,
+        time: s.time || null,
+      }))
+      const { error: updateError } = await supabase
+        .from('tour_requests')
+        .update({
+          status: 'rescheduled',
+          proposed_alternates: proposedAlternates,
+          agent_response: agentNote.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tour.id)
+      if (updateError) throw updateError
+
+      // 2. Post war room system message (if war room exists)
+      if (tour.war_room_id) {
+        const slotLines = proposedAlternates
+          .map((a, i) => {
+            const dateLabel = formatProposedDateLabel(a.date, a.time)
+            return `  ${i + 1}. ${dateLabel}`
+          })
+          .join('\n')
+        const body =
+          `Your agent suggested ${proposedAlternates.length} alternative time${
+            proposedAlternates.length === 1 ? '' : 's'
+          } for ${tour.property_address || 'the tour'}:\n${slotLines}` +
+          (agentNote.trim() ? `\n\n${agentNote.trim()}` : '') +
+          '\n\nPick one from your Schedule tab to confirm.'
+
+        const { data: msg, error: msgErr } = await supabase
+          .from('war_room_messages')
+          .insert({
+            tenant_id: tour.tenant_id,
+            war_room_id: tour.war_room_id,
+            sender_type: 'system',
+            body,
+            metadata: {
+              type: 'tour_alternates_proposed',
+              tour_request_id: tour.id,
+              proposed_alternates: proposedAlternates,
+            },
+          })
+          .select('id')
+          .single()
+
+        if (!msgErr && msg) {
+          // Fire-and-forget email to the client
+          fetch(`${EDGE_FUNCTIONS_BASE_URL}/notify_war_room_message`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message_id: msg.id }),
+          }).catch(() => {})
+        }
+      }
+
+      onSubmitted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const filledCount = slots.filter((s) => s.date).length
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-ink-900/40 flex items-start justify-center p-4 overflow-y-auto"
+      onClick={onClose}
+    >
+      <div
+        className="bg-cream border border-ink-200 w-full max-w-2xl mt-12 p-6 shadow-xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between mb-5 pb-4 border-b border-ink-200">
+          <div>
+            <h2 className="font-display text-2xl text-ink-900 leading-tight">
+              Suggest alternate tour times
+            </h2>
+            <p className="text-2xs uppercase tracking-widest text-ink-500 mt-1.5">
+              {tour.property_address || 'Tour'}
+            </p>
+          </div>
+          <button onClick={onClose} className="text-ink-500 hover:text-ink-900">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <p className="text-sm text-ink-600 mb-5">
+          Propose up to 3 alternate datetime slots based on listing-agent availability. The client
+          sees these on their Schedule tab and confirms the one that works for them.
+        </p>
+
+        {/* Original request reference */}
+        <div className="text-xs text-ink-500 bg-ink-50 border border-ink-100 px-3 py-2 mb-5">
+          <span className="text-2xs uppercase tracking-widest text-ink-400">
+            Client originally requested
+          </span>
+          <div className="text-ink-700 mt-0.5">
+            {tour.preferred_date
+              ? `${formatProposedDateLabel(tour.preferred_date, tour.preferred_time)}`
+              : 'No date set'}
+          </div>
+        </div>
+
+        {/* Slot inputs */}
+        <div className="space-y-3 mb-5">
+          {slots.map((slot, idx) => (
+            <div key={idx} className="flex items-end gap-2">
+              <div className="flex-1">
+                <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-1.5">
+                  Option {idx + 1}
+                  {idx === 0 && (
+                    <span className="ml-1 text-ink-400 normal-case">(required)</span>
+                  )}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="date"
+                    value={slot.date}
+                    min={minDate}
+                    onChange={(e) => updateSlot(idx, 'date', e.target.value)}
+                    className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+                  />
+                  <input
+                    type="time"
+                    value={slot.time}
+                    onChange={(e) => updateSlot(idx, 'time', e.target.value)}
+                    className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+                  />
+                </div>
+              </div>
+              {idx > 0 && slot.date && (
+                <button
+                  type="button"
+                  onClick={() => clearSlot(idx)}
+                  className="text-ink-500 hover:text-ink-900 p-2"
+                  title="Clear this slot"
+                >
+                  <Minus className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Agent note */}
+        <div className="mb-5">
+          <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-1.5">
+            Note to client (optional)
+          </label>
+          <textarea
+            value={agentNote}
+            onChange={(e) => setAgentNote(e.target.value)}
+            rows={3}
+            placeholder="e.g. Listing agent only has these access windows this week — let me know which works best."
+            className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream"
+          />
+        </div>
+
+        {error && (
+          <p className="text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 mb-4">
+            {error}
+          </p>
+        )}
+
+        <div className="flex items-center justify-end gap-2 border-t border-ink-200 pt-4">
+          <button
+            onClick={onClose}
+            disabled={submitting}
+            className="px-4 py-2 text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || filledCount === 0}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
+          >
+            {submitting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Send className="w-3.5 h-3.5" />
+            )}
+            Send {filledCount} suggestion{filledCount === 1 ? '' : 's'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function formatProposedDateLabel(date: string | null, time: string | null): string {
+  if (!date) return 'TBD'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return date
+  const dateStr = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  })
+  return time ? `${dateStr} at ${time}` : dateStr
 }
