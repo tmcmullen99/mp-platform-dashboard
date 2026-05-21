@@ -22,6 +22,7 @@ import {
   Edit3,
   Filter,
   Check,
+  Calendar,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -59,6 +60,7 @@ export default function SavedPropertiesTab({ clientId, tenantId, viewerType }: P
   const [loading, setLoading] = useState(true)
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<ExternalListing | null>(null)
+  const [requestingTour, setRequestingTour] = useState<ExternalListing | null>(null)
   const [statusFilter, setStatusFilter] = useState<'all' | 'favorites' | ExternalListingClientStatus>(
     'all',
   )
@@ -271,6 +273,7 @@ export default function SavedPropertiesTab({ clientId, tenantId, viewerType }: P
                   onUpdateStatus={(s) => updateStatus(item, s)}
                   onEdit={() => setEditing(item)}
                   onDelete={() => deleteItem(item)}
+                  onRequestTour={() => setRequestingTour(item)}
                 />
               ))}
             </tbody>
@@ -300,6 +303,19 @@ export default function SavedPropertiesTab({ clientId, tenantId, viewerType }: P
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null)
+            refresh()
+          }}
+        />
+      )}
+
+      {/* Request-tour dialog */}
+      {requestingTour && (
+        <RequestTourDialog
+          listing={requestingTour}
+          accessToken={session?.access_token || ''}
+          onClose={() => setRequestingTour(null)}
+          onSubmitted={() => {
+            setRequestingTour(null)
             refresh()
           }}
         />
@@ -385,59 +401,80 @@ function Row({
   onUpdateStatus,
   onEdit,
   onDelete,
+  onRequestTour,
 }: {
   item: ExternalListing
   onToggleFavorite: () => void
   onUpdateStatus: (s: ExternalListingClientStatus) => void
   onEdit: () => void
   onDelete: () => void
+  onRequestTour: () => void
 }) {
   const ppsf = item.price && item.sqft ? Math.round(item.price / item.sqft) : null
   const status = EXTERNAL_LISTING_STATUSES.find((s) => s.value === item.client_status)
   return (
     <tr className="hover:bg-ink-50">
       {/* Favorite */}
-      <td className="px-3 py-3 w-10">
+      <td className="px-3 py-3 w-10 align-top">
         <button onClick={onToggleFavorite} title={item.is_favorite ? 'Unfavorite' : 'Favorite'}>
           <Star
             className={`w-4 h-4 ${
-              item.is_favorite ? 'fill-amber-400 text-amber-400' : 'text-ink-300 hover:text-ink-500'
+              item.is_favorite
+                ? 'fill-ink-900 text-ink-900'
+                : 'text-ink-300 hover:text-ink-500'
             }`}
             strokeWidth={1.5}
           />
         </button>
       </td>
 
-      {/* Address */}
-      <td className="px-3 py-3 min-w-[14rem]">
-        <a
-          href={item.source_url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-start gap-3 group"
-        >
+      {/* Address + prominent Request-tour button */}
+      <td className="px-3 py-3 min-w-[16rem] align-top">
+        <div className="flex items-start gap-3">
           {item.photo_url ? (
-            <img
-              src={item.photo_url}
-              alt=""
-              className="w-12 h-12 object-cover border border-ink-200 shrink-0"
-            />
+            <a
+              href={item.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0"
+              title="Open listing on source site"
+            >
+              <img
+                src={item.photo_url}
+                alt=""
+                className="w-12 h-12 object-cover border border-ink-200"
+              />
+            </a>
           ) : (
             <div className="w-12 h-12 bg-ink-100 border border-ink-200 shrink-0 flex items-center justify-center">
               <Home className="w-4 h-4 text-ink-400" strokeWidth={1.5} />
             </div>
           )}
-          <div className="min-w-0">
-            <div className="font-medium text-ink-900 leading-snug group-hover:underline truncate">
-              {item.address || 'Unknown address'}
-              <ExternalLink className="inline w-3 h-3 ml-1 text-ink-400" />
-            </div>
-            <div className="text-2xs text-ink-500 truncate">
-              {[item.city, item.state].filter(Boolean).join(', ')}
-              {item.property_type && ` · ${item.property_type}`}
-            </div>
+          <div className="min-w-0 flex-1">
+            <a
+              href={item.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="block group"
+            >
+              <div className="font-medium text-ink-900 leading-snug group-hover:underline truncate">
+                {item.address || 'Unknown address'}
+                <ExternalLink className="inline w-3 h-3 ml-1 text-ink-400" />
+              </div>
+              <div className="text-2xs text-ink-500 truncate">
+                {[item.city, item.state].filter(Boolean).join(', ')}
+                {item.property_type && ` · ${item.property_type}`}
+              </div>
+            </a>
+            <button
+              onClick={onRequestTour}
+              className="mt-2.5 inline-flex items-center gap-1.5 bg-ink-900 text-cream px-3 py-1.5 text-2xs uppercase tracking-widest hover:bg-ink-700 transition-colors"
+            >
+              <Calendar className="w-3 h-3" strokeWidth={2} />
+              Request tour
+            </button>
           </div>
-        </a>
+        </div>
       </td>
 
       {/* Price */}
@@ -1109,4 +1146,156 @@ function detectSource(url: string): 'zillow' | 'redfin' | 'realtor' | 'other' {
   if (u.includes('redfin.com')) return 'redfin'
   if (u.includes('realtor.com')) return 'realtor'
   return 'other'
+}
+
+// ============================================================
+// Request-tour dialog (P9.3 — submits to submit_tour_request Edge Function)
+// ============================================================
+function RequestTourDialog({
+  listing,
+  accessToken,
+  onClose,
+  onSubmitted,
+}: {
+  listing: ExternalListing
+  accessToken: string
+  onClose: () => void
+  onSubmitted: () => void
+}) {
+  const [preferredDate, setPreferredDate] = useState('')
+  const [preferredTime, setPreferredTime] = useState('')
+  const [alternateDate, setAlternateDate] = useState('')
+  const [alternateTime, setAlternateTime] = useState('')
+  const [notes, setNotes] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const addressLine =
+    [listing.address, listing.city, listing.state].filter(Boolean).join(', ') ||
+    'this property'
+  const today = new Date().toISOString().slice(0, 10)
+
+  async function handleSubmit() {
+    if (!preferredDate) {
+      setError('Pick a preferred date.')
+      return
+    }
+    if (!accessToken) {
+      setError('Not signed in.')
+      return
+    }
+    setError(null)
+    setSubmitting(true)
+    try {
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/submit_tour_request`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          external_listing_id: listing.id,
+          client_id: listing.client_id,
+          preferred_date: preferredDate,
+          preferred_time: preferredTime || null,
+          alternate_date: alternateDate || null,
+          alternate_time: alternateTime || null,
+          notes: notes || null,
+        }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || !json.ok) {
+        throw new Error(json.error || `HTTP ${resp.status}`)
+      }
+      onSubmitted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <DialogShell onClose={onClose} title="Request a tour">
+      <p className="text-sm text-ink-600 mb-5">
+        Schedule a tour of{' '}
+        <span className="text-ink-900 font-medium">{addressLine}</span>. Your agent gets an
+        email immediately and confirms (or proposes a new time) in the war room.
+      </p>
+
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <Field label="Preferred date">
+          <input
+            type="date"
+            value={preferredDate}
+            min={today}
+            onChange={(e) => setPreferredDate(e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Preferred time">
+          <input
+            type="time"
+            value={preferredTime}
+            onChange={(e) => setPreferredTime(e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Alternate date (optional)">
+          <input
+            type="date"
+            value={alternateDate}
+            min={today}
+            onChange={(e) => setAlternateDate(e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Alternate time (optional)">
+          <input
+            type="time"
+            value={alternateTime}
+            onChange={(e) => setAlternateTime(e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Notes (optional)" colspan={2}>
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={3}
+            placeholder="Anything your agent should know — financing status, must-see features, parking access, etc."
+            className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream"
+          />
+        </Field>
+      </div>
+
+      {error && (
+        <p className="text-xs text-red-700 bg-red-50 border border-red-200 px-3 py-2 mb-4">
+          {error}
+        </p>
+      )}
+
+      <div className="flex items-center justify-end gap-2 border-t border-ink-200 pt-4">
+        <button
+          onClick={onClose}
+          disabled={submitting}
+          className="px-4 py-2 text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || !preferredDate}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
+        >
+          {submitting ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Calendar className="w-3.5 h-3.5" />
+          )}
+          Send tour request
+        </button>
+      </div>
+    </DialogShell>
+  )
 }
