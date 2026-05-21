@@ -39,6 +39,7 @@ import {
   ListingEdit,
   DocumentRecord,
   SERVICE_PACKAGES,
+  ServicePackage,
 } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import ListingPhotos from './ListingPhotos'
@@ -71,6 +72,15 @@ export default function ListingBuilder({
   const [floorPlans, setFloorPlans] = useState<DocumentRecord[]>([])
   const [pendingEdits, setPendingEdits] = useState<ListingEdit[]>([])
   const [loading, setLoading] = useState(true)
+
+  // P9.12.1: service_package owned locally so the strategy modal can update
+  // it without forcing a parent re-fetch. Re-syncs whenever the prop changes.
+  const [servicePackage, setServicePackage] = useState<ServicePackage | null>(
+    deal.service_package,
+  )
+  useEffect(() => {
+    setServicePackage(deal.service_package)
+  }, [deal.service_package])
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -142,7 +152,7 @@ export default function ListingBuilder({
   const floorState: CardState = floorPlans.length > 0 ? 'complete' : 'not_started'
   const netSheetState: CardState = 'not_started' // P9.12.3
   const servicePkgState: CardState =
-    deal.service_package && deal.service_package !== 'tbd' ? 'complete' : 'in_progress'
+    servicePackage && servicePackage !== 'tbd' ? 'complete' : 'in_progress'
   const publishState: CardState = 'not_started' // P9.12.4
 
   const states: CardState[] = [
@@ -239,7 +249,13 @@ export default function ListingBuilder({
               onChanged={refresh}
             />
             <NetSheetCard state={netSheetState} />
-            <ServicePackageCard deal={deal} state={servicePkgState} />
+            <ServicePackageCard
+              deal={deal}
+              mode={mode}
+              currentPackage={servicePackage}
+              state={servicePkgState}
+              onChange={setServicePackage}
+            />
             <PublishStatusCard state={publishState} />
           </div>
 
@@ -566,25 +582,340 @@ function NetSheetCard({ state }: { state: CardState }) {
   )
 }
 
-function ServicePackageCard({ deal, state }: { deal: Deal; state: CardState }) {
-  const pkg = SERVICE_PACKAGES.find((p) => p.value === deal.service_package)
-  const summary = !pkg
-    ? 'No package selected yet.'
-    : pkg.value === 'tbd'
-      ? 'Not yet chosen — we’ll walk through your options.'
-      : `${pkg.label} — ${truncate(pkg.blurb, 110)}`
+function ServicePackageCard({
+  deal,
+  mode,
+  currentPackage,
+  state,
+  onChange,
+}: {
+  deal: Deal
+  mode: 'agent' | 'client'
+  currentPackage: ServicePackage | null
+  state: CardState
+  onChange: (next: ServicePackage) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const pkg = SERVICE_PACKAGES.find((p) => p.value === currentPackage)
+  const isSellDeal = deal.deal_type === 'sell'
+  const summary = !pkg || pkg.value === 'tbd'
+    ? 'Three tiers of distribution. Start where you’re comfortable, upgrade anytime.'
+    : `${pkg.label} — ${truncate(pkg.blurb, 110)}`
 
   return (
-    <Card state={state} icon={Sparkles} title="Service strategy" summary={summary}>
-      <button
-        disabled
-        title="Comparable table coming in P9.12.2"
-        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-400 cursor-not-allowed"
+    <>
+      <Card state={state} icon={Sparkles} title="Service strategy" summary={summary}>
+        {isSellDeal ? (
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-700 hover:text-ink-900"
+          >
+            <Sparkles className="w-3 h-3" />
+            {!pkg || pkg.value === 'tbd' ? 'Choose your strategy' : 'Compare & change'}
+          </button>
+        ) : (
+          <span className="text-2xs uppercase tracking-widest text-ink-400">
+            {pkg?.label || 'Buyer engagement'}
+          </span>
+        )}
+      </Card>
+
+      {open && isSellDeal && (
+        <StrategyModal
+          deal={deal}
+          mode={mode}
+          currentPackage={currentPackage}
+          onClose={() => setOpen(false)}
+          onSelect={async (next) => {
+            const prev = currentPackage
+            onChange(next) // optimistic
+            const { error } = await supabase
+              .from('deals')
+              .update({ service_package: next })
+              .eq('id', deal.id)
+            if (error) {
+              onChange(prev as ServicePackage) // revert
+              alert('Could not save strategy: ' + error.message)
+              return
+            }
+            setOpen(false)
+          }}
+        />
+      )}
+    </>
+  )
+}
+
+// ============================================================================
+// Strategy comparable feature table — the value ladder
+// ============================================================================
+
+type SellTier = Extract<ServicePackage, 'make_me_move' | 'coming_soon' | 'active_listing'>
+
+const SELL_TIERS: Array<{
+  value: SellTier
+  label: string
+  tagline: string
+}> = [
+  {
+    value: 'make_me_move',
+    label: 'Make Me Move',
+    tagline: 'Test the market quietly, no commitment.',
+  },
+  {
+    value: 'coming_soon',
+    label: 'Coming Soon',
+    tagline: 'Build demand before the MLS clock starts.',
+  },
+  {
+    value: 'active_listing',
+    label: 'Active Listing',
+    tagline: 'Maximum reach across every channel.',
+  },
+]
+
+const STRATEGY_FEATURES: Array<{
+  label: string
+  tiers: Record<SellTier, boolean>
+}> = [
+  // Foundation — every tier
+  {
+    label: 'Hero photo + dedicated property landing page',
+    tiers: { make_me_move: true, coming_soon: true, active_listing: true },
+  },
+  {
+    label: 'Email drip to warm buyer pool',
+    tiers: { make_me_move: true, coming_soon: true, active_listing: true },
+  },
+  {
+    label: 'Soft launch — no MLS days-on-market clock',
+    tiers: { make_me_move: true, coming_soon: true, active_listing: false },
+  },
+  // Coming Soon adds
+  {
+    label: 'Professional photography',
+    tiers: { make_me_move: false, coming_soon: true, active_listing: true },
+  },
+  {
+    label: 'Pre-MLS broker network announcement',
+    tiers: { make_me_move: false, coming_soon: true, active_listing: true },
+  },
+  {
+    label: 'Social media campaign',
+    tiers: { make_me_move: false, coming_soon: true, active_listing: true },
+  },
+  {
+    label: 'Yard sign',
+    tiers: { make_me_move: false, coming_soon: true, active_listing: true },
+  },
+  // Active adds
+  {
+    label: 'Staging consultation',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+  {
+    label: 'Full MLS syndication (Zillow, Redfin, Trulia, Realtor.com)',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+  {
+    label: 'Public open houses',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+  {
+    label: 'Drone + video tour',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+  {
+    label: 'Weekly seller reports',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+  {
+    label: 'Showings management + lockbox',
+    tiers: { make_me_move: false, coming_soon: false, active_listing: true },
+  },
+]
+
+function StrategyModal({
+  deal,
+  mode,
+  currentPackage,
+  onClose,
+  onSelect,
+}: {
+  deal: Deal
+  mode: 'agent' | 'client'
+  currentPackage: ServicePackage | null
+  onClose: () => void
+  onSelect: (next: SellTier) => Promise<void> | void
+}) {
+  const [submitting, setSubmitting] = useState<SellTier | null>(null)
+
+  // ESC to close
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  // Compute "next upgrade" tier for the upgrade badge
+  const currentIdx = SELL_TIERS.findIndex((t) => t.value === currentPackage)
+  const nextUpgradeIdx = currentIdx >= 0 && currentIdx < SELL_TIERS.length - 1 ? currentIdx + 1 : -1
+
+  async function pick(tier: SellTier) {
+    if (tier === currentPackage) {
+      onClose()
+      return
+    }
+    setSubmitting(tier)
+    try {
+      await onSelect(tier)
+    } finally {
+      setSubmitting(null)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink-900/40"
+      onClick={onClose}
+    >
+      <div
+        className="bg-cream w-full max-w-5xl max-h-[90vh] overflow-y-auto border border-ink-200"
+        onClick={(e) => e.stopPropagation()}
       >
-        <Sparkles className="w-3 h-3" />
-        Comparable table coming next sprint
-      </button>
-    </Card>
+        {/* Header */}
+        <div className="px-8 py-6 border-b border-ink-200 flex items-start justify-between gap-4">
+          <div>
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+              Service strategy · {deal.title || 'Listing'}
+            </div>
+            <h2 className="font-display text-2xl text-ink-900 leading-tight">
+              {mode === 'client'
+                ? 'Choose your distribution.'
+                : 'Choose the distribution for this client.'}
+            </h2>
+            <p className="text-sm text-ink-600 mt-2 max-w-2xl leading-relaxed">
+              Each tier adds reach. Start where you’re comfortable — you can upgrade to a higher
+              tier any time without re-doing the work below it.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-ink-500 hover:text-ink-900 shrink-0"
+            aria-label="Close"
+          >
+            <XIcon className="w-5 h-5" strokeWidth={1.5} />
+          </button>
+        </div>
+
+        {/* Tier columns */}
+        <div className="px-8 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {SELL_TIERS.map((tier, idx) => {
+              const isCurrent = tier.value === currentPackage
+              const isUpgrade = idx === nextUpgradeIdx
+              return (
+                <div
+                  key={tier.value}
+                  className={`border bg-white p-5 flex flex-col ${
+                    isCurrent
+                      ? 'border-ink-900 ring-2 ring-ink-900/10'
+                      : 'border-ink-200'
+                  }`}
+                >
+                  {/* Column header */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between gap-2 mb-1.5 h-5">
+                      {isCurrent && (
+                        <span className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest bg-ink-900 text-cream px-1.5 py-0.5">
+                          <Check className="w-3 h-3" strokeWidth={2} />
+                          Current
+                        </span>
+                      )}
+                      {!isCurrent && isUpgrade && (
+                        <span className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest bg-emerald-50 text-emerald-700 px-1.5 py-0.5">
+                          <Sparkles className="w-3 h-3" strokeWidth={2} />
+                          Upgrade
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-display text-xl text-ink-900 leading-tight">
+                      {tier.label}
+                    </h3>
+                    <p className="text-xs text-ink-600 mt-1 leading-relaxed min-h-[2.5rem]">
+                      {tier.tagline}
+                    </p>
+                  </div>
+
+                  {/* Features */}
+                  <ul className="space-y-2 mb-5 flex-1">
+                    {STRATEGY_FEATURES.map((f) => {
+                      const included = f.tiers[tier.value]
+                      return (
+                        <li
+                          key={f.label}
+                          className={`flex items-start gap-2 text-xs leading-relaxed ${
+                            included ? 'text-ink-800' : 'text-ink-400'
+                          }`}
+                        >
+                          {included ? (
+                            <Check
+                              className="w-3 h-3 mt-1 shrink-0 text-emerald-700"
+                              strokeWidth={2}
+                            />
+                          ) : (
+                            <XIcon
+                              className="w-3 h-3 mt-1 shrink-0 text-ink-300"
+                              strokeWidth={2}
+                            />
+                          )}
+                          <span>{f.label}</span>
+                        </li>
+                      )
+                    })}
+                  </ul>
+
+                  {/* CTA */}
+                  <button
+                    onClick={() => pick(tier.value)}
+                    disabled={submitting !== null || isCurrent}
+                    className={`w-full inline-flex items-center justify-center gap-2 py-2.5 text-2xs uppercase tracking-widest transition-colors ${
+                      isCurrent
+                        ? 'bg-ink-50 text-ink-500 cursor-default'
+                        : isUpgrade
+                          ? 'bg-ink-900 text-cream hover:bg-ink-700'
+                          : 'bg-cream text-ink-900 border border-ink-300 hover:border-ink-900'
+                    } disabled:opacity-50`}
+                  >
+                    {submitting === tier.value ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Saving…
+                      </>
+                    ) : isCurrent ? (
+                      'Currently selected'
+                    ) : isUpgrade ? (
+                      <>
+                        Upgrade to {tier.label}
+                        <Sparkles className="w-3 h-3" strokeWidth={2} />
+                      </>
+                    ) : (
+                      `Choose ${tier.label}`
+                    )}
+                  </button>
+                </div>
+              )
+            })}
+          </div>
+
+          <p className="text-2xs uppercase tracking-widest text-ink-400 text-center mt-6">
+            You can change strategies any time. Your photos, description, and uploads carry over.
+          </p>
+        </div>
+      </div>
+    </div>
   )
 }
 
