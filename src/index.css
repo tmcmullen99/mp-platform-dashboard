@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --tenant-primary: #1a1f2e;
+  --tenant-secondary: #91a1ba;
+  --tenant-accent: #353535;
+  --tenant-background: #ffffff;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
+}
+
+/* Refined scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd0db;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #a3acbf;
+}
+
+/* Letter-spacing tuning for the editorial type stack */
+.font-display {
+  letter-spacing: -0.015em;
+}

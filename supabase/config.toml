@@ -1,0 +1,24 @@
+# Supabase project config — used when running the Supabase CLI locally
+# (e.g. `supabase db push`, `supabase functions deploy <name>`).
+# Currently deploys happen through the Supabase MCP from Claude, but this
+# config lives in the repo so the CLI path is ready when needed.
+
+project_id = "kumfuludrhoqirxvaqja"
+
+[db]
+major_version = 15
+
+[functions.chat]
+verify_jwt = true
+
+[functions.send_campaign]
+verify_jwt = true
+
+[functions.ingest_contact]
+verify_jwt = false
+
+[functions.invite_client]
+verify_jwt = true
+
+[functions.notify_war_room_message]
+verify_jwt = true
