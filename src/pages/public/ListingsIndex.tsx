@@ -1,158 +1,143 @@
-// P9.13.0 — Public listing detail page.
+// P9.13.1 — Public listings catalog.
 //
-// Route: /listings/:slug (no auth)
+// Route: /listings (no auth)
 //
-// Anon-RLS-gated. The slug looks up coming_soon_listings; the deal that
-// references it MUST exist and have listing_status IN (soft_launch, active,
-// pending) — otherwise the lookups return nothing and we render a 404.
-// Tenant + branding derived from the deal's tenant_id.
+// Anon-readable index of every sell-side deal currently in
+// soft_launch / active / pending. RLS filters down to public rows.
+// Grid layout, status filter chips, address search.
 
-import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import {
-  Bed,
-  Bath,
-  Square,
-  MapPin,
-  Calendar,
-  Mail,
-  Phone,
-  ArrowLeft,
-} from 'lucide-react'
-import PublicLayout, {
-  TenantPublic,
-  TenantBrandingPublic,
-} from '@/components/public/PublicLayout'
+import { Bed, Bath, Square, Search, MapPin } from 'lucide-react'
+import PublicLayout from '@/components/public/PublicLayout'
 
-type Listing = {
-  id: string
+type ListingCard = {
+  deal_id: string
+  tenant_id: string
+  listing_status: string
   slug: string
   name: string
   subtitle: string | null
   neighborhood: string | null
-  property_type: string | null
   bedrooms: number | null
   bathrooms: number | null
   area_sqft: number | null
   price_estimate: string | null
-  expected_list_date: string | null
-  description_html: string | null
-  features_html: string | null
   hero_image_url: string | null
-  hero_image_alt: string | null
+  hero_photo_path: string | null
 }
 
-type Photo = {
-  id: string
-  storage_path: string
-  caption: string | null
-  alt_text: string | null
-  sort_order: number
-  is_hero: boolean
-}
+type StatusFilter = 'all' | 'soft_launch' | 'active' | 'pending'
 
-type DealRow = {
-  id: string
-  tenant_id: string
-  listing_status: string
-}
-
-export default function PublicListingDetail() {
-  const { slug } = useParams<{ slug: string }>()
+export default function ListingsIndex() {
   const [loading, setLoading] = useState(true)
-  const [listing, setListing] = useState<Listing | null>(null)
-  const [deal, setDeal] = useState<DealRow | null>(null)
-  const [photos, setPhotos] = useState<Array<Photo & { url: string }>>([])
-  const [tenant, setTenant] = useState<TenantPublic | null>(null)
-  const [branding, setBranding] = useState<TenantBrandingPublic | null>(null)
-  const [activeUrl, setActiveUrl] = useState<string | null>(null)
-  const [notFound, setNotFound] = useState(false)
+  const [listings, setListings] = useState<ListingCard[]>([])
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => {
-    if (!slug) return
     let cancelled = false
 
     async function load() {
       setLoading(true)
-      setNotFound(false)
 
-      // 1. Look up listing by slug
-      const { data: listingData } = await supabase
-        .from('coming_soon_listings')
-        .select(
-          'id, slug, name, subtitle, neighborhood, property_type, bedrooms, bathrooms, area_sqft, price_estimate, expected_list_date, description_html, features_html, hero_image_url, hero_image_alt',
-        )
-        .eq('slug', slug)
-        .maybeSingle()
-
-      if (cancelled) return
-      if (!listingData) {
-        setNotFound(true)
-        setLoading(false)
-        return
-      }
-
-      // 2. Find the deal that owns this listing (RLS filters to public statuses)
-      const { data: dealData } = await supabase
+      // 1. Get public deals (RLS gates to public statuses)
+      const { data: dealRows } = await supabase
         .from('deals')
-        .select('id, tenant_id, listing_status')
-        .eq('coming_soon_listing_id', listingData.id)
+        .select('id, tenant_id, listing_status, coming_soon_listing_id')
         .eq('deal_type', 'sell')
         .in('listing_status', ['soft_launch', 'active', 'pending'])
-        .limit(1)
-        .maybeSingle()
+        .not('coming_soon_listing_id', 'is', null)
+        .order('created_at', { ascending: false })
 
       if (cancelled) return
-      if (!dealData) {
-        // Listing exists but isn't public — treat as 404
-        setNotFound(true)
+      const deals = (dealRows || []) as Array<{
+        id: string
+        tenant_id: string
+        listing_status: string
+        coming_soon_listing_id: string
+      }>
+
+      if (deals.length === 0) {
+        setListings([])
         setLoading(false)
         return
       }
 
-      setListing(listingData as Listing)
-      setDeal(dealData as DealRow)
+      const listingIds = deals.map((d) => d.coming_soon_listing_id)
+      const dealIds = deals.map((d) => d.id)
 
-      // 3. Photos + tenant + branding in parallel
-      const [photoRes, tenantRes, brandingRes] = await Promise.all([
+      // 2. Get CSL data + photos in parallel
+      const [csls, photoRows] = await Promise.all([
+        supabase
+          .from('coming_soon_listings')
+          .select(
+            'id, slug, name, subtitle, neighborhood, bedrooms, bathrooms, area_sqft, price_estimate, hero_image_url',
+          )
+          .in('id', listingIds),
         supabase
           .from('listing_photos')
-          .select('id, storage_path, caption, alt_text, sort_order, is_hero')
-          .eq('deal_id', dealData.id)
+          .select('deal_id, storage_path, is_hero, sort_order')
+          .in('deal_id', dealIds)
           .order('sort_order', { ascending: true }),
-        supabase
-          .from('tenants')
-          .select('id, slug, name')
-          .eq('id', dealData.tenant_id)
-          .maybeSingle(),
-        supabase
-          .from('tenant_branding')
-          .select('*')
-          .eq('tenant_id', dealData.tenant_id)
-          .maybeSingle(),
       ])
 
       if (cancelled) return
 
-      const photoRows = (photoRes.data || []) as Photo[]
-      const withUrls = photoRows.map((p) => {
-        const { data: urlData } = supabase.storage
-          .from('listing-photos')
-          .getPublicUrl(p.storage_path)
-        return { ...p, url: urlData.publicUrl }
+      const cslMap = new Map<string, Record<string, unknown>>()
+      ;(csls.data || []).forEach((c) => {
+        cslMap.set((c as { id: string }).id, c as Record<string, unknown>)
       })
-      setPhotos(withUrls)
 
-      const heroPhoto = withUrls.find((p) => p.is_hero) || withUrls[0]
-      if (heroPhoto) {
-        setActiveUrl(heroPhoto.url)
-      } else if (listingData.hero_image_url) {
-        setActiveUrl(listingData.hero_image_url)
-      }
+      // Best photo per deal: hero wins; otherwise first by sort_order
+      const photosByDeal = new Map<string, { path: string; is_hero: boolean }>()
+      ;(photoRows.data || []).forEach((p) => {
+        const row = p as { deal_id: string; storage_path: string; is_hero: boolean }
+        const existing = photosByDeal.get(row.deal_id)
+        if (!existing || (row.is_hero && !existing.is_hero)) {
+          photosByDeal.set(row.deal_id, {
+            path: row.storage_path,
+            is_hero: row.is_hero,
+          })
+        }
+      })
 
-      setTenant(tenantRes.data as TenantPublic | null)
-      setBranding(brandingRes.data as TenantBrandingPublic | null)
+      const cards: ListingCard[] = deals
+        .map((d) => {
+          const csl = cslMap.get(d.coming_soon_listing_id) as
+            | {
+                slug: string
+                name: string
+                subtitle: string | null
+                neighborhood: string | null
+                bedrooms: number | null
+                bathrooms: number | null
+                area_sqft: number | null
+                price_estimate: string | null
+                hero_image_url: string | null
+              }
+            | undefined
+          if (!csl) return null
+          return {
+            deal_id: d.id,
+            tenant_id: d.tenant_id,
+            listing_status: d.listing_status,
+            slug: csl.slug,
+            name: csl.name,
+            subtitle: csl.subtitle,
+            neighborhood: csl.neighborhood,
+            bedrooms: csl.bedrooms,
+            bathrooms: csl.bathrooms,
+            area_sqft: csl.area_sqft,
+            price_estimate: csl.price_estimate,
+            hero_image_url: csl.hero_image_url,
+            hero_photo_path: photosByDeal.get(d.id)?.path || null,
+          }
+        })
+        .filter((x): x is ListingCard => x !== null)
+
+      setListings(cards)
       setLoading(false)
     }
 
@@ -160,299 +145,199 @@ export default function PublicListingDetail() {
     return () => {
       cancelled = true
     }
-  }, [slug])
+  }, [])
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-2xs uppercase tracking-widest text-ink-500">
-          Loading listing…
-        </div>
-      </div>
-    )
-  }
+  const filtered = useMemo(() => {
+    return listings.filter((l) => {
+      if (statusFilter !== 'all' && l.listing_status !== statusFilter)
+        return false
+      if (search) {
+        const q = search.toLowerCase()
+        if (
+          !l.name.toLowerCase().includes(q) &&
+          !(l.neighborhood || '').toLowerCase().includes(q) &&
+          !(l.subtitle || '').toLowerCase().includes(q)
+        )
+          return false
+      }
+      return true
+    })
+  }, [listings, statusFilter, search])
 
-  if (notFound || !listing) {
-    return (
-      <PublicLayout
-        tenant={tenant || undefined}
-        branding={branding || undefined}
-      >
-        <div className="max-w-3xl mx-auto px-6 py-24 text-center">
-          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-            404
-          </div>
-          <h1 className="font-display text-3xl text-ink-900 mb-3">
-            Listing not found
-          </h1>
-          <p className="text-ink-600 mb-6">
-            This listing may have been removed, sold, or isn’t public yet.
-          </p>
-          <Link
-            to="/listings"
-            className="inline-flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-700 border-b border-ink-300 pb-0.5"
-          >
-            <ArrowLeft className="w-3 h-3" /> Browse all listings
-          </Link>
-        </div>
-      </PublicLayout>
-    )
-  }
-
-  const isPending = deal?.listing_status === 'pending'
-  const isSoftLaunch = deal?.listing_status === 'soft_launch'
+  const counts = useMemo(() => {
+    const c: Record<StatusFilter, number> = {
+      all: listings.length,
+      soft_launch: 0,
+      active: 0,
+      pending: 0,
+    }
+    listings.forEach((l) => {
+      if (l.listing_status === 'soft_launch') c.soft_launch++
+      else if (l.listing_status === 'active') c.active++
+      else if (l.listing_status === 'pending') c.pending++
+    })
+    return c
+  }, [listings])
 
   return (
-    <PublicLayout tenant={tenant || undefined} branding={branding || undefined}>
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Back link */}
-        <Link
-          to="/listings"
-          className="inline-flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 mb-6"
-        >
-          <ArrowLeft className="w-3 h-3" /> All listings
-        </Link>
+    <PublicLayout>
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        {/* Header */}
+        <header className="mb-10">
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">
+            Listings
+          </div>
+          <h1 className="font-display text-4xl md:text-5xl text-ink-900 mb-3">
+            All listings
+          </h1>
+          <p className="text-ink-600 max-w-2xl leading-relaxed">
+            Browse current and upcoming properties. Click any listing for
+            photos, details, and contact information.
+          </p>
+        </header>
 
-        {/* Hero photo */}
-        {activeUrl && (
-          <div className="aspect-[16/9] bg-ink-100 overflow-hidden mb-3">
-            <img
-              src={activeUrl}
-              alt={listing.hero_image_alt || listing.name}
-              className="w-full h-full object-cover"
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-3 mb-8 pb-4 border-b border-ink-200">
+          <div className="relative flex-1 min-w-[200px]">
+            <Search
+              className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-400"
+              strokeWidth={1.5}
+            />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by address or neighborhood"
+              className="w-full pl-9 pr-3 py-2 border border-ink-200 text-sm bg-cream focus:outline-none focus:border-ink-900"
             />
           </div>
-        )}
-
-        {/* Thumbnails */}
-        {photos.length > 1 && (
-          <div className="flex gap-2 overflow-x-auto pb-2 mb-10">
-            {photos.map((p) => {
-              const isActive = p.url === activeUrl
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => setActiveUrl(p.url)}
-                  className={`w-20 h-20 shrink-0 overflow-hidden border-2 ${
-                    isActive ? 'border-ink-900' : 'border-transparent hover:border-ink-300'
-                  }`}
-                >
-                  <img
-                    src={p.url}
-                    alt={p.alt_text || ''}
-                    className="w-full h-full object-cover"
-                  />
-                </button>
-              )
-            })}
+          <div className="flex items-center gap-1.5">
+            {(['all', 'soft_launch', 'active', 'pending'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setStatusFilter(s)}
+                className={`px-3 py-1.5 text-2xs uppercase tracking-widest border ${
+                  statusFilter === s
+                    ? 'border-ink-900 bg-ink-900 text-cream'
+                    : 'border-ink-200 text-ink-600 hover:border-ink-400'
+                }`}
+              >
+                {s === 'all'
+                  ? `All (${counts.all})`
+                  : s === 'soft_launch'
+                    ? `Coming soon (${counts.soft_launch})`
+                    : s === 'active'
+                      ? `Active (${counts.active})`
+                      : `Pending (${counts.pending})`}
+              </button>
+            ))}
           </div>
-        )}
-
-        {/* Content grid */}
-        <div className="grid md:grid-cols-3 gap-10">
-          {/* Left: details */}
-          <div className="md:col-span-2 space-y-10">
-            <header>
-              {(isPending || isSoftLaunch) && (
-                <span
-                  className={`inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest px-2 py-0.5 mb-3 ${
-                    isPending
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-sky-50 text-sky-700'
-                  }`}
-                >
-                  {isPending ? 'Pending' : 'Coming soon'}
-                </span>
-              )}
-              <h1 className="font-display text-4xl md:text-5xl text-ink-900 leading-tight mb-2">
-                {listing.name}
-              </h1>
-              {listing.subtitle && (
-                <p className="text-lg text-ink-600 italic leading-relaxed">
-                  {listing.subtitle}
-                </p>
-              )}
-              {listing.neighborhood && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-ink-600">
-                  <MapPin className="w-4 h-4" strokeWidth={1.5} />
-                  {listing.neighborhood}
-                </div>
-              )}
-            </header>
-
-            {/* Stats strip */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 border-y border-ink-200 py-6">
-              {listing.bedrooms !== null && (
-                <Stat
-                  icon={Bed}
-                  value={listing.bedrooms}
-                  label="Bedrooms"
-                />
-              )}
-              {listing.bathrooms !== null && (
-                <Stat
-                  icon={Bath}
-                  value={listing.bathrooms}
-                  label="Bathrooms"
-                />
-              )}
-              {listing.area_sqft && (
-                <Stat
-                  icon={Square}
-                  value={listing.area_sqft.toLocaleString()}
-                  label="Square feet"
-                />
-              )}
-              {listing.price_estimate && (
-                <Stat value={listing.price_estimate} label="Price" />
-              )}
-            </div>
-
-            {/* Description */}
-            {listing.description_html && (
-              <section>
-                <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-                  About this home
-                </div>
-                <div
-                  className="prose max-w-none text-ink-700 leading-relaxed prose-headings:font-display prose-headings:text-ink-900"
-                  dangerouslySetInnerHTML={{ __html: listing.description_html }}
-                />
-              </section>
-            )}
-
-            {/* Features */}
-            {listing.features_html && (
-              <section>
-                <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-                  Features
-                </div>
-                <div
-                  className="prose max-w-none text-ink-700 leading-relaxed prose-headings:font-display prose-headings:text-ink-900"
-                  dangerouslySetInnerHTML={{ __html: listing.features_html }}
-                />
-              </section>
-            )}
-
-            {/* Expected list date */}
-            {listing.expected_list_date && isSoftLaunch && (
-              <div className="text-sm text-ink-600 flex items-center gap-2 border-t border-ink-200 pt-6">
-                <Calendar className="w-4 h-4" strokeWidth={1.5} />
-                Expected on market:{' '}
-                {new Date(listing.expected_list_date).toLocaleDateString(
-                  'en-US',
-                  { month: 'long', day: 'numeric', year: 'numeric' },
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Right: agent card (sticky on desktop) */}
-          <aside className="md:col-span-1">
-            <div className="md:sticky md:top-24">
-              <AgentCard branding={branding} />
-            </div>
-          </aside>
         </div>
+
+        {/* Grid */}
+        {loading ? (
+          <div className="text-2xs uppercase tracking-widest text-ink-500 py-20 text-center">
+            Loading listings…
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">
+              No listings
+            </div>
+            <p className="text-ink-600">
+              {listings.length === 0
+                ? 'No public listings yet.'
+                : 'No listings match your filters.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filtered.map((l) => (
+              <ListingCardItem key={l.deal_id} listing={l} />
+            ))}
+          </div>
+        )}
       </div>
     </PublicLayout>
   )
 }
 
-function Stat({
-  icon: Icon,
-  value,
-  label,
-}: {
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>
-  value: React.ReactNode
-  label: string
-}) {
-  return (
-    <div>
-      <div className="font-display text-2xl text-ink-900 flex items-baseline gap-2">
-        {Icon && <Icon className="w-5 h-5 text-ink-500" strokeWidth={1.5} />}
-        {value}
-      </div>
-      <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">
-        {label}
-      </div>
-    </div>
-  )
-}
-
-function AgentCard({ branding }: { branding: TenantBrandingPublic | null }) {
-  if (!branding) {
-    return (
-      <div className="border border-ink-200 bg-cream p-6 text-sm text-ink-600">
-        Agent info not available.
-      </div>
-    )
+function ListingCardItem({ listing }: { listing: ListingCard }) {
+  let photoUrl = listing.hero_image_url
+  if (listing.hero_photo_path) {
+    const { data } = supabase.storage
+      .from('listing-photos')
+      .getPublicUrl(listing.hero_photo_path)
+    photoUrl = data.publicUrl
   }
 
+  const statusBadge =
+    listing.listing_status === 'soft_launch'
+      ? 'bg-sky-50 text-sky-700'
+      : listing.listing_status === 'active'
+        ? 'bg-emerald-50 text-emerald-700'
+        : 'bg-amber-50 text-amber-700'
+  const statusLabel =
+    listing.listing_status === 'soft_launch'
+      ? 'Coming soon'
+      : listing.listing_status === 'active'
+        ? 'Active'
+        : 'Pending'
+
   return (
-    <div className="border border-ink-200 bg-cream p-6">
-      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-4">
-        Listing agent
-      </div>
-      {branding.agent_photo_url ? (
-        <img
-          src={branding.agent_photo_url}
-          alt={branding.agent_name || ''}
-          className="w-20 h-20 rounded-full object-cover mb-4"
-        />
-      ) : (
-        <div className="w-20 h-20 rounded-full bg-ink-100 mb-4 flex items-center justify-center font-display text-2xl text-ink-500">
-          {(branding.agent_name?.[0] || 'A').toUpperCase()}
-        </div>
-      )}
-      <div className="font-display text-xl text-ink-900">
-        {branding.agent_name}
-      </div>
-      {branding.agent_title && (
-        <div className="text-sm text-ink-600 mt-1">{branding.agent_title}</div>
-      )}
-      {branding.brokerage_affiliation && (
-        <div className="text-xs text-ink-500 mt-1">
-          {branding.brokerage_affiliation}
-        </div>
-      )}
-      {branding.dre_license && (
-        <div className="text-2xs uppercase tracking-widest text-ink-400 mt-1">
-          DRE #{branding.dre_license}
-        </div>
-      )}
-
-      <div className="mt-5 space-y-2">
-        {branding.agent_email && (
-          <a
-            href={`mailto:${branding.agent_email}`}
-            className="flex items-center gap-2 text-sm text-ink-700 hover:text-ink-900"
-          >
-            <Mail className="w-4 h-4" strokeWidth={1.5} />
-            {branding.agent_email}
-          </a>
-        )}
-        {branding.agent_phone && (
-          <a
-            href={`tel:${branding.agent_phone}`}
-            className="flex items-center gap-2 text-sm text-ink-700 hover:text-ink-900"
-          >
-            <Phone className="w-4 h-4" strokeWidth={1.5} />
-            {branding.agent_phone}
-          </a>
+    <Link to={`/listings/${listing.slug}`} className="group block">
+      <div className="aspect-[4/3] bg-ink-100 overflow-hidden mb-3">
+        {photoUrl ? (
+          <img
+            src={photoUrl}
+            alt={listing.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-ink-400 text-2xs uppercase tracking-widest">
+            No photo
+          </div>
         )}
       </div>
-
-      {/* CTA — wired in P9.13.3 (lead capture). For now opens mailto. */}
-      {branding.agent_email && (
-        <a
-          href={`mailto:${branding.agent_email}?subject=Inquiry about a listing`}
-          className="block w-full text-center mt-6 px-4 py-3 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+      <div className="mb-1.5">
+        <span
+          className={`inline-flex items-center text-2xs uppercase tracking-widest px-2 py-0.5 ${statusBadge}`}
         >
-          Request more info
-        </a>
+          {statusLabel}
+        </span>
+      </div>
+      <h3 className="font-display text-xl text-ink-900 leading-tight group-hover:underline">
+        {listing.name}
+      </h3>
+      {listing.neighborhood && (
+        <div className="text-sm text-ink-600 flex items-center gap-1 mt-1">
+          <MapPin className="w-3 h-3" strokeWidth={1.5} /> {listing.neighborhood}
+        </div>
       )}
-    </div>
+      <div className="flex items-center gap-4 mt-3 text-sm text-ink-700">
+        {listing.bedrooms !== null && (
+          <span className="flex items-center gap-1">
+            <Bed className="w-3.5 h-3.5" strokeWidth={1.5} /> {listing.bedrooms}
+          </span>
+        )}
+        {listing.bathrooms !== null && (
+          <span className="flex items-center gap-1">
+            <Bath className="w-3.5 h-3.5" strokeWidth={1.5} />{' '}
+            {listing.bathrooms}
+          </span>
+        )}
+        {listing.area_sqft && (
+          <span className="flex items-center gap-1">
+            <Square className="w-3.5 h-3.5" strokeWidth={1.5} />{' '}
+            {listing.area_sqft.toLocaleString()}
+          </span>
+        )}
+      </div>
+      {listing.price_estimate && (
+        <div className="font-display text-lg text-ink-900 mt-2">
+          {listing.price_estimate}
+        </div>
+      )}
+    </Link>
   )
 }
