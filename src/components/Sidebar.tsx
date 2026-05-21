@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+vimport { NavLink } from 'react-router-dom'
 import {
   Sun,
   Users,
@@ -72,7 +72,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.9 · P9.2
+        Platform v0.11 · P9.4
       </div>
     </aside>
   )
