@@ -1,5 +1,5 @@
-// P8.2 — Client-facing portal. Only renders when useAuth().isClient is true.
-// Routes: /portal (home), /portal/listing, /portal/war-room, /portal/documents
+// P8.2 + P9.1 — Client-facing portal. Only renders when useAuth().isClient is true.
+// Routes: /portal (home), /portal/listing, /portal/cmas, /portal/cmas/:slug, /portal/war-room, /portal/documents
 import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink, Navigate, Link } from 'react-router-dom'
 import {
@@ -11,18 +11,21 @@ import {
   Loader2,
   DollarSign,
   Calendar,
+  FileBarChart2,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
   supabase,
   Deal,
   WarRoom,
+  CMA,
   SERVICE_PACKAGES,
 } from '@/lib/supabase'
 import WarRoomThread from '@/components/WarRoomThread'
 import DocumentManager from '@/components/DocumentManager'
 import ListingEditor from '@/components/ListingEditor'
 import NotificationBell from '@/components/NotificationBell'
+import CMAViewer from '@/components/CMAViewer'
 
 type ComingSoonListing = {
   id: string
@@ -47,6 +50,8 @@ export default function Portal() {
       <Routes>
         <Route index element={<PortalHome />} />
         <Route path="listing" element={<PortalListing />} />
+        <Route path="cmas" element={<PortalCMAs />} />
+        <Route path="cmas/:slug" element={<CMAViewer embedded />} />
         <Route path="war-room" element={<PortalWarRoom />} />
         <Route path="documents" element={<PortalDocuments />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
@@ -85,6 +90,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
         <nav className="max-w-5xl mx-auto px-8 flex gap-1">
           <PortalNavLink to="/portal" exact icon={LayoutDashboard} label="Home" />
           <PortalNavLink to="/portal/listing" icon={Home} label="My listing" />
+          <PortalNavLink to="/portal/cmas" icon={FileBarChart2} label="CMAs" />
           <PortalNavLink to="/portal/war-room" icon={MessageSquare} label="War room" />
           <PortalNavLink to="/portal/documents" icon={FileText} label="Documents" />
         </nav>
@@ -432,6 +438,95 @@ function PortalDocuments() {
         clientId={clientProfile.id}
         uploaderType="client"
       />
+    </div>
+  )
+}
+
+// ===========================================================================
+// Portal CMAs — list view (P9.1)
+// ===========================================================================
+function PortalCMAs() {
+  const { clientProfile } = useAuth()
+  const [cmas, setCmas] = useState<CMA[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!clientProfile) return
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('client_id', clientProfile!.id)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false })
+      if (cancelled) return
+      setCmas((data as CMA[]) || [])
+      setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [clientProfile])
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+
+  return (
+    <div>
+      <div className="mb-8">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">CMAs</div>
+        <h1 className="font-display text-3xl text-ink-900 leading-tight mb-3">
+          Comparative market analyses.
+        </h1>
+        <p className="text-ink-600 max-w-2xl">
+          Side-by-side pricing analyses your agent has put together — recent sales, market context,
+          and pricing rationale. Click any CMA to view the full breakdown.
+        </p>
+      </div>
+
+      {cmas.length === 0 ? (
+        <div className="border border-ink-200 p-12 text-center bg-cream">
+          <FileBarChart2 className="w-8 h-8 text-ink-300 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-sm text-ink-600">
+            No CMAs yet. Your agent will share market analyses here when ready.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {cmas.map((cma) => (
+            <Link
+              key={cma.id}
+              to={`/portal/cmas/${cma.slug}`}
+              className="block border border-ink-200 hover:border-ink-400 p-5 transition-colors"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+                    CMA
+                    {cma.published_at && (
+                      <span className="ml-3">
+                        {new Date(cma.published_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="font-display text-xl text-ink-900 leading-tight">
+                    {cma.property_address || cma.name}
+                  </h2>
+                  {cma.list_price && (
+                    <div className="text-sm text-ink-600 mt-1">{cma.list_price}</div>
+                  )}
+                </div>
+                <FileBarChart2 className="w-5 h-5 text-ink-400 mt-1" strokeWidth={1.5} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

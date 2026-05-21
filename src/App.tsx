@@ -9,6 +9,8 @@ import Clients from '@/pages/Clients'
 import Campaigns from '@/pages/Campaigns'
 import Placeholder from '@/pages/Placeholder'
 import Portal from '@/pages/Portal'
+import NewCMA from '@/pages/NewCMA'
+import CMAViewer from '@/components/CMAViewer'
 import {
   Search,
   Send,
@@ -61,6 +63,8 @@ function AuthGate() {
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/clients/*" element={<Clients />} />
+        <Route path="/cmas/new" element={<NewCMA />} />
+        <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
           path="/prospecting"
           element={

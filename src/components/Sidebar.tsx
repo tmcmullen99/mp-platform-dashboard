@@ -10,6 +10,7 @@ import {
   Globe,
   BarChart3,
   Settings,
+  FileBarChart2,
   LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -20,6 +21,7 @@ const navItems: NavItem[] = [
   { to: '/', label: 'Today', Icon: Sun },
   { to: '/crm', label: 'CRM', Icon: Users },
   { to: '/clients', label: 'Clients', Icon: Briefcase },
+  { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
   { to: '/campaigns', label: 'Campaigns', Icon: Send },
   { to: '/listings', label: 'Listings', Icon: Home },
@@ -70,7 +72,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.7 · P8.3
+        Platform v0.8 · P9.1
       </div>
     </aside>
   )

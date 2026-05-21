@@ -455,6 +455,52 @@ export type NotificationRecord = {
   created_at: string
 }
 
+export type CMAStatus = 'draft' | 'published' | 'archived'
+
+export type CMASubject = {
+  address: string
+  city: string
+  state: string
+  zip: string
+  listPrice: number | null
+  mls: string
+  beds: number | null
+  bathsFull: number | null
+  bathsPartial: number | null
+  sqft: number | null
+  lotSqft: number | null
+  yearBuilt: number | null
+  propertyType: string
+  garage: string
+  parking: string
+  cooling: string
+  heating: string
+  hoaMonthly: number | null
+  listDate: string
+  daysOnMarket: number | null
+  remarks: string
+}
+
+export type CMAComp = {
+  address: string
+  city: string
+  listPrice: number | null
+  soldPrice: number | null
+  beds: number | null
+  bathsFull: number | null
+  bathsPartial: number | null
+  sqft: number | null
+  lotSqft: number | null
+  pricePerSqft: number | null
+  percentOverList: number | null
+  daysOnMarket: number | null
+  soldDate: string
+  soldDateIso: string
+  mls: string
+  photoUrl?: string
+  listingUrl?: string
+}
+
 export type CMA = {
   id: string
   tenant_id: string | null
@@ -465,6 +511,11 @@ export type CMA = {
   property_address: string | null
   list_price: string | null
   cma_html: string | null
+  subject_data: CMASubject | null
+  comps_data: CMAComp[] | null
+  status: CMAStatus
+  agent_notes: string | null
+  created_by: string | null
   published_at: string | null
   created_at: string
   updated_at: string

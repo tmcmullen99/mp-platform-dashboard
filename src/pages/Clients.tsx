@@ -20,6 +20,8 @@ import {
   Info,
   Send,
   Check,
+  FileBarChart2,
+  ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import WarRoomThread from '@/components/WarRoomThread'
@@ -37,6 +39,7 @@ import {
   Activity as ActivityRow,
   DocumentRecord,
   Contact,
+  CMA,
   EDGE_FUNCTIONS_BASE_URL,
   SERVICE_PACKAGES,
   CLIENT_STAGES,
@@ -455,10 +458,11 @@ function Field({ label, required, children }: { label: string; required?: boolea
 // CLIENT DETAIL — /clients/:clientId/[tab]
 // ===========================================================================
 
-type Tab = 'overview' | 'listing' | 'timeline' | 'documents' | 'war_room'
+type Tab = 'overview' | 'listing' | 'cmas' | 'timeline' | 'documents' | 'war_room'
 const TABS: { key: Tab; label: string; Icon: typeof Home }[] = [
   { key: 'overview', label: 'Overview', Icon: ActivityIcon },
   { key: 'listing', label: 'Listing & Service', Icon: Home },
+  { key: 'cmas', label: 'CMAs', Icon: FileBarChart2 },
   { key: 'timeline', label: 'Timeline', Icon: Clock },
   { key: 'documents', label: 'Documents', Icon: FileText },
   { key: 'war_room', label: 'War Room', Icon: MessageSquare },
@@ -616,6 +620,7 @@ function ClientDetail() {
         <OverviewTab client={client} deals={deals} activities={activities} documents={documents} warRooms={warRooms} />
       )}
       {activeTab === 'listing' && <ListingTab deals={deals} onChanged={refresh} />}
+      {activeTab === 'cmas' && <CMATab clientId={clientId!} clientName={client.name} />}
       {activeTab === 'timeline' && <TimelineTab activities={activities} />}
       {activeTab === 'documents' && <DocumentsTab client={client} />}
       {activeTab === 'war_room' && <WarRoomTab warRooms={warRooms} />}
@@ -954,5 +959,107 @@ function InviteToPortalButton({ client }: { client: Client }) {
       {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : sent ? <Check className="w-3 h-3" /> : <Send className="w-3 h-3" />}
       {sent ? 'Invitation sent' : 'Invite to portal'}
     </button>
+  )
+}
+
+// ===========================================================================
+// CMA TAB — P9.1
+// ===========================================================================
+function CMATab({ clientId, clientName }: { clientId: string; clientName: string }) {
+  const [cmas, setCmas] = useState<CMA[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('client_id', clientId)
+        .order('created_at', { ascending: false })
+      if (cancelled) return
+      setCmas((data as CMA[]) || [])
+      setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [clientId])
+
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-6">
+        <div>
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">CMAs</div>
+          <p className="text-sm text-ink-600">
+            {cmas.length} {cmas.length === 1 ? 'CMA' : 'CMAs'} for {clientName}.
+          </p>
+        </div>
+        <Link
+          to={`/cmas/new?client=${clientId}`}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          New CMA
+        </Link>
+      </div>
+
+      {cmas.length === 0 ? (
+        <div className="border border-ink-200 p-12 text-center bg-cream">
+          <FileBarChart2 className="w-8 h-8 text-ink-300 mx-auto mb-3" strokeWidth={1.5} />
+          <p className="text-sm text-ink-600 mb-4">No CMAs yet for this client.</p>
+          <Link
+            to={`/cmas/new?client=${clientId}`}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Create the first CMA
+          </Link>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {cmas.map((cma) => (
+            <Link
+              key={cma.id}
+              to={`/cmas/${cma.slug}`}
+              className="block border border-ink-200 hover:border-ink-400 p-5 transition-colors"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1 flex items-center gap-3">
+                    CMA
+                    {cma.status === 'draft' && (
+                      <span className="text-amber-600 normal-case tracking-normal">· Draft</span>
+                    )}
+                    {cma.published_at && (
+                      <span>
+                        {new Date(cma.published_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="font-display text-lg text-ink-900 leading-tight">
+                    {cma.property_address || cma.name}
+                  </h2>
+                  <div className="text-sm text-ink-600 mt-1 flex items-center gap-4">
+                    {cma.list_price && <span>{cma.list_price}</span>}
+                    {Array.isArray(cma.comps_data) && cma.comps_data.length > 0 && (
+                      <span>{cma.comps_data.length} comps</span>
+                    )}
+                  </div>
+                </div>
+                <ExternalLink className="w-4 h-4 text-ink-400" strokeWidth={1.5} />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
+    </div>
   )
 }
