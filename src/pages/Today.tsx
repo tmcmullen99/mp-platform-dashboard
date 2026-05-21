@@ -115,9 +115,9 @@ export default function Today() {
           clients: Array.isArray(r.clients) ? r.clients[0] ?? null : r.clients ?? null,
         }))
 
-      setPendingTours(normalize((toursResp.data || []) as PendingTour[]))
-      setUnreadThreads(normalize((roomsResp.data || []) as UnreadThread[]))
-      setRecentCMAs(normalize((cmasResp.data || []) as RecentCMA[]))
+      setPendingTours(normalize((toursResp.data || []) as unknown as PendingTour[]))
+      setUnreadThreads(normalize((roomsResp.data || []) as unknown as UnreadThread[]))
+      setRecentCMAs(normalize((cmasResp.data || []) as unknown as RecentCMA[]))
       setRecentClients((clientsResp.data || []) as RecentClient[])
       setLoading(false)
     })
