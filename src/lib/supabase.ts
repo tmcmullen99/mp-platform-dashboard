@@ -534,3 +534,79 @@ export const DOCUMENT_CATEGORIES: { value: DocumentCategory; label: string }[] =
 ]
 
 export const CLIENT_DOCUMENTS_BUCKET = 'client-documents'
+
+// ============================================================
+// P9.2 — External listings (Zillow links etc.)
+// ============================================================
+export type ExternalListingSource = 'zillow' | 'redfin' | 'realtor' | 'mls' | 'other'
+export type ExternalListingClientStatus =
+  | 'interested'
+  | 'shortlist'
+  | 'toured'
+  | 'offered'
+  | 'rejected'
+export type ExternalListingFetchStatus = 'pending' | 'success' | 'failed' | 'manual'
+
+export type ExternalListing = {
+  id: string
+  tenant_id: string
+  client_id: string
+  added_by_type: 'agent' | 'client'
+  added_by_user_id: string | null
+  source_kind: ExternalListingSource
+  source_url: string
+  address: string | null
+  city: string | null
+  state: string | null
+  zip: string | null
+  price: number | null
+  bedrooms: number | null
+  bathrooms: number | null
+  sqft: number | null
+  lot_sqft: number | null
+  year_built: number | null
+  property_type: string | null
+  hoa_monthly: number | null
+  parking_type: string | null
+  parking_spaces: number | null
+  outdoor_features: string[]
+  photo_url: string | null
+  raw_extracted_data: unknown
+  is_favorite: boolean
+  notes: string | null
+  client_status: ExternalListingClientStatus
+  fetch_status: ExternalListingFetchStatus
+  fetch_error: string | null
+  fetched_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export const OUTDOOR_FEATURES: { value: string; label: string }[] = [
+  { value: 'backyard', label: 'Backyard' },
+  { value: 'patio', label: 'Patio' },
+  { value: 'balcony', label: 'Balcony' },
+  { value: 'deck', label: 'Deck' },
+  { value: 'pool', label: 'Pool' },
+  { value: 'garden', label: 'Garden' },
+]
+
+export const PARKING_TYPES: { value: string; label: string }[] = [
+  { value: 'garage', label: 'Garage' },
+  { value: 'driveway', label: 'Driveway' },
+  { value: 'carport', label: 'Carport' },
+  { value: 'street', label: 'Street' },
+  { value: 'none', label: 'None' },
+]
+
+export const EXTERNAL_LISTING_STATUSES: {
+  value: ExternalListingClientStatus
+  label: string
+  color: string
+}[] = [
+  { value: 'interested', label: 'Interested', color: 'bg-ink-100 text-ink-700' },
+  { value: 'shortlist', label: 'Shortlist', color: 'bg-blue-50 text-blue-700' },
+  { value: 'toured', label: 'Toured', color: 'bg-amber-50 text-amber-700' },
+  { value: 'offered', label: 'Offered', color: 'bg-emerald-50 text-emerald-700' },
+  { value: 'rejected', label: 'Rejected', color: 'bg-red-50 text-red-700' },
+]

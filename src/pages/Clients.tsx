@@ -22,11 +22,13 @@ import {
   Check,
   FileBarChart2,
   ExternalLink,
+  Heart,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import WarRoomThread from '@/components/WarRoomThread'
 import DocumentManager from '@/components/DocumentManager'
 import { ListingEditApprovals } from '@/components/ListingEditor'
+import SavedPropertiesTab from '@/components/SavedPropertiesTab'
 import {
   supabase,
   Client,
@@ -458,11 +460,12 @@ function Field({ label, required, children }: { label: string; required?: boolea
 // CLIENT DETAIL — /clients/:clientId/[tab]
 // ===========================================================================
 
-type Tab = 'overview' | 'listing' | 'cmas' | 'timeline' | 'documents' | 'war_room'
+type Tab = 'overview' | 'listing' | 'cmas' | 'saved' | 'timeline' | 'documents' | 'war_room'
 const TABS: { key: Tab; label: string; Icon: typeof Home }[] = [
   { key: 'overview', label: 'Overview', Icon: ActivityIcon },
   { key: 'listing', label: 'Listing & Service', Icon: Home },
   { key: 'cmas', label: 'CMAs', Icon: FileBarChart2 },
+  { key: 'saved', label: 'Saved properties', Icon: Heart },
   { key: 'timeline', label: 'Timeline', Icon: Clock },
   { key: 'documents', label: 'Documents', Icon: FileText },
   { key: 'war_room', label: 'War Room', Icon: MessageSquare },
@@ -621,6 +624,13 @@ function ClientDetail() {
       )}
       {activeTab === 'listing' && <ListingTab deals={deals} onChanged={refresh} />}
       {activeTab === 'cmas' && <CMATab clientId={clientId!} clientName={client.name} />}
+      {activeTab === 'saved' && client.tenant_id && (
+        <SavedPropertiesTab
+          clientId={clientId!}
+          tenantId={client.tenant_id}
+          viewerType="agent"
+        />
+      )}
       {activeTab === 'timeline' && <TimelineTab activities={activities} />}
       {activeTab === 'documents' && <DocumentsTab client={client} />}
       {activeTab === 'war_room' && <WarRoomTab warRooms={warRooms} />}

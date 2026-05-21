@@ -1,5 +1,6 @@
-// P8.2 + P9.1 — Client-facing portal. Only renders when useAuth().isClient is true.
-// Routes: /portal (home), /portal/listing, /portal/cmas, /portal/cmas/:slug, /portal/war-room, /portal/documents
+// P8.2 + P9.1 + P9.2 — Client-facing portal. Only renders when useAuth().isClient is true.
+// Routes: /portal (home), /portal/listing, /portal/cmas, /portal/cmas/:slug,
+// /portal/saved, /portal/war-room, /portal/documents
 import { useEffect, useState } from 'react'
 import { Routes, Route, NavLink, Navigate, Link } from 'react-router-dom'
 import {
@@ -12,6 +13,7 @@ import {
   DollarSign,
   Calendar,
   FileBarChart2,
+  Heart,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -26,6 +28,7 @@ import DocumentManager from '@/components/DocumentManager'
 import ListingEditor from '@/components/ListingEditor'
 import NotificationBell from '@/components/NotificationBell'
 import CMAViewer from '@/components/CMAViewer'
+import SavedPropertiesTab from '@/components/SavedPropertiesTab'
 
 type ComingSoonListing = {
   id: string
@@ -52,6 +55,7 @@ export default function Portal() {
         <Route path="listing" element={<PortalListing />} />
         <Route path="cmas" element={<PortalCMAs />} />
         <Route path="cmas/:slug" element={<CMAViewer embedded />} />
+        <Route path="saved" element={<PortalSaved />} />
         <Route path="war-room" element={<PortalWarRoom />} />
         <Route path="documents" element={<PortalDocuments />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
@@ -91,6 +95,7 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
           <PortalNavLink to="/portal" exact icon={LayoutDashboard} label="Home" />
           <PortalNavLink to="/portal/listing" icon={Home} label="My listing" />
           <PortalNavLink to="/portal/cmas" icon={FileBarChart2} label="CMAs" />
+          <PortalNavLink to="/portal/saved" icon={Heart} label="Saved" />
           <PortalNavLink to="/portal/war-room" icon={MessageSquare} label="War room" />
           <PortalNavLink to="/portal/documents" icon={FileText} label="Documents" />
         </nav>
@@ -527,6 +532,35 @@ function PortalCMAs() {
           ))}
         </div>
       )}
+    </div>
+  )
+}
+
+// ===========================================================================
+// Portal Saved Properties — P9.2
+// ===========================================================================
+function PortalSaved() {
+  const { clientProfile } = useAuth()
+  if (!clientProfile) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+
+  return (
+    <div>
+      <div className="mb-8">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">Saved properties</div>
+        <h1 className="font-display text-3xl text-ink-900 leading-tight mb-3">
+          Properties you're tracking.
+        </h1>
+        <p className="text-ink-600 max-w-2xl">
+          Paste Zillow, Redfin, or Realtor.com links here. Each becomes a card you can sort by
+          price, $/sqft, HOA, outdoor space, or parking. Favorite the ones you like — your agent
+          sees the same list and can react in the war room.
+        </p>
+      </div>
+      <SavedPropertiesTab
+        clientId={clientProfile.id}
+        tenantId={clientProfile.tenant_id}
+        viewerType="client"
+      />
     </div>
   )
 }
