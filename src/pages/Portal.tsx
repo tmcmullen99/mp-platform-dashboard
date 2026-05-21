@@ -1,4 +1,4 @@
-// P8.2 + P9.1 + P9.2 — Client-facing portal. Only renders when useAuth().isClient is true.
+// P8.2 + P9.1 + P9.2 + P9.4 + P9.7 — Client-facing portal. Only renders when useAuth().isClient is true.
 // Routes: /portal (home), /portal/listing, /portal/cmas, /portal/cmas/:slug,
 // /portal/saved, /portal/war-room, /portal/documents
 import { useEffect, useState } from 'react'
@@ -14,6 +14,7 @@ import {
   Calendar,
   FileBarChart2,
   Heart,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import {
@@ -45,6 +46,20 @@ type ComingSoonListing = {
   description_html: string | null
   hero_image_url: string | null
   gallery_urls: unknown
+}
+
+// Local subset type for the portal home — full tour_requests row not needed here
+type PortalTourRequest = {
+  id: string
+  external_listing_id: string | null
+  property_address: string | null
+  property_photo_url: string | null
+  preferred_date: string | null
+  preferred_time: string | null
+  alternate_date: string | null
+  alternate_time: string | null
+  status: 'requested' | 'confirmed' | 'rescheduled' | 'toured' | 'cancelled'
+  created_at: string
 }
 
 export default function Portal() {
@@ -114,7 +129,7 @@ function PortalNavLink({
 }: {
   to: string
   exact?: boolean
-  icon: typeof Home
+  icon: LucideIcon
   label: string
 }) {
   return (
@@ -136,32 +151,70 @@ function PortalNavLink({
 }
 
 // ===========================================================================
-// Portal Home
+// Portal Home — P9.7 rebuild
 // ===========================================================================
 function PortalHome() {
-  const { clientProfile } = useAuth()
+  const { clientProfile, currentBranding } = useAuth()
   const [deals, setDeals] = useState<Deal[]>([])
   const [warRooms, setWarRooms] = useState<WarRoom[]>([])
+  const [tourRequests, setTourRequests] = useState<PortalTourRequest[]>([])
+  const [recentCMAs, setRecentCMAs] = useState<CMA[]>([])
+  const [savedCount, setSavedCount] = useState<number>(0)
+  const [favoritesCount, setFavoritesCount] = useState<number>(0)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!clientProfile) return
     let cancelled = false
-    async function load() {
-      const [{ data: dData }, { data: wrData }] = await Promise.all([
-        supabase
-          .from('deals')
-          .select('*')
-          .eq('client_id', clientProfile!.id)
-          .order('created_at', { ascending: false }),
-        supabase.from('war_rooms').select('*').eq('client_id', clientProfile!.id),
-      ])
+    const cid = clientProfile.id
+    setLoading(true)
+
+    Promise.all([
+      supabase
+        .from('deals')
+        .select('*')
+        .eq('client_id', cid)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('war_rooms')
+        .select('*')
+        .eq('client_id', cid)
+        .order('last_message_at', { ascending: false, nullsFirst: false }),
+      supabase
+        .from('tour_requests')
+        .select(
+          'id, external_listing_id, property_address, property_photo_url, preferred_date, preferred_time, alternate_date, alternate_time, status, created_at',
+        )
+        .eq('client_id', cid)
+        .order('created_at', { ascending: false })
+        .limit(5),
+      supabase
+        .from('cmas')
+        .select('*')
+        .eq('client_id', cid)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false, nullsFirst: false })
+        .limit(3),
+      supabase
+        .from('client_external_listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', cid),
+      supabase
+        .from('client_external_listings')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_id', cid)
+        .eq('is_favorite', true),
+    ]).then(([dResp, wResp, tResp, cResp, sResp, fResp]) => {
       if (cancelled) return
-      setDeals((dData as Deal[]) || [])
-      setWarRooms((wrData as WarRoom[]) || [])
+      setDeals((dResp.data || []) as Deal[])
+      setWarRooms((wResp.data || []) as WarRoom[])
+      setTourRequests((tResp.data || []) as PortalTourRequest[])
+      setRecentCMAs((cResp.data || []) as CMA[])
+      setSavedCount(sResp.count ?? 0)
+      setFavoritesCount(fResp.count ?? 0)
       setLoading(false)
-    }
-    load()
+    })
+
     return () => {
       cancelled = true
     }
@@ -170,57 +223,275 @@ function PortalHome() {
   if (!clientProfile) return <p className="text-ink-600">Loading…</p>
 
   const firstName = clientProfile.name.split(' ')[0]
+  const agentName = currentBranding?.agent_name || 'your agent'
+  const totalUnread = warRooms.reduce((sum, wr) => sum + (wr.unread_client || 0), 0)
+  const pendingTourCount = tourRequests.filter(
+    (t) => t.status === 'requested' || t.status === 'rescheduled',
+  ).length
+  const confirmedTourCount = tourRequests.filter((t) => t.status === 'confirmed').length
+  const sellDeal = deals.find((d) => d.deal_type === 'sell')
 
   return (
     <div>
-      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Welcome</div>
-      <h1 className="font-display text-4xl text-ink-900 leading-tight mb-3">
-        Hi, {firstName}.
-      </h1>
-      <p className="text-ink-600 max-w-2xl mb-12 leading-relaxed">
-        This is your private portal — your listing, our messages, and shared documents in one
-        place. Use the war room for anything you want to discuss; emails to your agent get sent
-        automatically.
-      </p>
+      {/* Hero */}
+      <div className="mb-12">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Welcome</div>
+        <h1 className="font-display text-4xl text-ink-900 leading-tight mb-3">
+          Hi, {firstName}.
+        </h1>
+        <p className="text-ink-600 max-w-2xl leading-relaxed">
+          {loading ? (
+            'Loading your portal…'
+          ) : (
+            <>
+              You’re working with <span className="text-ink-900">{agentName}</span>. Here’s
+              where everything stands.
+            </>
+          )}
+        </p>
+      </div>
 
-      {loading ? (
-        <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Link
-            to="/portal/listing"
-            className="block border border-ink-200 hover:border-ink-400 p-6 transition-colors"
-          >
-            <Home className="w-5 h-5 text-ink-500 mb-3" strokeWidth={1.5} />
-            <h2 className="font-display text-xl text-ink-900 mb-2">My listing</h2>
-            <p className="text-sm text-ink-600 mb-3">
-              {deals[0]?.title || 'Your active engagement'}
-            </p>
-            <div className="text-2xs uppercase tracking-widest text-ink-500">
-              {SERVICE_PACKAGES.find((p) => p.value === deals[0]?.service_package)?.label ||
+      {/* Status grid: 2x2 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-12">
+        <StatusCard
+          to="/portal/saved"
+          icon={Calendar}
+          label="Tour requests"
+          primary={
+            tourRequests.length === 0
+              ? 'None yet'
+              : pendingTourCount > 0
+              ? `${pendingTourCount} pending`
+              : confirmedTourCount > 0
+              ? `${confirmedTourCount} confirmed`
+              : `${tourRequests.length} recent`
+          }
+          secondary={
+            tourRequests.length === 0
+              ? 'Find a Zillow listing you like and request a tour.'
+              : confirmedTourCount > 0 && pendingTourCount > 0
+              ? `${confirmedTourCount} confirmed`
+              : pendingTourCount > 0
+              ? 'Your agent will respond soon.'
+              : 'See full list'
+          }
+        />
+
+        <StatusCard
+          to="/portal/war-room"
+          icon={MessageSquare}
+          label="Messages"
+          primary={
+            totalUnread > 0
+              ? `${totalUnread} new from agent`
+              : warRooms.length === 0
+              ? 'No conversations yet'
+              : 'All caught up'
+          }
+          secondary={
+            warRooms.length === 0
+              ? 'Your agent will open one shortly.'
+              : totalUnread > 0
+              ? 'Open thread'
+              : `${warRooms.length} ${warRooms.length === 1 ? 'room' : 'rooms'} open`
+          }
+          badge={totalUnread > 0 ? totalUnread : undefined}
+        />
+
+        <StatusCard
+          to="/portal/cmas"
+          icon={FileBarChart2}
+          label="Market analyses"
+          primary={
+            recentCMAs.length === 0
+              ? 'None yet'
+              : `${recentCMAs.length} ${recentCMAs.length === 1 ? 'CMA' : 'CMAs'} ready`
+          }
+          secondary={
+            recentCMAs.length === 0
+              ? 'Pricing analyses will appear here.'
+              : recentCMAs[0]?.property_address || recentCMAs[0]?.name || 'Open list'
+          }
+        />
+
+        <StatusCard
+          to="/portal/saved"
+          icon={Heart}
+          label="Saved properties"
+          primary={
+            savedCount === 0
+              ? 'None yet'
+              : `${savedCount} saved`
+          }
+          secondary={
+            savedCount === 0
+              ? 'Paste any Zillow link to start.'
+              : favoritesCount > 0
+              ? `${favoritesCount} favorite${favoritesCount === 1 ? '' : 's'}`
+              : 'See full list'
+          }
+        />
+      </div>
+
+      {/* Tour request detail strip — only if any */}
+      {!loading && tourRequests.length > 0 && (
+        <section className="mb-12">
+          <PortalSectionLabel>Your tour requests</PortalSectionLabel>
+          <ul className="border border-ink-200 divide-y divide-ink-100 bg-white">
+            {tourRequests.map((t) => (
+              <li key={t.id} className="flex items-start gap-4 p-5">
+                {t.property_photo_url ? (
+                  <img
+                    src={t.property_photo_url}
+                    alt=""
+                    className="w-16 h-16 object-cover border border-ink-200 shrink-0"
+                  />
+                ) : (
+                  <div className="w-16 h-16 bg-ink-100 border border-ink-200 shrink-0 flex items-center justify-center">
+                    <Home className="w-5 h-5 text-ink-400" strokeWidth={1.5} />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm text-ink-900 truncate">
+                    {t.property_address || 'Property'}
+                  </div>
+                  <div className="text-xs text-ink-500 mt-1 flex items-center gap-2 flex-wrap">
+                    {t.preferred_date && (
+                      <span className="inline-flex items-center gap-1">
+                        <Calendar className="w-3 h-3" strokeWidth={1.5} />
+                        {formatPortalDate(t.preferred_date)}
+                        {t.preferred_time ? ` · ${t.preferred_time}` : ''}
+                      </span>
+                    )}
+                    {t.preferred_date && <span className="text-ink-300">·</span>}
+                    <span>requested {portalTimeAgo(t.created_at)}</span>
+                  </div>
+                </div>
+                <TourStatusBadge status={t.status} />
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* My listing card — only if has a sell deal */}
+      {sellDeal && (
+        <Link
+          to="/portal/listing"
+          className="block border border-ink-200 hover:border-ink-400 p-6 transition-colors mb-12"
+        >
+          <Home className="w-5 h-5 text-ink-500 mb-3" strokeWidth={1.5} />
+          <h2 className="font-display text-xl text-ink-900 mb-2">My listing</h2>
+          <p className="text-sm text-ink-600 mb-3">
+            {sellDeal.title || 'Your active engagement'}
+          </p>
+          <div className="text-2xs uppercase tracking-widest text-ink-500 flex items-center gap-3">
+            <span>
+              {SERVICE_PACKAGES.find((p) => p.value === sellDeal.service_package)?.label ||
                 'Service package'}
-            </div>
-          </Link>
-
-          <Link
-            to="/portal/war-room"
-            className="block border border-ink-200 hover:border-ink-400 p-6 transition-colors"
-          >
-            <MessageSquare className="w-5 h-5 text-ink-500 mb-3" strokeWidth={1.5} />
-            <h2 className="font-display text-xl text-ink-900 mb-2">War room</h2>
-            <p className="text-sm text-ink-600 mb-3">
-              {warRooms.length > 0 ? 'Open thread with your agent.' : 'No conversations yet.'}
-            </p>
-            <div className="text-2xs uppercase tracking-widest text-ink-500">
-              {warRooms.length} {warRooms.length === 1 ? 'room' : 'rooms'}
-            </div>
-          </Link>
-        </div>
+            </span>
+            {sellDeal.estimated_value && (
+              <>
+                <span className="text-ink-300">·</span>
+                <span className="inline-flex items-center gap-1">
+                  <DollarSign className="w-3 h-3" />
+                  {sellDeal.estimated_value.toLocaleString()}
+                </span>
+              </>
+            )}
+          </div>
+        </Link>
       )}
 
       <ServicePackagesEducation />
     </div>
   )
+}
+
+// ---------------------------------------------------------------------------
+// Portal Home helper components
+// ---------------------------------------------------------------------------
+
+function PortalSectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-4">
+      <div className="text-2xs uppercase tracking-widest text-ink-500">{children}</div>
+      <div className="flex-1 h-px bg-ink-200" />
+    </div>
+  )
+}
+
+function StatusCard({
+  to,
+  icon: Icon,
+  label,
+  primary,
+  secondary,
+  badge,
+}: {
+  to: string
+  icon: LucideIcon
+  label: string
+  primary: string
+  secondary: string
+  badge?: number
+}) {
+  return (
+    <Link
+      to={to}
+      className="block border border-ink-200 hover:border-ink-400 p-6 transition-colors group bg-white"
+    >
+      <div className="flex items-start justify-between mb-4">
+        <Icon
+          className="w-5 h-5 text-ink-500 group-hover:text-ink-900 transition-colors"
+          strokeWidth={1.5}
+        />
+        {badge != null && badge > 0 && (
+          <span className="text-2xs font-mono bg-ink-900 text-cream px-1.5 py-0.5 tabular-nums">
+            {badge}
+          </span>
+        )}
+      </div>
+      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">{label}</div>
+      <div className="font-display text-xl text-ink-900 mb-1.5 leading-tight">{primary}</div>
+      <div className="text-xs text-ink-500 truncate">{secondary}</div>
+    </Link>
+  )
+}
+
+function TourStatusBadge({ status }: { status: PortalTourRequest['status'] }) {
+  const styles: Record<PortalTourRequest['status'], string> = {
+    requested: 'bg-amber-50 text-amber-700',
+    confirmed: 'bg-emerald-50 text-emerald-700',
+    rescheduled: 'bg-blue-50 text-blue-700',
+    toured: 'bg-ink-100 text-ink-700',
+    cancelled: 'bg-red-50 text-red-700',
+  }
+  return (
+    <span
+      className={`text-2xs uppercase tracking-widest px-2 py-1 shrink-0 ${styles[status]}`}
+    >
+      {status}
+    </span>
+  )
+}
+
+function formatPortalDate(iso: string): string {
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+}
+
+function portalTimeAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (isNaN(then)) return iso
+  const diff = Date.now() - then
+  if (diff < 60_000) return 'just now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`
+  const days = Math.floor(diff / 86_400_000)
+  if (days < 7) return `${days}d ago`
+  return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
 function ServicePackagesEducation() {
@@ -318,7 +589,12 @@ function PortalListing() {
             )}
 
             <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 mt-8 pb-8 border-b border-ink-200">
-              <Stat label="List price" value={deal.estimated_value ? `$${deal.estimated_value.toLocaleString()}` : '—'} />
+              <Stat
+                label="List price"
+                value={
+                  deal.estimated_value ? `$${deal.estimated_value.toLocaleString()}` : '—'
+                }
+              />
               <Stat label="Package" value={pkg?.label || '—'} />
               <Stat label="Stage" value={deal.stage} />
               <Stat
@@ -342,7 +618,9 @@ function PortalListing() {
 
             {deal.notes && (
               <section className="mt-8">
-                <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Agent notes</h3>
+                <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+                  Agent notes
+                </h3>
                 <p className="text-sm text-ink-700 whitespace-pre-wrap leading-relaxed max-w-3xl">
                   {deal.notes}
                 </p>
