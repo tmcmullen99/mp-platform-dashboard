@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
 import Today from '@/pages/Today'
+import Schedule from '@/pages/Schedule'
 import CRM from '@/pages/CRM'
 import CSVImport from '@/pages/CSVImport'
 import Clients from '@/pages/Clients'
@@ -60,6 +61,7 @@ function AuthGate() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Today />} />
+        <Route path="/schedule" element={<Schedule />} />
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/clients/*" element={<Clients />} />
