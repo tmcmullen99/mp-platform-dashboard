@@ -221,7 +221,7 @@ export default function Login() {
         )}
 
         <div className="mt-10 text-center text-2xs uppercase tracking-widest text-ink-400">
-          Platform v0.1 · Phase 1 · <span className="font-mono normal-case tracking-normal">build-p1-nav-fix</span>
+          Platform v0.15 · P9.8
         </div>
       </div>
     </div>
