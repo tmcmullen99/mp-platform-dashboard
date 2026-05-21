@@ -21,6 +21,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext'
 import {
   supabase,
+  EDGE_FUNCTIONS_BASE_URL,
   Deal,
   WarRoom,
   CMA,
@@ -851,8 +852,14 @@ function PortalSaved() {
 // Portal Schedule — P9.5 (upcoming + past tour requests)
 // ===========================================================================
 
+type ProposedAlternate = {
+  date: string
+  time: string | null
+}
+
 type ScheduleTourRow = {
   id: string
+  tenant_id: string
   external_listing_id: string | null
   war_room_id: string | null
   property_address: string | null
@@ -866,32 +873,36 @@ type ScheduleTourRow = {
   scheduled_at: string | null
   notes: string | null
   agent_response: string | null
+  proposed_alternates: ProposedAlternate[] | null
   status: 'requested' | 'confirmed' | 'rescheduled' | 'toured' | 'cancelled'
   created_at: string
 }
 
 function PortalSchedule() {
-  const { clientProfile } = useAuth()
+  const { clientProfile, session } = useAuth()
   const [tours, setTours] = useState<ScheduleTourRow[]>([])
   const [loading, setLoading] = useState(true)
+
+  async function loadTours(cid: string) {
+    const { data } = await supabase
+      .from('tour_requests')
+      .select(
+        'id, tenant_id, external_listing_id, war_room_id, property_address, property_photo_url, property_price, property_url, preferred_date, preferred_time, alternate_date, alternate_time, scheduled_at, notes, agent_response, proposed_alternates, status, created_at',
+      )
+      .eq('client_id', cid)
+      .order('preferred_date', { ascending: true, nullsFirst: false })
+    setTours((data as ScheduleTourRow[]) || [])
+  }
 
   useEffect(() => {
     if (!clientProfile) return
     let cancelled = false
     const cid = clientProfile.id
     setLoading(true)
-    supabase
-      .from('tour_requests')
-      .select(
-        'id, external_listing_id, war_room_id, property_address, property_photo_url, property_price, property_url, preferred_date, preferred_time, alternate_date, alternate_time, scheduled_at, notes, agent_response, status, created_at',
-      )
-      .eq('client_id', cid)
-      .order('preferred_date', { ascending: true, nullsFirst: false })
-      .then(({ data }) => {
-        if (cancelled) return
-        setTours((data as ScheduleTourRow[]) || [])
-        setLoading(false)
-      })
+    loadTours(cid).then(() => {
+      if (cancelled) return
+      setLoading(false)
+    })
     return () => {
       cancelled = true
     }
@@ -956,7 +967,15 @@ function PortalSchedule() {
             ) : (
               <div className="space-y-3">
                 {upcoming.map((t) => (
-                  <ScheduleTourCard key={t.id} tour={t} mode="upcoming" />
+                  <ScheduleTourCard
+                    key={t.id}
+                    tour={t}
+                    mode="upcoming"
+                    accessToken={session?.access_token || ''}
+                    onAccepted={() => {
+                      if (clientProfile) loadTours(clientProfile.id)
+                    }}
+                  />
                 ))}
               </div>
             )}
@@ -968,7 +987,13 @@ function PortalSchedule() {
               <PortalSectionLabel>Past · {past.length}</PortalSectionLabel>
               <div className="space-y-3">
                 {past.map((t) => (
-                  <ScheduleTourCard key={t.id} tour={t} mode="past" />
+                  <ScheduleTourCard
+                    key={t.id}
+                    tour={t}
+                    mode="past"
+                    accessToken={session?.access_token || ''}
+                    onAccepted={() => {}}
+                  />
                 ))}
               </div>
             </section>
@@ -982,18 +1007,93 @@ function PortalSchedule() {
 function ScheduleTourCard({
   tour,
   mode,
+  accessToken,
+  onAccepted,
 }: {
   tour: ScheduleTourRow
   mode: 'upcoming' | 'past'
+  accessToken: string
+  onAccepted: () => void
 }) {
   const isPast = mode === 'past'
+  const proposedAlternates: ProposedAlternate[] = Array.isArray(tour.proposed_alternates)
+    ? tour.proposed_alternates
+    : []
+  const showProposed =
+    !isPast && tour.status === 'rescheduled' && proposedAlternates.length > 0
   const showAlternate =
-    !isPast && tour.alternate_date && tour.status !== 'confirmed' && tour.status !== 'toured'
+    !isPast &&
+    tour.alternate_date &&
+    tour.status !== 'confirmed' &&
+    tour.status !== 'toured' &&
+    !showProposed
   // If agent set a different scheduled_at than the preferred slot, surface it
   const scheduledOverridesPreferred =
     tour.scheduled_at &&
     tour.preferred_date &&
     new Date(tour.scheduled_at).toISOString().slice(0, 10) !== tour.preferred_date
+
+  const [acceptingIdx, setAcceptingIdx] = useState<number | null>(null)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
+
+  async function handleAcceptAlternate(idx: number, slot: ProposedAlternate) {
+    if (!accessToken) {
+      setAcceptError('Not signed in.')
+      return
+    }
+    setAcceptError(null)
+    setAcceptingIdx(idx)
+    try {
+      const scheduledAt = combinePortalDateTimeToISO(slot.date, slot.time)
+      // 1. Update tour_requests
+      const { error: updateError } = await supabase
+        .from('tour_requests')
+        .update({
+          status: 'confirmed',
+          scheduled_at: scheduledAt,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tour.id)
+      if (updateError) throw updateError
+
+      // 2. Post war room system message
+      if (tour.war_room_id) {
+        const label = formatPortalDate(slot.date) + (slot.time ? ` at ${slot.time}` : '')
+        const { data: msg, error: msgErr } = await supabase
+          .from('war_room_messages')
+          .insert({
+            tenant_id: tour.tenant_id,
+            war_room_id: tour.war_room_id,
+            sender_type: 'system',
+            body: `Tour confirmed for ${tour.property_address || 'the property'} on ${label}.`,
+            metadata: {
+              type: 'tour_status_change',
+              tour_request_id: tour.id,
+              new_status: 'confirmed',
+              accepted_alternate: slot,
+            },
+          })
+          .select('id')
+          .single()
+        if (!msgErr && msg) {
+          // Notify the agent via existing edge function
+          fetch(`${EDGE_FUNCTIONS_BASE_URL}/notify_war_room_message`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ message_id: msg.id }),
+          }).catch(() => {})
+        }
+      }
+      onAccepted()
+    } catch (e) {
+      setAcceptError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setAcceptingIdx(null)
+    }
+  }
 
   return (
     <article
@@ -1058,7 +1158,7 @@ function ScheduleTourCard({
 
             {showAlternate && tour.alternate_date && (
               <ScheduleField
-                label="Alternate"
+                label="Your alternate"
                 value={`${formatPortalDate(tour.alternate_date)}${
                   tour.alternate_time ? ` · ${tour.alternate_time}` : ''
                 }`}
@@ -1104,6 +1204,58 @@ function ScheduleTourCard({
             </div>
           )}
 
+          {/* P9.6 — Agent-proposed alternate times. Click to accept. */}
+          {showProposed && (
+            <div className="mt-4 border border-ink-900 bg-ink-50/50 p-4">
+              <div className="text-2xs uppercase tracking-widest text-ink-900 mb-2 flex items-center gap-1.5">
+                <Calendar className="w-3 h-3" strokeWidth={2} />
+                Pick a tour time
+              </div>
+              <p className="text-xs text-ink-600 mb-3 leading-relaxed">
+                Your agent couldn’t confirm your preferred time. Tap one of these instead — the
+                tour locks in and you’ll get a confirmation email.
+              </p>
+              <div className="space-y-2">
+                {proposedAlternates.map((slot, idx) => (
+                  <button
+                    key={`${slot.date}-${slot.time}-${idx}`}
+                    onClick={() => handleAcceptAlternate(idx, slot)}
+                    disabled={acceptingIdx !== null}
+                    className="w-full text-left flex items-center justify-between gap-3 border border-ink-200 bg-white hover:border-ink-900 hover:bg-cream px-3 py-2.5 text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <span className="text-ink-900">
+                      {formatPortalDate(slot.date)}
+                      {slot.time ? ` · ${slot.time}` : ''}
+                    </span>
+                    {acceptingIdx === idx ? (
+                      <Loader2
+                        className="w-3.5 h-3.5 animate-spin text-ink-500"
+                        strokeWidth={2}
+                      />
+                    ) : (
+                      <span className="text-2xs uppercase tracking-widest text-ink-500">
+                        Pick
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {acceptError && (
+                <p className="text-xs text-red-700 bg-red-50 px-3 py-2 mt-3">{acceptError}</p>
+              )}
+              <p className="text-2xs text-ink-500 mt-3">
+                None of these work?{' '}
+                <Link
+                  to="/portal/war-room"
+                  className="text-ink-700 hover:text-ink-900 underline"
+                >
+                  Message your agent
+                </Link>
+                .
+              </p>
+            </div>
+          )}
+
           {/* Footer link */}
           <div className="mt-4 flex items-center gap-3 text-2xs uppercase tracking-widest">
             <Link
@@ -1135,4 +1287,13 @@ function ScheduleField({
       <dd className={emphasized ? 'text-ink-900 font-medium' : 'text-ink-700'}>{value}</dd>
     </div>
   )
+}
+
+function combinePortalDateTimeToISO(date: string, time: string | null): string | null {
+  if (!date) return null
+  const baseTime = time && /^\d{1,2}:\d{2}/.test(time)
+    ? time.slice(0, 5).padStart(5, '0')
+    : '09:00'
+  const iso = new Date(`${date}T${baseTime}`)
+  return isNaN(iso.getTime()) ? null : iso.toISOString()
 }
