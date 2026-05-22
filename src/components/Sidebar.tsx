@@ -7,6 +7,7 @@ import {
   Map,
   Target,
   Megaphone,
+  Flame,
   Search,
   Send,
   Home,
@@ -29,6 +30,7 @@ const navItems: NavItem[] = [
   { to: '/markets', label: 'Markets', Icon: Map },
   { to: '/audiences', label: 'Audiences', Icon: Target },
   { to: '/outreach', label: 'Outreach', Icon: Megaphone },
+  { to: '/board', label: 'Hot leads', Icon: Flame },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
   { to: '/campaigns', label: 'Campaigns', Icon: Send },
@@ -80,7 +82,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.17 · Epic C.2
+        Platform v0.18 · Epic D.2
       </div>
     </aside>
   )
