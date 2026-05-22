@@ -17,11 +17,13 @@ import CMAViewer from '@/components/CMAViewer'
 import Markets from '@/pages/Markets'
 import MarketDetail from '@/pages/MarketDetail'
 import Audiences from '@/pages/Audiences'
+import Outreach from '@/pages/Outreach'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
 import TenantHome from '@/pages/public/TenantHome'
 import ClaimUnit from '@/pages/public/ClaimUnit'
+import Unsubscribe from '@/pages/public/Unsubscribe'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -37,6 +39,8 @@ export default function App() {
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
           {/* B.2: public ownership-claim link */}
           <Route path="/claim/:token" element={<ClaimUnit />} />
+          {/* C.2: public unsubscribe */}
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           {/* Everything else goes through the auth gate */}
           <Route path="*" element={<AuthGate />} />
         </Routes>
@@ -78,6 +82,7 @@ function AuthGate() {
         <Route path="/markets" element={<Markets />} />
         <Route path="/markets/:marketId" element={<MarketDetail />} />
         <Route path="/audiences" element={<Audiences />} />
+        <Route path="/outreach" element={<Outreach />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
