@@ -25,6 +25,9 @@ import {
   ChevronRight,
   Mail,
   Phone,
+  CheckCircle2,
+  Link2,
+  Check,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import MarketImportModal from '@/components/MarketImportModal'
@@ -53,6 +56,8 @@ type OwnerEdge = {
   confidence: string
   source: string | null
   ownership_role: string
+  claim_token: string | null
+  claim_status: string | null
   contacts: OwnerContact | null
 }
 
@@ -91,7 +96,7 @@ const PAGE_SIZE = 50
 const UNIT_SELECT = `
   id, full_address, unit_label, beds, baths, area_sqft, last_sale_price, last_sale_date,
   buildings ( name, street_address, neighborhood, hoa_name ),
-  unit_ownership ( confidence, source, ownership_role, contacts ( id, first_name, last_name, email, phone ) ),
+  unit_ownership ( confidence, source, ownership_role, claim_token, claim_status, contacts ( id, first_name, last_name, email, phone ) ),
   property_sales ( sale_price, sale_date )
 `
 
@@ -460,6 +465,15 @@ export default function MarketDetail() {
                                   </span>
                                 )}
                               </div>
+                              <div className="mt-1.5">
+                                {o.claim_status === 'claimed' ? (
+                                  <span className="text-2xs uppercase tracking-widest text-emerald-700 inline-flex items-center gap-1">
+                                    <CheckCircle2 className="w-3 h-3" /> Claimed by owner
+                                  </span>
+                                ) : (
+                                  o.claim_token && <ClaimLinkButton token={o.claim_token} />
+                                )}
+                              </div>
                             </li>
                           ))}
                         </ul>
@@ -576,5 +590,38 @@ function SummaryStat({
       </div>
       <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">{label}</div>
     </div>
+  )
+}
+
+function ClaimLinkButton({ token }: { token: string }) {
+  const [copied, setCopied] = useState(false)
+  const url = `${typeof window !== 'undefined' ? window.location.origin : ''}/claim/${token}`
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // clipboard blocked — select-prompt fallback
+      window.prompt('Copy this claim link:', url)
+    }
+  }
+
+  return (
+    <button
+      onClick={copy}
+      className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900"
+    >
+      {copied ? (
+        <>
+          <Check className="w-3 h-3 text-emerald-700" /> Copied
+        </>
+      ) : (
+        <>
+          <Link2 className="w-3 h-3" /> Copy claim link
+        </>
+      )}
+    </button>
   )
 }
