@@ -28,6 +28,8 @@ import {
   CheckCircle2,
   Link2,
   Check,
+  UserPlus,
+  UserCheck,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import MarketImportModal from '@/components/MarketImportModal'
@@ -132,6 +134,7 @@ export default function MarketDetail() {
   const [expanded, setExpanded] = useState<string | null>(null)
   const [importing, setImporting] = useState(false)
   const [notFound, setNotFound] = useState(false)
+  const [clientContactIds, setClientContactIds] = useState<Set<string>>(new Set())
 
   const loadMarket = useCallback(async () => {
     if (!marketId) return
@@ -171,6 +174,14 @@ export default function MarketDetail() {
     setLoadingUnits(false)
   }, [marketId, page, appliedSearch])
 
+  const loadClients = useCallback(async () => {
+    const { data } = await supabase
+      .from('clients')
+      .select('contact_id')
+      .not('contact_id', 'is', null)
+    setClientContactIds(new Set(((data as { contact_id: string }[]) || []).map((r) => r.contact_id)))
+  }, [])
+
   useEffect(() => {
     loadMarket()
   }, [loadMarket])
@@ -178,6 +189,10 @@ export default function MarketDetail() {
   useEffect(() => {
     loadUnits()
   }, [loadUnits])
+
+  useEffect(() => {
+    loadClients()
+  }, [loadClients])
 
   const missingOwner = useMemo(() => {
     if (!summary) return 0
@@ -465,7 +480,7 @@ export default function MarketDetail() {
                                   </span>
                                 )}
                               </div>
-                              <div className="mt-1.5">
+                              <div className="mt-1.5 flex items-center gap-4 flex-wrap">
                                 {o.claim_status === 'claimed' ? (
                                   <span className="text-2xs uppercase tracking-widest text-emerald-700 inline-flex items-center gap-1">
                                     <CheckCircle2 className="w-3 h-3" /> Claimed by owner
@@ -473,6 +488,24 @@ export default function MarketDetail() {
                                 ) : (
                                   o.claim_token && <ClaimLinkButton token={o.claim_token} />
                                 )}
+                                {o.contacts?.id &&
+                                  (clientContactIds.has(o.contacts.id) ? (
+                                    <Link
+                                      to="/clients"
+                                      className="text-2xs uppercase tracking-widest text-emerald-700 inline-flex items-center gap-1 hover:text-emerald-800"
+                                    >
+                                      <UserCheck className="w-3 h-3" /> Portal client
+                                    </Link>
+                                  ) : (
+                                    <PromoteOwnerButton
+                                      contactId={o.contacts.id}
+                                      unitId={u.id}
+                                      hasEmail={!!o.contacts.email}
+                                      onPromoted={(cid) =>
+                                        setClientContactIds((prev) => new Set(prev).add(cid))
+                                      }
+                                    />
+                                  ))}
                               </div>
                             </li>
                           ))}
@@ -622,6 +655,83 @@ function ClaimLinkButton({ token }: { token: string }) {
           <Link2 className="w-3 h-3" /> Copy claim link
         </>
       )}
+    </button>
+  )
+}
+
+function PromoteOwnerButton({
+  contactId,
+  unitId,
+  hasEmail,
+  onPromoted,
+}: {
+  contactId: string
+  unitId: string
+  hasEmail: boolean
+  onPromoted: (contactId: string) => void
+}) {
+  const [state, setState] = useState<'idle' | 'working' | 'done' | 'error'>('idle')
+  const [msg, setMsg] = useState('')
+
+  async function go() {
+    setState('working')
+    // 1. Reusable conversion: ensure client + war room (idempotent)
+    const { data, error } = await supabase.rpc('provision_client_for_contact', {
+      p_contact_id: contactId,
+      p_source: 'unit_claim',
+      p_unit_id: unitId,
+    })
+    if (error) {
+      setState('error')
+      setMsg(error.message)
+      return
+    }
+    const clientId = (data as { client_id?: string } | null)?.client_id
+    // 2. Chain the existing portal invite (transactional — sends regardless of marketing opt-out)
+    let invited = false
+    if (clientId && hasEmail) {
+      const { error: invErr } = await supabase.functions.invoke('invite_client', {
+        body: { client_id: clientId },
+      })
+      invited = !invErr
+    }
+    setState('done')
+    setMsg(
+      invited
+        ? 'Client created · portal invite sent'
+        : hasEmail
+          ? 'Client created · invite didn’t send'
+          : 'Client created · add an email to invite',
+    )
+    if (contactId) onPromoted(contactId)
+  }
+
+  if (state === 'done') {
+    return (
+      <span className="text-2xs uppercase tracking-widest text-emerald-700 inline-flex items-center gap-1">
+        <UserCheck className="w-3 h-3" /> {msg}
+      </span>
+    )
+  }
+  if (state === 'error') {
+    return (
+      <span className="text-2xs uppercase tracking-widest text-red-700 inline-flex items-center gap-1">
+        <AlertTriangle className="w-3 h-3" /> {msg || 'Could not promote'}
+      </span>
+    )
+  }
+  return (
+    <button
+      onClick={go}
+      disabled={state === 'working'}
+      className="text-2xs uppercase tracking-widest text-ink-700 hover:text-ink-900 inline-flex items-center gap-1 disabled:opacity-50"
+    >
+      {state === 'working' ? (
+        <Loader2 className="w-3 h-3 animate-spin" />
+      ) : (
+        <UserPlus className="w-3 h-3" />
+      )}
+      Promote to client
     </button>
   )
 }
