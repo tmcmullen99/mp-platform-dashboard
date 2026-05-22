@@ -26,6 +26,7 @@ import Pipeline from '@/pages/Pipeline'
 import Analytics from '@/pages/Analytics'
 import Tasks from '@/pages/Tasks'
 import Notifications from '@/pages/Notifications'
+import Copilot from '@/pages/Copilot'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
@@ -98,6 +99,7 @@ function AuthGate() {
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/notifications" element={<Notifications />} />
+        <Route path="/copilot" element={<Copilot />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
