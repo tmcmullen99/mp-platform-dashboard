@@ -10,6 +10,7 @@ import {
   UserPlus,
   Send,
   ArrowUpRight,
+  Flame,
   Check,
   X,
   Loader2,
@@ -64,6 +65,16 @@ type RecentClient = {
   created_at: string
 }
 
+type HotLead = {
+  contact_id: string
+  first_name: string | null
+  last_name: string | null
+  score: number
+  tier: string
+  unit_address: string | null
+  market_name: string | null
+}
+
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export default function Today() {
@@ -72,6 +83,7 @@ export default function Today() {
   const [unreadThreads, setUnreadThreads] = useState<UnreadThread[]>([])
   const [recentCMAs, setRecentCMAs] = useState<RecentCMA[]>([])
   const [recentClients, setRecentClients] = useState<RecentClient[]>([])
+  const [hotLeads, setHotLeads] = useState<HotLead[]>([])
   const [loading, setLoading] = useState(true)
   const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -119,7 +131,8 @@ export default function Today() {
         .gte('created_at', sevenDaysAgo)
         .order('created_at', { ascending: false })
         .limit(5),
-    ]).then(([toursResp, roomsResp, cmasResp, clientsResp]) => {
+      supabase.rpc('hot_leads', { p_market_id: null, p_limit: 5 }),
+    ]).then(([toursResp, roomsResp, cmasResp, clientsResp, hotResp]) => {
       if (cancelled) return
 
       // Supabase joined relations sometimes come back as arrays; normalize to object.
@@ -133,6 +146,7 @@ export default function Today() {
       setUnreadThreads(normalize((roomsResp.data || []) as unknown as UnreadThread[]))
       setRecentCMAs(normalize((cmasResp.data || []) as unknown as RecentCMA[]))
       setRecentClients((clientsResp.data || []) as RecentClient[])
+      setHotLeads((hotResp.data || []) as HotLead[])
       setLoading(false)
     })
 
@@ -311,6 +325,56 @@ export default function Today() {
           )}
         </p>
       </div>
+
+      {/* Hot leads */}
+      {!loading && hotLeads.length > 0 && (
+        <section className="mb-14">
+          <div className="flex items-center justify-between mb-4">
+            <SectionLabel>Hot leads</SectionLabel>
+            <Link
+              to="/board"
+              className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 inline-flex items-center gap-1"
+            >
+              View board <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <Card>
+            <ul className="divide-y divide-ink-100">
+              {hotLeads.map((l) => {
+                const name =
+                  [l.first_name, l.last_name].filter(Boolean).join(' ').trim() || 'Owner'
+                const tierCls =
+                  l.tier === 'hot'
+                    ? 'bg-ink-900 text-cream'
+                    : l.tier === 'warm'
+                      ? 'bg-sky-50 text-sky-700'
+                      : 'bg-ink-100 text-ink-500'
+                return (
+                  <li key={l.contact_id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <Flame className="w-3.5 h-3.5 text-ink-400 shrink-0" strokeWidth={1.5} />
+                        <span className="text-ink-900 truncate">{name}</span>
+                        <span className={`text-2xs uppercase tracking-widest px-1.5 py-0.5 shrink-0 ${tierCls}`}>
+                          {l.tier}
+                        </span>
+                      </div>
+                      {(l.unit_address || l.market_name) && (
+                        <div className="text-2xs uppercase tracking-widest text-ink-400 mt-0.5 truncate pl-5">
+                          {l.unit_address || l.market_name}
+                        </div>
+                      )}
+                    </div>
+                    <div className="font-display text-xl text-ink-900 tabular-nums shrink-0">
+                      {Number(l.score).toFixed(1)}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          </Card>
+        </section>
+      )}
 
       {/* Action queue */}
       <section className="mb-14">
