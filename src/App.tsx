@@ -18,6 +18,7 @@ import Markets from '@/pages/Markets'
 import MarketDetail from '@/pages/MarketDetail'
 import Audiences from '@/pages/Audiences'
 import Outreach from '@/pages/Outreach'
+import Board from '@/pages/Board'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
@@ -83,6 +84,7 @@ function AuthGate() {
         <Route path="/markets/:marketId" element={<MarketDetail />} />
         <Route path="/audiences" element={<Audiences />} />
         <Route path="/outreach" element={<Outreach />} />
+        <Route path="/board" element={<Board />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
