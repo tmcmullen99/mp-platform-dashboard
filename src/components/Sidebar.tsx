@@ -4,6 +4,7 @@ import {
   Calendar,
   Users,
   Briefcase,
+  Map,
   Search,
   Send,
   Home,
@@ -23,6 +24,7 @@ const navItems: NavItem[] = [
   { to: '/schedule', label: 'Schedule', Icon: Calendar },
   { to: '/crm', label: 'CRM', Icon: Users },
   { to: '/clients', label: 'Clients', Icon: Briefcase },
+  { to: '/markets', label: 'Markets', Icon: Map },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
   { to: '/campaigns', label: 'Campaigns', Icon: Send },
@@ -74,7 +76,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.14 · P9.7
+        Platform v0.15 · Epic B
       </div>
     </aside>
   )
