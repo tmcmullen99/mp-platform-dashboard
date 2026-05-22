@@ -19,6 +19,13 @@ import MarketDetail from '@/pages/MarketDetail'
 import Audiences from '@/pages/Audiences'
 import Outreach from '@/pages/Outreach'
 import Board from '@/pages/Board'
+import Brokerage from '@/pages/Brokerage'
+import DealDetail from '@/pages/DealDetail'
+import Referrals from '@/pages/Referrals'
+import Pipeline from '@/pages/Pipeline'
+import Analytics from '@/pages/Analytics'
+import Tasks from '@/pages/Tasks'
+import Notifications from '@/pages/Notifications'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
@@ -85,6 +92,12 @@ function AuthGate() {
         <Route path="/audiences" element={<Audiences />} />
         <Route path="/outreach" element={<Outreach />} />
         <Route path="/board" element={<Board />} />
+        <Route path="/brokerage" element={<Brokerage />} />
+        <Route path="/deals/:dealId" element={<DealDetail />} />
+        <Route path="/referrals" element={<Referrals />} />
+        <Route path="/pipeline" element={<Pipeline />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
@@ -125,18 +138,7 @@ function AuthGate() {
             />
           }
         />
-        <Route
-          path="/analytics"
-          element={
-            <Placeholder
-              title="Analytics"
-              description="Lead-source attribution, funnel metrics, ROI by campaign and content piece. Engagement-as-conversion-signal: click + return + content-depth + form-submit, not vanity opens. Closes the content → CRM → outreach loop."
-              Icon={BarChart3}
-              phase="P10"
-              replaces="Google Analytics"
-            />
-          }
-        />
+        <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="/portal/*" element={<Portal />} />
