@@ -123,7 +123,7 @@ export default function PublicListingDetail() {
           .order('sort_order', { ascending: true }),
         supabase
           .from('tenants')
-          .select('id, slug, name')
+          .select('id, slug, name:display_name')
           .eq('id', dealData.tenant_id)
           .maybeSingle(),
         supabase
