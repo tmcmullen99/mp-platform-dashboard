@@ -46,7 +46,7 @@ export default function TenantHome() {
       // 1. Tenant by slug
       const { data: tenantData } = await supabase
         .from('tenants')
-        .select('id, slug, name')
+        .select('id, slug, name:display_name')
         .eq('slug', tenantSlug)
         .maybeSingle()
 
