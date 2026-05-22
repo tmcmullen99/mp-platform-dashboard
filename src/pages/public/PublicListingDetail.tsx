@@ -24,6 +24,7 @@ import PublicLayout, {
   TenantPublic,
   TenantBrandingPublic,
 } from '@/components/public/PublicLayout'
+import InquiryModal from '@/components/public/InquiryModal'
 
 type Listing = {
   id: string
@@ -68,6 +69,7 @@ export default function PublicListingDetail() {
   const [branding, setBranding] = useState<TenantBrandingPublic | null>(null)
   const [activeUrl, setActiveUrl] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [inquiryOpen, setInquiryOpen] = useState(false)
 
   useEffect(() => {
     if (!slug) return
@@ -350,11 +352,23 @@ export default function PublicListingDetail() {
           {/* Right: agent card (sticky on desktop) */}
           <aside className="md:col-span-1">
             <div className="md:sticky md:top-24">
-              <AgentCard branding={branding} />
+              <AgentCard
+                branding={branding}
+                onInquire={() => setInquiryOpen(true)}
+              />
             </div>
           </aside>
         </div>
       </div>
+
+      {inquiryOpen && deal && (
+        <InquiryModal
+          dealId={deal.id}
+          listingName={listing.name}
+          agentName={branding?.agent_name || null}
+          onClose={() => setInquiryOpen(false)}
+        />
+      )}
     </PublicLayout>
   )
 }
@@ -381,7 +395,13 @@ function Stat({
   )
 }
 
-function AgentCard({ branding }: { branding: TenantBrandingPublic | null }) {
+function AgentCard({
+  branding,
+  onInquire,
+}: {
+  branding: TenantBrandingPublic | null
+  onInquire: () => void
+}) {
   if (!branding) {
     return (
       <div className="border border-ink-200 bg-cream p-6 text-sm text-ink-600">
@@ -444,15 +464,13 @@ function AgentCard({ branding }: { branding: TenantBrandingPublic | null }) {
         )}
       </div>
 
-      {/* CTA — wired in P9.13.3 (lead capture). For now opens mailto. */}
-      {branding.agent_email && (
-        <a
-          href={`mailto:${branding.agent_email}?subject=Inquiry about a listing`}
-          className="block w-full text-center mt-6 px-4 py-3 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
-        >
-          Request more info
-        </a>
-      )}
+      {/* P9.13.3 — opens the inquiry form (lead capture into CRM) */}
+      <button
+        onClick={onInquire}
+        className="block w-full text-center mt-6 px-4 py-3 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+      >
+        Request more info
+      </button>
     </div>
   )
 }
