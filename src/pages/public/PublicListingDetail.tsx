@@ -10,6 +10,7 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/beacon'
 import {
   Bed,
   Bath,
@@ -73,6 +74,10 @@ export default function PublicListingDetail() {
 
   useEffect(() => {
     if (!slug) return
+    // D.0b: beacon a page_view, attributed to a campaign recipient if the link
+    // carried ?e=<tracking_token>.
+    const e = new URLSearchParams(window.location.search).get('e')
+    trackEvent({ event_type: 'page_view', campaign_token: e, page_path: `/listings/${slug}` })
     let cancelled = false
 
     async function load() {
