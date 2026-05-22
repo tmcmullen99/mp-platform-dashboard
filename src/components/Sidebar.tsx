@@ -6,6 +6,7 @@ import {
   Briefcase,
   Map,
   Target,
+  Megaphone,
   Search,
   Send,
   Home,
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { to: '/clients', label: 'Clients', Icon: Briefcase },
   { to: '/markets', label: 'Markets', Icon: Map },
   { to: '/audiences', label: 'Audiences', Icon: Target },
+  { to: '/outreach', label: 'Outreach', Icon: Megaphone },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
   { to: '/campaigns', label: 'Campaigns', Icon: Send },
@@ -78,7 +80,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.16 · Epic C
+        Platform v0.17 · Epic C.2
       </div>
     </aside>
   )
