@@ -15,6 +15,7 @@ import {
   Home,
   Users,
 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import MarketImportModal from '@/components/MarketImportModal'
@@ -165,7 +166,12 @@ function MarketCard({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap mb-1">
-            <h3 className="font-display text-xl text-ink-900">{market.name}</h3>
+            <Link
+              to={`/markets/${market.id}`}
+              className="font-display text-xl text-ink-900 hover:text-ink-600 transition-colors"
+            >
+              {market.name}
+            </Link>
             <span className="text-2xs uppercase tracking-widest bg-ink-100 text-ink-600 px-2 py-0.5">
               {market.kind}
             </span>
@@ -195,6 +201,15 @@ function MarketCard({
         <Counter icon={Building2} label="Buildings" value={market.building_count} />
         <Counter icon={Home} label="Units" value={market.unit_count} />
         <Counter icon={Users} label="Owners" value={market.owner_count} />
+      </div>
+
+      <div className="mt-4">
+        <Link
+          to={`/markets/${market.id}`}
+          className="text-2xs uppercase tracking-widest text-ink-700 hover:text-ink-900"
+        >
+          View inventory →
+        </Link>
       </div>
     </div>
   )
