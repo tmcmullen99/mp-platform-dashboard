@@ -21,6 +21,7 @@ import Audiences from '@/pages/Audiences'
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
 import TenantHome from '@/pages/public/TenantHome'
+import ClaimUnit from '@/pages/public/ClaimUnit'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -34,6 +35,8 @@ export default function App() {
           <Route path="/listings" element={<ListingsIndex />} />
           <Route path="/listings/:slug" element={<PublicListingDetail />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
+          {/* B.2: public ownership-claim link */}
+          <Route path="/claim/:token" element={<ClaimUnit />} />
           {/* Everything else goes through the auth gate */}
           <Route path="*" element={<AuthGate />} />
         </Routes>
