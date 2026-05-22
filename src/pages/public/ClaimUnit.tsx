@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { trackEvent } from '@/lib/beacon'
 
 type LookupResult = {
   found: boolean
@@ -58,7 +59,8 @@ export default function ClaimUnit() {
 
   useEffect(() => {
     runLookup()
-  }, [runLookup])
+    if (token) trackEvent({ event_type: 'page_view', claim_token: token })
+  }, [runLookup, token])
 
   async function submit() {
     if (!name.trim() && !email.trim()) {
