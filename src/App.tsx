@@ -14,6 +14,7 @@ import Placeholder from '@/pages/Placeholder'
 import Portal from '@/pages/Portal'
 import NewCMA from '@/pages/NewCMA'
 import CMAViewer from '@/components/CMAViewer'
+import Markets from '@/pages/Markets'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
@@ -69,6 +70,7 @@ function AuthGate() {
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/clients/*" element={<Clients />} />
+        <Route path="/markets" element={<Markets />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
