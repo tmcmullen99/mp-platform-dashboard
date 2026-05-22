@@ -44,6 +44,8 @@ type Campaign = {
   recipient_count: number
   sent_count: number
   failed_count: number
+  opened_count: number
+  clicked_count: number
   last_wave_at: string | null
   created_at: string
 }
@@ -82,7 +84,7 @@ export default function Outreach() {
       supabase.from('audiences').select('id, name, market_id, last_resolved_count').order('created_at', { ascending: false }),
       supabase
         .from('campaigns')
-        .select('id, name, subject, status, audience_id, wave_size, cooldown_days, recipient_count, sent_count, failed_count, last_wave_at, created_at')
+        .select('id, name, subject, status, audience_id, wave_size, cooldown_days, recipient_count, sent_count, failed_count, opened_count, clicked_count, last_wave_at, created_at')
         .not('audience_id', 'is', null)
         .order('created_at', { ascending: false }),
     ])
@@ -240,6 +242,11 @@ function CampaignCard({
             {campaign.sent_count.toLocaleString()}
           </div>
           <div className="text-2xs uppercase tracking-widest text-ink-500">sent</div>
+          {(campaign.opened_count > 0 || campaign.clicked_count > 0) && (
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">
+              {campaign.opened_count} opened · {campaign.clicked_count} clicked
+            </div>
+          )}
           {campaign.failed_count > 0 && (
             <div className="text-2xs uppercase tracking-widest text-red-600 mt-0.5">
               {campaign.failed_count} failed
