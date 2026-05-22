@@ -42,6 +42,7 @@ type Lead = {
   unit_address: string | null
   confidence: string | null
   claim_status: string | null
+  source_campaign: string | null
 }
 
 type Market = { id: string; name: string }
@@ -201,6 +202,11 @@ function LeadCard({ lead, rank }: { lead: Lead; rank: number }) {
             <div className="text-sm text-ink-600 truncate">
               {lead.unit_address || '—'}
               {lead.market_name ? ` · ${lead.market_name}` : ''}
+            </div>
+          )}
+          {lead.source_campaign && (
+            <div className="text-2xs uppercase tracking-widest text-ink-400 mt-0.5 truncate">
+              from {lead.source_campaign}
             </div>
           )}
           <div className="flex items-center gap-3 mt-2 text-2xs uppercase tracking-widest text-ink-500 flex-wrap">
