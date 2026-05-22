@@ -2,7 +2,7 @@
 // where the recipient is the current user (agent via tenant, client via clientProfile).
 // P9.8: bell badge upgraded from red dot to numeric count.
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import { supabase, NotificationRecord } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -142,6 +142,13 @@ export default function NotificationBell() {
               ))
             )}
           </div>
+          <Link
+            to="/notifications"
+            onClick={() => setOpen(false)}
+            className="block text-center px-4 py-2.5 border-t border-ink-200 text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900"
+          >
+            See all
+          </Link>
         </div>
       )}
     </div>
