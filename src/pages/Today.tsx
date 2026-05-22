@@ -11,6 +11,8 @@ import {
   Send,
   ArrowUpRight,
   Flame,
+  CheckSquare,
+  Square,
   Check,
   X,
   Loader2,
@@ -84,6 +86,7 @@ export default function Today() {
   const [recentCMAs, setRecentCMAs] = useState<RecentCMA[]>([])
   const [recentClients, setRecentClients] = useState<RecentClient[]>([])
   const [hotLeads, setHotLeads] = useState<HotLead[]>([])
+  const [openTasks, setOpenTasks] = useState<{ id: string; title: string; due_date: string | null; priority: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -132,7 +135,13 @@ export default function Today() {
         .order('created_at', { ascending: false })
         .limit(5),
       supabase.rpc('hot_leads', { p_market_id: null, p_limit: 5 }),
-    ]).then(([toursResp, roomsResp, cmasResp, clientsResp, hotResp]) => {
+      supabase
+        .from('tasks')
+        .select('id, title, due_date, priority')
+        .eq('status', 'open')
+        .order('due_date', { ascending: true, nullsFirst: false })
+        .limit(5),
+    ]).then(([toursResp, roomsResp, cmasResp, clientsResp, hotResp, tasksResp]) => {
       if (cancelled) return
 
       // Supabase joined relations sometimes come back as arrays; normalize to object.
@@ -147,6 +156,7 @@ export default function Today() {
       setRecentCMAs(normalize((cmasResp.data || []) as unknown as RecentCMA[]))
       setRecentClients((clientsResp.data || []) as RecentClient[])
       setHotLeads((hotResp.data || []) as HotLead[])
+      setOpenTasks((tasksResp.data || []) as any[])
       setLoading(false)
     })
 
@@ -325,6 +335,38 @@ export default function Today() {
           )}
         </p>
       </div>
+
+      {/* Follow-ups */}
+      {!loading && openTasks.length > 0 && (
+        <section className="mb-14">
+          <div className="flex items-center justify-between mb-4">
+            <SectionLabel>Follow-ups</SectionLabel>
+            <Link to="/tasks" className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 inline-flex items-center gap-1">
+              All tasks <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <Card>
+            <ul className="divide-y divide-ink-100">
+              {openTasks.map((t) => {
+                const overdue = t.due_date && new Date(t.due_date) < new Date(new Date().toDateString())
+                return (
+                  <li key={t.id} className="py-3 first:pt-0 last:pb-0 flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Square className="w-3.5 h-3.5 text-ink-300 shrink-0" />
+                      <span className="text-ink-900 truncate">{t.title}</span>
+                    </div>
+                    {t.due_date && (
+                      <span className={`text-2xs uppercase tracking-widest shrink-0 ${overdue ? 'text-red-600' : 'text-ink-400'}`}>
+                        {new Date(t.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          </Card>
+        </section>
+      )}
 
       {/* Hot leads */}
       {!loading && hotLeads.length > 0 && (
