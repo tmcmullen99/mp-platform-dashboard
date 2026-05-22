@@ -20,6 +20,7 @@ import {
   Workflow,
   Gift,
   CheckSquare,
+  Sparkles,
   LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -28,6 +29,7 @@ type NavItem = { to: string; label: string; Icon: LucideIcon }
 
 const navItems: NavItem[] = [
   { to: '/', label: 'Today', Icon: Sun },
+  { to: '/copilot', label: 'Copilot', Icon: Sparkles },
   { to: '/tasks', label: 'Tasks', Icon: CheckSquare },
   { to: '/schedule', label: 'Schedule', Icon: Calendar },
   { to: '/crm', label: 'CRM', Icon: Users },
@@ -134,7 +136,7 @@ export default function Sidebar() {
 
       {/* Footer */}
       <div className="p-7 border-t border-white/5 text-2xs uppercase tracking-widest text-cream/30">
-        Platform v0.22 · Epic G
+        Platform v0.23 · Epic H
       </div>
     </aside>
   )
