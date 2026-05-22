@@ -13,6 +13,7 @@ import {
   Flame,
   CheckSquare,
   Square,
+  Sparkles,
   Check,
   X,
   Loader2,
@@ -87,6 +88,9 @@ export default function Today() {
   const [recentClients, setRecentClients] = useState<RecentClient[]>([])
   const [hotLeads, setHotLeads] = useState<HotLead[]>([])
   const [openTasks, setOpenTasks] = useState<{ id: string; title: string; due_date: string | null; priority: string }[]>([])
+  const [briefing, setBriefing] = useState<string | null>(null)
+  const [briefingLoading, setBriefingLoading] = useState(false)
+  const [briefingError, setBriefingError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -299,6 +303,24 @@ export default function Today() {
 
   const totalActionItems = pendingTours.length + unreadThreads.length
 
+  async function generateBriefing() {
+    if (!currentTenant) return
+    setBriefingLoading(true)
+    setBriefingError(null)
+    try {
+      const { data, error } = await supabase.functions.invoke('daily_briefing', {
+        body: { tenant_id: currentTenant.id },
+      })
+      if (error) throw error
+      if (data?.error) throw new Error(data.error)
+      setBriefing((data?.briefing as string) || 'No briefing returned.')
+    } catch (err) {
+      setBriefingError(err instanceof Error ? err.message : 'Could not generate briefing.')
+    } finally {
+      setBriefingLoading(false)
+    }
+  }
+
   return (
     <div className="p-12 max-w-6xl">
       {/* Hero */}
@@ -335,6 +357,41 @@ export default function Today() {
           )}
         </p>
       </div>
+
+      {/* AI briefing */}
+      {!loading && (
+        <div className="mb-12 border border-ink-200 bg-cream">
+          <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-ink-100">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-ink-900" strokeWidth={2} />
+              <span className="text-2xs uppercase tracking-widest text-ink-500">Daily briefing</span>
+            </div>
+            {!briefing && (
+              <button onClick={generateBriefing} disabled={briefingLoading}
+                className="px-3 py-1.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50">
+                {briefingLoading ? 'Thinking…' : 'Generate'}
+              </button>
+            )}
+            {briefing && (
+              <button onClick={generateBriefing} disabled={briefingLoading}
+                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 disabled:opacity-50">
+                {briefingLoading ? 'Thinking…' : 'Refresh'}
+              </button>
+            )}
+          </div>
+          <div className="px-5 py-4">
+            {briefingError ? (
+              <div className="text-sm text-red-700">{briefingError}</div>
+            ) : briefing ? (
+              <div className="text-ink-800 text-sm leading-relaxed whitespace-pre-wrap">{briefing}</div>
+            ) : briefingLoading ? (
+              <div className="text-sm text-ink-400">Reading your pipeline, hot leads, and tasks…</div>
+            ) : (
+              <div className="text-sm text-ink-500">Get an AI read on where things stand today and what to do next.</div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Follow-ups */}
       {!loading && openTasks.length > 0 && (
