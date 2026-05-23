@@ -21,33 +21,62 @@ import {
   Gift,
   CheckSquare,
   Sparkles,
+  Radio,
   LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
 type NavItem = { to: string; label: string; Icon: LucideIcon }
+type NavGroup = { label: string | null; items: NavItem[] }
 
-const navItems: NavItem[] = [
-  { to: '/', label: 'Today', Icon: Sun },
-  { to: '/copilot', label: 'Copilot', Icon: Sparkles },
-  { to: '/tasks', label: 'Tasks', Icon: CheckSquare },
-  { to: '/schedule', label: 'Schedule', Icon: Calendar },
-  { to: '/crm', label: 'CRM', Icon: Users },
-  { to: '/clients', label: 'Clients', Icon: Briefcase },
-  { to: '/pipeline', label: 'Pipeline', Icon: Workflow },
-  { to: '/referrals', label: 'Referrals', Icon: Gift },
-  { to: '/markets', label: 'Markets', Icon: Map },
-  { to: '/audiences', label: 'Audiences', Icon: Target },
-  { to: '/outreach', label: 'Outreach', Icon: Megaphone },
-  { to: '/board', label: 'Hot leads', Icon: Flame },
-  { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
-  { to: '/prospecting', label: 'Prospecting', Icon: Search },
-  { to: '/campaigns', label: 'Campaigns', Icon: Send },
-  { to: '/listings', label: 'Listings', Icon: Home },
-  { to: '/content', label: 'Content Studio', Icon: PenLine },
-  { to: '/site', label: 'Site Editor', Icon: Globe },
-  { to: '/analytics', label: 'Analytics', Icon: BarChart3 },
-  { to: '/settings', label: 'Settings', Icon: Settings },
+// Funnel order: pinned daily drivers up top, then GROW → REACH → CONVERT → OPERATE.
+const navGroups: NavGroup[] = [
+  {
+    label: null,
+    items: [
+      { to: '/', label: 'Today', Icon: Sun },
+      { to: '/copilot', label: 'Copilot', Icon: Sparkles },
+    ],
+  },
+  {
+    label: 'Grow',
+    items: [
+      { to: '/cold-drip', label: 'Cold Drip', Icon: Radio },
+      { to: '/prospecting', label: 'Prospecting', Icon: Search },
+      { to: '/audiences', label: 'Audiences', Icon: Target },
+      { to: '/markets', label: 'Markets', Icon: Map },
+    ],
+  },
+  {
+    label: 'Reach',
+    items: [
+      { to: '/campaigns', label: 'Campaigns', Icon: Send },
+      { to: '/outreach', label: 'Outreach', Icon: Megaphone },
+      { to: '/listings', label: 'Listings', Icon: Home },
+      { to: '/content', label: 'Content Studio', Icon: PenLine },
+    ],
+  },
+  {
+    label: 'Convert',
+    items: [
+      { to: '/board', label: 'Hot leads', Icon: Flame },
+      { to: '/crm', label: 'CRM', Icon: Users },
+      { to: '/clients', label: 'Clients', Icon: Briefcase },
+      { to: '/pipeline', label: 'Pipeline', Icon: Workflow },
+      { to: '/referrals', label: 'Referrals', Icon: Gift },
+      { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
+    ],
+  },
+  {
+    label: 'Operate',
+    items: [
+      { to: '/tasks', label: 'Tasks', Icon: CheckSquare },
+      { to: '/schedule', label: 'Schedule', Icon: Calendar },
+      { to: '/site', label: 'Site Editor', Icon: Globe },
+      { to: '/analytics', label: 'Analytics', Icon: BarChart3 },
+      { to: '/settings', label: 'Settings', Icon: Settings },
+    ],
+  },
 ]
 
 export default function Sidebar() {
@@ -67,26 +96,39 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-3 overflow-y-auto">
-        <ul className="space-y-0.5">
-          {navItems.map((item) => (
-            <li key={item.to}>
-              <NavLink
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
-                    isActive
-                      ? 'bg-white/10 text-cream'
-                      : 'text-cream/60 hover:text-cream hover:bg-white/5'
-                  }`
-                }
-              >
-                <item.Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
-                <span className="font-medium">{item.label}</span>
-              </NavLink>
-            </li>
-          ))}
-          {profile?.is_brokerage_admin && (
+        {navGroups.map((group, gi) => (
+          <div key={group.label ?? `pinned-${gi}`} className={group.label ? 'mt-5' : ''}>
+            {group.label && (
+              <div className="text-2xs uppercase tracking-widest text-cream/40 px-3 mb-2">
+                {group.label}
+              </div>
+            )}
+            <ul className="space-y-0.5">
+              {group.items.map((item) => (
+                <li key={item.to}>
+                  <NavLink
+                    to={item.to}
+                    end={item.to === '/'}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
+                        isActive
+                          ? 'bg-white/10 text-cream'
+                          : 'text-cream/60 hover:text-cream hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <item.Icon className="w-4 h-4 shrink-0" strokeWidth={1.5} />
+                    <span className="font-medium">{item.label}</span>
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+
+        {/* Brokerage — admin only, pinned at the bottom */}
+        {profile?.is_brokerage_admin && (
+          <ul className="space-y-0.5 mt-5 pt-4 border-t border-white/5">
             <li>
               <NavLink
                 to="/brokerage"
@@ -102,8 +144,8 @@ export default function Sidebar() {
                 <span className="font-medium">Brokerage</span>
               </NavLink>
             </li>
-          )}
-        </ul>
+          </ul>
+        )}
       </nav>
 
       {/* Operating as (brokerage admins only) */}
