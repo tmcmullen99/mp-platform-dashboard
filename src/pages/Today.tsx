@@ -18,6 +18,14 @@ import {
   X,
   Loader2,
   Minus,
+  Megaphone,
+  Radio,
+  TrendingUp,
+  TrendingDown,
+  Home,
+  Gift,
+  CircleDollarSign,
+  UserCheck,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -78,6 +86,34 @@ type HotLead = {
   market_name: string | null
 }
 
+type AudienceSummary = {
+  audience: { subscribed: number; total_contacts: number; growth_30d: number; unsub_30d: number }
+  cold_drip: {
+    active: number
+    graduated: number
+    exited: number
+    total_enrolled: number
+    graduated_30d: number
+    sends_30d: number
+  }
+  engagement: { engaged_30d: number; events_30d: number }
+  marketplace: {
+    make_me_move_active: number
+    buyer_feed_active: number
+    referrals_total: number
+    referrals_converted: number
+    credits_outstanding_cents: number
+  }
+  readiness: {
+    markets_total: number
+    cold_markets_enabled: number
+    has_cold_identity: boolean
+    has_primary_identity: boolean
+  }
+}
+
+type AudienceSeriesPoint = { d: string; cumulative: number }
+
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000
 
 export default function Today() {
@@ -95,6 +131,8 @@ export default function Today() {
   const [actingOnTourId, setActingOnTourId] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [proposingFor, setProposingFor] = useState<PendingTour | null>(null)
+  const [audience, setAudience] = useState<AudienceSummary | null>(null)
+  const [series, setSeries] = useState<AudienceSeriesPoint[]>([])
 
   const PENDING_TOUR_SELECT =
     'id, tenant_id, client_id, war_room_id, property_address, property_photo_url, preferred_date, preferred_time, alternate_date, alternate_time, notes, created_at, clients!inner(name)'
@@ -164,6 +202,23 @@ export default function Today() {
       setLoading(false)
     })
 
+    return () => {
+      cancelled = true
+    }
+  }, [currentTenant])
+
+  // Audience growth (Cold Drip thesis) — summary metrics + the 90-day curve.
+  useEffect(() => {
+    if (!currentTenant) return
+    let cancelled = false
+    Promise.all([
+      supabase.rpc('tenant_audience_summary', { p_tenant_id: currentTenant.id }),
+      supabase.rpc('tenant_audience_series', { p_tenant_id: currentTenant.id, p_days: 90 }),
+    ]).then(([sumResp, seriesResp]) => {
+      if (cancelled) return
+      setAudience((sumResp.data as AudienceSummary) ?? null)
+      setSeries((seriesResp.data as AudienceSeriesPoint[]) || [])
+    })
     return () => {
       cancelled = true
     }
@@ -357,6 +412,9 @@ export default function Today() {
           )}
         </p>
       </div>
+
+      {/* Audience growth — Cold Drip thesis (the curve is the pitch) */}
+      <AudienceSection audience={audience} series={series} />
 
       {/* AI briefing */}
       {!loading && (
@@ -817,6 +875,208 @@ function CardHeader({
 
 function CardEmpty({ children }: { children: React.ReactNode }) {
   return <div className="text-sm text-ink-500 py-2">{children}</div>
+}
+
+function AudienceSection({
+  audience,
+  series,
+}: {
+  audience: AudienceSummary | null
+  series: AudienceSeriesPoint[]
+}) {
+  const subscribed = audience?.audience.subscribed ?? 0
+  const headlineN = series.length ? series[series.length - 1].cumulative : subscribed
+  const prevIdx = series.length > 7 ? series.length - 8 : 0
+  const weekAgo = series.length ? series[prevIdx].cumulative : headlineN
+  const wow = headlineN - weekAgo
+  const cold = audience?.cold_drip
+  const mkt = audience?.marketplace
+  const coldOff = (audience?.readiness.cold_markets_enabled ?? 0) === 0
+  const marketsTotal = audience?.readiness.markets_total ?? 0
+
+  return (
+    <>
+      {/* Readiness banner — cold drip not running */}
+      {audience && coldOff && (
+        <div className="mb-12 bg-ink-900 text-cream px-6 py-5 flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex items-start gap-3">
+            <Radio className="w-5 h-5 text-cream shrink-0 mt-0.5" strokeWidth={1.5} />
+            <div>
+              <div className="text-sm">Cold Drip isn't running.</div>
+              <div className="text-sm text-cream/60 mt-0.5 leading-relaxed">
+                {marketsTotal > 0
+                  ? `Enable it for your ${marketsTotal} ${
+                      marketsTotal === 1 ? 'market' : 'markets'
+                    } to start compounding your audience.`
+                  : 'Add a market, then switch it on to start compounding your audience.'}
+              </div>
+            </div>
+          </div>
+          <Link
+            to="/cold-drip"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-cream text-ink-900 text-2xs uppercase tracking-widest hover:bg-white shrink-0"
+          >
+            Open Cold Drip <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </div>
+      )}
+
+      {/* Hero — audience number + growth curve */}
+      <section className="mb-14">
+        <div className="bg-white border border-ink-100 p-7">
+          <div className="flex items-end justify-between gap-4 flex-wrap mb-6">
+            <div>
+              <div className="flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 mb-2">
+                <Megaphone className="w-3.5 h-3.5 text-ink-400" strokeWidth={1.5} />
+                Your audience
+              </div>
+              <div className="font-display text-6xl text-ink-900 leading-none tabular-nums">
+                {headlineN.toLocaleString()}
+              </div>
+            </div>
+            <AudienceTrend value={wow} />
+          </div>
+          <GrowthCurve data={series} />
+          <div className="mt-3 text-2xs uppercase tracking-widest text-ink-400">
+            Cumulative reachable contacts · last {series.length || 0} days
+          </div>
+        </div>
+      </section>
+
+      {/* Funnel strip */}
+      {audience && (
+        <section className="mb-14">
+          <SectionLabel>Audience funnel</SectionLabel>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <Metric icon={Radio} label="Cold · active" value={cold?.active ?? 0} />
+            <Metric icon={UserCheck} label="Graduated" value={cold?.graduated ?? 0} />
+            <Metric icon={Sparkles} label="Engaged · 30d" value={audience.engagement.engaged_30d} />
+          </div>
+        </section>
+      )}
+
+      {/* Marketplace flywheel */}
+      {audience && (
+        <section className="mb-14">
+          <SectionLabel>Marketplace flywheel</SectionLabel>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <Metric icon={Home} label="Make-me-move" value={mkt?.make_me_move_active ?? 0} />
+            <Metric icon={Users} label="Buyer feed" value={mkt?.buyer_feed_active ?? 0} />
+            <Metric
+              icon={Gift}
+              label="Referrals"
+              value={mkt?.referrals_total ?? 0}
+              sub={`${mkt?.referrals_converted ?? 0} converted`}
+            />
+            <Metric
+              icon={CircleDollarSign}
+              label="Credits out"
+              value={(mkt?.credits_outstanding_cents ?? 0) / 100}
+              money
+              sub="outstanding"
+            />
+          </div>
+        </section>
+      )}
+    </>
+  )
+}
+
+function AudienceTrend({ value }: { value: number }) {
+  const up = value >= 0
+  const Icon = up ? TrendingUp : TrendingDown
+  return (
+    <div className="text-right">
+      <div
+        className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-2xs uppercase tracking-widest ${
+          up ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+        }`}
+      >
+        <Icon className="w-3.5 h-3.5" strokeWidth={2} />
+        {up ? '+' : ''}
+        {value.toLocaleString()}
+      </div>
+      <div className="text-2xs uppercase tracking-widest text-ink-400 mt-1.5">week over week</div>
+    </div>
+  )
+}
+
+function GrowthCurve({ data }: { data: AudienceSeriesPoint[] }) {
+  const W = 800
+  const H = 200
+  const P = 8
+  if (!data || data.length < 2) {
+    return (
+      <div className="h-40 flex items-center justify-center border border-dashed border-ink-100 text-2xs uppercase tracking-widest text-ink-400">
+        Your growth curve appears once contacts start flowing in
+      </div>
+    )
+  }
+  const ys = data.map((p) => p.cumulative)
+  const maxY = Math.max(1, ...ys)
+  const x = (i: number) => P + (i / (data.length - 1)) * (W - 2 * P)
+  const y = (v: number) => H - P - (v / maxY) * (H - 2 * P)
+  const line = data
+    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(p.cumulative).toFixed(1)}`)
+    .join(' ')
+  const area = `${line} L ${x(data.length - 1).toFixed(1)} ${(H - P).toFixed(1)} L ${x(0).toFixed(
+    1,
+  )} ${(H - P).toFixed(1)} Z`
+  const lastX = x(data.length - 1)
+  const lastY = y(data[data.length - 1].cumulative)
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 'auto' }} role="img">
+      <defs>
+        <linearGradient id="cmGrowthGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#91a1ba" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#91a1ba" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#cmGrowthGrad)" />
+      <path
+        d={line}
+        fill="none"
+        stroke="#1a1f2e"
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+      <circle cx={lastX} cy={lastY} r={3.5} fill="#1a1f2e" />
+    </svg>
+  )
+}
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  sub,
+  money,
+}: {
+  icon: LucideIcon
+  label: string
+  value: number
+  sub?: string
+  money?: boolean
+}) {
+  const display = money
+    ? value.toLocaleString('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        maximumFractionDigits: 0,
+      })
+    : value.toLocaleString()
+  return (
+    <div className="bg-white border border-ink-100 p-6">
+      <div className="flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 mb-3">
+        <Icon className="w-3.5 h-3.5 text-ink-400" strokeWidth={1.5} />
+        {label}
+      </div>
+      <div className="font-display text-4xl text-ink-900 tabular-nums leading-none">{display}</div>
+      {sub && <div className="text-2xs uppercase tracking-widest text-ink-400 mt-2">{sub}</div>}
+    </div>
+  )
 }
 
 function QuickAction({
