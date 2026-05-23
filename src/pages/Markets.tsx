@@ -14,6 +14,7 @@ import {
   Building2,
   Home,
   Users,
+  LucideIcon,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -220,7 +221,7 @@ function Counter({
   label,
   value,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: LucideIcon
   label: string
   value: number
 }) {
