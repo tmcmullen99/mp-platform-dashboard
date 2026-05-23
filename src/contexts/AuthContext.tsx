@@ -15,6 +15,9 @@ type AuthContextValue = {
   loading: boolean
   signOut: () => Promise<void>
   switchTenant: (tenantId: string) => void
+  isOversight: boolean
+  actAsTenant: (tenantId: string) => void
+  enterOversight: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -28,6 +31,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null)
   const [currentBranding, setCurrentBranding] = useState<TenantBranding | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isOversight, setIsOversight] = useState(false)
 
   // Subscribe to auth state
   useEffect(() => {
@@ -135,6 +139,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(({ data }) => setCurrentBranding(data as TenantBranding | null))
   }
 
+  // Brokerage-admin tenant scoping. actAsTenant pins one tenant; enterOversight
+  // returns to the cross-tenant (all tenants) view.
+  function actAsTenant(tenantId: string) {
+    setIsOversight(false)
+    switchTenant(tenantId)
+  }
+
+  function enterOversight() {
+    setIsOversight(true)
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -150,6 +165,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signOut,
         switchTenant,
+        isOversight,
+        actAsTenant,
+        enterOversight,
       }}
     >
       {children}
