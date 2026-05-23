@@ -374,6 +374,7 @@ export type DocumentRecord = {
   deal_id: string | null
   name: string
   file_url: string
+  storage_path: string
   file_type: string | null
   file_size: number | null
   category: DocumentCategory
