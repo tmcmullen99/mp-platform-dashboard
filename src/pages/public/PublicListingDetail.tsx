@@ -20,6 +20,7 @@ import {
   Mail,
   Phone,
   ArrowLeft,
+  LucideIcon,
 } from 'lucide-react'
 import PublicLayout, {
   TenantPublic,
@@ -383,7 +384,7 @@ function Stat({
   value,
   label,
 }: {
-  icon?: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon?: LucideIcon
   value: React.ReactNode
   label: string
 }) {
