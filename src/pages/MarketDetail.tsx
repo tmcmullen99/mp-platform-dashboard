@@ -30,6 +30,7 @@ import {
   Check,
   UserPlus,
   UserCheck,
+  LucideIcon,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import MarketImportModal from '@/components/MarketImportModal'
@@ -170,7 +171,7 @@ export default function MarketDetail() {
       q = q.ilike('full_address', `%${appliedSearch.trim()}%`)
     }
     const { data } = await q
-    setUnits((data as UnitRow[]) || [])
+    setUnits((data as unknown as UnitRow[]) || [])
     setLoadingUnits(false)
   }, [marketId, page, appliedSearch])
 
@@ -606,7 +607,7 @@ function SummaryStat({
   value,
   warn,
 }: {
-  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  icon: LucideIcon
   label: string
   value: number
   warn?: boolean
