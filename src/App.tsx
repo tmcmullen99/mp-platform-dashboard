@@ -34,6 +34,7 @@ import PublicListingDetail from '@/pages/public/PublicListingDetail'
 import TenantHome from '@/pages/public/TenantHome'
 import ClaimUnit from '@/pages/public/ClaimUnit'
 import Unsubscribe from '@/pages/public/Unsubscribe'
+import SharedDoc from '@/pages/public/SharedDoc'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -51,6 +52,8 @@ export default function App() {
           <Route path="/claim/:token" element={<ClaimUnit />} />
           {/* C.2: public unsubscribe */}
           <Route path="/unsubscribe" element={<Unsubscribe />} />
+          {/* Public read-only shared documents (CMAs, Net Sheets, …) */}
+          <Route path="/share/:token" element={<SharedDoc />} />
           {/* Everything else goes through the auth gate */}
           <Route path="*" element={<AuthGate />} />
         </Routes>
