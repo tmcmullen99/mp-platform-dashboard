@@ -1,155 +1,193 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider, useAuth } from '@/contexts/AuthContext'
-import Layout from '@/components/Layout'
-import Login from '@/pages/Login'
-import Signup from '@/pages/Signup'
-import Today from '@/pages/Today'
-import Schedule from '@/pages/Schedule'
-import Settings from '@/pages/Settings'
-import CRM from '@/pages/CRM'
-import CSVImport from '@/pages/CSVImport'
-import Clients from '@/pages/Clients'
-import Campaigns from '@/pages/Campaigns'
-import Placeholder from '@/pages/Placeholder'
-import Portal from '@/pages/Portal'
-import NewCMA from '@/pages/NewCMA'
-import CMAViewer from '@/components/CMAViewer'
-import Markets from '@/pages/Markets'
-import MarketDetail from '@/pages/MarketDetail'
-import Audiences from '@/pages/Audiences'
-import Outreach from '@/pages/Outreach'
-import Board from '@/pages/Board'
-import Brokerage from '@/pages/Brokerage'
-import DealDetail from '@/pages/DealDetail'
-import Referrals from '@/pages/Referrals'
-import Pipeline from '@/pages/Pipeline'
-import Analytics from '@/pages/Analytics'
-import Tasks from '@/pages/Tasks'
-import Notifications from '@/pages/Notifications'
-import Copilot from '@/pages/Copilot'
-import ColdDrip from '@/pages/ColdDrip'
-// P9.13.0-.2: public pages (no auth required)
-import ListingsIndex from '@/pages/public/ListingsIndex'
-import PublicListingDetail from '@/pages/public/PublicListingDetail'
-import TenantHome from '@/pages/public/TenantHome'
-import ClaimUnit from '@/pages/public/ClaimUnit'
-import Unsubscribe from '@/pages/public/Unsubscribe'
-import SharedDoc from '@/pages/public/SharedDoc'
-import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
+// P9.1 — Fetches a single CMA row by slug and renders it via CMATemplate.
+// Used by both the agent dashboard (/cmas/:slug) and the client portal (/portal/cmas/:slug).
+// RLS handles access control — agents see CMAs in their tenant; clients see only theirs.
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          {/* P9.13.0-.2: public-facing routes, no auth */}
-          <Route path="/listings" element={<ListingsIndex />} />
-          <Route path="/listings/:slug" element={<PublicListingDetail />} />
-          <Route path="/t/:tenantSlug" element={<TenantHome />} />
-          {/* B.2: public ownership-claim link */}
-          <Route path="/claim/:token" element={<ClaimUnit />} />
-          {/* C.2: public unsubscribe */}
-          <Route path="/unsubscribe" element={<Unsubscribe />} />
-          {/* Public read-only shared documents (CMAs, Net Sheets, …) */}
-          <Route path="/share/:token" element={<SharedDoc />} />
-          {/* Everything else goes through the auth gate */}
-          <Route path="*" element={<AuthGate />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
-  )
+import { useEffect, useState } from 'react'
+import { useParams, Link, useNavigate } from 'react-router-dom'
+import { Loader2, ChevronLeft, Printer, Trash2, Share2, Check } from 'lucide-react'
+import { supabase, CMA, CMASubject, CMAComp } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
+import { getOrCreateShareLink } from '@/lib/shares'
+import CMATemplate from '@/components/CMATemplate'
+
+type Props = {
+  // If true, render without dashboard chrome (used in portal)
+  embedded?: boolean
 }
 
-function AuthGate() {
-  const { session, loading, isAgent, isClient } = useAuth()
+export default function CMAViewer({ embedded = false }: Props) {
+  const { slug } = useParams<{ slug: string }>()
+  const navigate = useNavigate()
+  const { currentBranding, isAgent, user, currentTenant } = useAuth()
+  const [cma, setCma] = useState<CMA | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [shareLabel, setShareLabel] = useState<'idle' | 'working' | 'copied'>('idle')
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      if (!slug) return
+      const { data, error: e } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('slug', slug)
+        .maybeSingle()
+      if (cancelled) return
+      if (e) setError(e.message)
+      setCma((data as CMA) || null)
+      setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [slug])
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-cream flex items-center justify-center">
-        <div className="text-2xs uppercase tracking-widest text-ink-500">Loading platform…</div>
+      <div className="p-12 flex items-center gap-2 text-ink-500 text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading CMA…
       </div>
     )
   }
-  if (!session) return <Navigate to="/login" replace />
-
-  // Client-only users — portal only
-  if (isClient && !isAgent) {
+  if (error || !cma) {
     return (
-      <Routes>
-        <Route path="/portal/*" element={<Portal />} />
-        <Route path="*" element={<Navigate to="/portal" replace />} />
-      </Routes>
+      <div className="p-12 max-w-3xl">
+        <p className="text-ink-600 mb-4">{error || 'CMA not found.'}</p>
+        <BackLink isAgent={isAgent} />
+      </div>
     )
   }
 
-  // Agent (possibly dual-role): full dashboard + portal preview
+  const subject = (cma.subject_data || {
+    address: cma.property_address || cma.name || 'Subject property',
+    city: '',
+    state: '',
+    zip: '',
+    listPrice: cma.list_price ? Number(cma.list_price.replace(/[^\d]/g, '')) : null,
+    mls: '',
+    beds: null,
+    bathsFull: null,
+    bathsPartial: null,
+    sqft: null,
+    lotSqft: null,
+    yearBuilt: null,
+    propertyType: '',
+    garage: '',
+    parking: '',
+    cooling: '',
+    heating: '',
+    hoaMonthly: null,
+    listDate: '',
+    daysOnMarket: null,
+    remarks: '',
+  }) as CMASubject
+  const comps = (cma.comps_data || []) as CMAComp[]
+
+  async function handleDelete() {
+    if (!cma) return
+    if (!confirm(`Delete this CMA?\n\nThis cannot be undone.`)) return
+    const { error } = await supabase.from('cmas').delete().eq('id', cma.id)
+    if (error) {
+      alert('Delete failed: ' + error.message)
+      return
+    }
+    navigate(isAgent ? '/clients' : '/portal')
+  }
+
+  async function handleShare() {
+    if (!cma) return
+    setShareLabel('working')
+    try {
+      const url = await getOrCreateShareLink({
+        entityKind: 'cma',
+        entityId: cma.id,
+        tenantId: cma.tenant_id || currentTenant?.id || '',
+        clientId: cma.client_id,
+        createdBy: user?.id ?? null,
+      })
+      try {
+        await navigator.clipboard.writeText(url)
+        setShareLabel('copied')
+        setTimeout(() => setShareLabel('idle'), 2500)
+      } catch {
+        // Clipboard blocked (e.g. non-HTTPS / permissions) — show the link to copy manually.
+        window.prompt('Public share link (copy):', url)
+        setShareLabel('idle')
+      }
+    } catch (e) {
+      setShareLabel('idle')
+      alert('Could not create share link: ' + (e as Error).message)
+    }
+  }
+
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Today />} />
-        <Route path="/schedule" element={<Schedule />} />
-        <Route path="/crm/import" element={<CSVImport />} />
-        <Route path="/crm/*" element={<CRM />} />
-        <Route path="/clients/*" element={<Clients />} />
-        <Route path="/markets" element={<Markets />} />
-        <Route path="/markets/:marketId" element={<MarketDetail />} />
-        <Route path="/audiences" element={<Audiences />} />
-        <Route path="/outreach" element={<Outreach />} />
-        <Route path="/board" element={<Board />} />
-        <Route path="/brokerage" element={<Brokerage />} />
-        <Route path="/deals/:dealId" element={<DealDetail />} />
-        <Route path="/referrals" element={<Referrals />} />
-        <Route path="/pipeline" element={<Pipeline />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/copilot" element={<Copilot />} />
-        <Route path="/cold-drip" element={<ColdDrip />} />
-        <Route path="/cmas/new" element={<NewCMA />} />
-        <Route path="/cmas/:slug" element={<CMAViewer />} />
-        <Route
-          path="/prospecting"
-          element={
-            <Placeholder
-              title="Prospecting"
-              description="Owner search by geography, equity, ownership length, and demographic signal. Skip-trace enrichment, email scrubbing, list export — direct into your warming sequences. The top of the funnel."
-              Icon={Search}
-              phase="P6"
-              replaces="DealMachine"
-            />
-          }
-        />
-        <Route path="/campaigns/*" element={<Campaigns />} />
-        {/* /listings is now a PUBLIC route (handled above, outside AuthGate). */}
-        <Route
-          path="/content"
-          element={
-            <Placeholder
-              title="Content Studio"
-              description="Blog editor with SEO scoring, AIO (AI-search visibility) optimization, content calendar with warming-sequence awareness. AI drafts in the agent's voice. Every piece is composed with the question: which list segment is this for, and where in their warming sequence?"
-              Icon={PenLine}
-              phase="P9"
-              replaces="SEMrush + ChatGPT"
-            />
-          }
-        />
-        <Route
-          path="/site"
-          element={
-            <Placeholder
-              title="Site Editor"
-              description="Faceless component chassis: a generic 30-page real-estate site that every tenant gets, configured via tenant_branding plus a component-tree editor. Edit by click or by chat. Publishes to the public Cloudflare Pages site."
-              Icon={Globe}
-              phase="P4"
-              replaces="Webflow / Squarespace"
-            />
-          }
-        />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/settings" element={<Settings />} />
-      </Route>
-      <Route path="/portal/*" element={<Portal />} />
-      <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+    <div className={embedded ? '' : 'p-12 max-w-5xl'}>
+      {!embedded && (
+        <div className="flex items-center justify-between mb-8 print:hidden">
+          <BackLink isAgent={isAgent} />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => window.print()}
+              className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 flex items-center gap-1.5 px-3 py-2 border border-ink-200"
+            >
+              <Printer className="w-3 h-3" />
+              Print / PDF
+            </button>
+            {isAgent && (
+              <button
+                onClick={handleShare}
+                disabled={shareLabel === 'working'}
+                className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 flex items-center gap-1.5 px-3 py-2 border border-ink-200 disabled:opacity-50"
+              >
+                {shareLabel === 'copied' ? (
+                  <Check className="w-3 h-3" />
+                ) : (
+                  <Share2 className="w-3 h-3" />
+                )}
+                {shareLabel === 'copied'
+                  ? 'Link copied'
+                  : shareLabel === 'working'
+                    ? 'Creating…'
+                    : 'Copy share link'}
+              </button>
+            )}
+            {isAgent && (
+              <button
+                onClick={handleDelete}
+                className="text-2xs uppercase tracking-widest text-red-600 hover:text-red-700 flex items-center gap-1.5 px-3 py-2 border border-red-200"
+              >
+                <Trash2 className="w-3 h-3" />
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+      <CMATemplate
+        subject={subject}
+        comps={comps}
+        agentName={currentBranding?.agent_name}
+        agentPhone={currentBranding?.agent_phone}
+        agentEmail={currentBranding?.agent_email}
+        brokerageName={currentBranding?.brokerage_affiliation}
+        agentNotes={cma.agent_notes}
+        preparedAt={cma.published_at || cma.created_at}
+      />
+    </div>
+  )
+}
+
+function BackLink({ isAgent }: { isAgent: boolean }) {
+  return (
+    <Link
+      to={isAgent ? '/clients' : '/portal'}
+      className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+    >
+      <ChevronLeft className="w-3 h-3" />
+      Back
+    </Link>
   )
 }
