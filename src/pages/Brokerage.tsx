@@ -8,7 +8,7 @@
 // invite. The new agent only ever sees their own tenant (F.0 scoping).
 
 import { useCallback, useEffect, useState } from 'react'
-import { Building2, UserPlus, Loader2, CheckCircle2, ShieldAlert } from 'lucide-react'
+import { Building2, UserPlus, Loader2, CheckCircle2, ShieldAlert, Wallet } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -26,15 +26,31 @@ type TenantRow = {
   last_activity: string | null
 }
 
+type RosterRow = {
+  agent_user_id: string
+  name: string
+  email: string | null
+  role: string | null
+  ytd_company_dollar_cents: number
+  is_capped: boolean
+  cap_company_dollar_cents: number
+  deals_count: number
+  agent_earnings_ytd_cents: number
+  company_earnings_ytd_cents: number
+}
+
 const money = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0, notation: 'compact' }).format(n || 0)
 
 type OnboardResult = { ok: true; slug: string; email_sent: boolean } | { error: string } | null
 
 export default function Brokerage() {
-  const { profile, actAsTenant } = useAuth()
+  const { profile, actAsTenant, currentTenant } = useAuth()
   const [tenants, setTenants] = useState<TenantRow[]>([])
   const [loading, setLoading] = useState(true)
+
+  const [roster, setRoster] = useState<RosterRow[]>([])
+  const [rosterLoading, setRosterLoading] = useState(true)
 
   const [agentName, setAgentName] = useState('')
   const [agentEmail, setAgentEmail] = useState('')
@@ -54,6 +70,22 @@ export default function Brokerage() {
   useEffect(() => {
     loadTenants()
   }, [loadTenants])
+
+  const loadRoster = useCallback(async () => {
+    if (!currentTenant) {
+      setRoster([])
+      setRosterLoading(false)
+      return
+    }
+    setRosterLoading(true)
+    const { data } = await supabase.rpc('commission_roster', { p_tenant_id: currentTenant.id })
+    setRoster((data as RosterRow[]) || [])
+    setRosterLoading(false)
+  }, [currentTenant])
+
+  useEffect(() => {
+    loadRoster()
+  }, [loadRoster])
 
   if (!profile?.is_brokerage_admin) {
     return (
@@ -185,6 +217,68 @@ export default function Brokerage() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Commission standing — current acting tenant */}
+      <div className="mt-12">
+        <div className="flex items-center gap-2 mb-3">
+          <Wallet className="w-4 h-4 text-ink-700" strokeWidth={1.5} />
+          <h2 className="font-display text-lg text-ink-900">Commission standing</h2>
+          {currentTenant && (
+            <span className="text-2xs uppercase tracking-widest text-ink-400">{currentTenant.display_name}</span>
+          )}
+        </div>
+        {rosterLoading ? (
+          <div className="py-12 text-center text-2xs uppercase tracking-widest text-ink-500">Loading…</div>
+        ) : roster.length === 0 ? (
+          <div className="border border-ink-200 px-4 py-8 text-center text-sm text-ink-500">
+            No salespeople in this workspace yet.
+          </div>
+        ) : (
+          <div className="border border-ink-200 divide-y divide-ink-100">
+            {roster.map((r) => {
+              const pct = Math.min(
+                100,
+                Math.round((r.ytd_company_dollar_cents / (r.cap_company_dollar_cents || 1)) * 100),
+              )
+              return (
+                <div key={r.agent_user_id} className="px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center text-ink-900">
+                        <span className="truncate">{r.name}</span>
+                        {r.is_capped && (
+                          <span className="ml-2 inline-flex items-center gap-1 px-1.5 py-0.5 text-2xs uppercase tracking-widest bg-emerald-50 text-emerald-700">
+                            <CheckCircle2 className="w-3 h-3" /> capped
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-2xs uppercase tracking-widest text-ink-400 mt-0.5">
+                        {r.role || 'member'}
+                        {r.deals_count > 0 ? ` · ${r.deals_count} closed` : ''}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right text-2xs uppercase tracking-widest text-ink-500 tabular-nums">
+                      {money(r.ytd_company_dollar_cents / 100)} / {money(r.cap_company_dollar_cents / 100)} to cap
+                    </div>
+                  </div>
+                  <div className="h-1.5 bg-ink-100 overflow-hidden mt-2">
+                    <div
+                      className={`h-full ${r.is_capped ? 'bg-emerald-500' : 'bg-ink-900'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  {(r.agent_earnings_ytd_cents > 0 || r.company_earnings_ytd_cents > 0) && (
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-2xs uppercase tracking-widest text-ink-500">
+                      <span>{money(r.agent_earnings_ytd_cents / 100)} to agent ytd</span>
+                      <span className="text-emerald-700">{money(r.company_earnings_ytd_cents / 100)} to MP ytd</span>
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </div>
   )
