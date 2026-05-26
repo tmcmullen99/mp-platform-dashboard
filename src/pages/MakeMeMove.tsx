@@ -27,6 +27,7 @@ import {
   Ruler,
   Users,
   Mail,
+  Send,
   ChevronRight,
   ChevronDown,
 } from 'lucide-react'
@@ -116,6 +117,8 @@ export default function MakeMeMove() {
   const [editing, setEditing] = useState<MMMListing | null>(null)
   const [creating, setCreating] = useState(false)
   const [savingStatusId, setSavingStatusId] = useState<string | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sendResult, setSendResult] = useState<Map<string, string>>(new Map())
 
   async function load() {
     if (!currentTenant) return
@@ -199,6 +202,49 @@ export default function MakeMeMove() {
     setSavingStatusId(null)
   }
 
+  // Manual "send now": fire marketplace_distribute for this listing to ALL matching
+  // buyers (manual:true overrides cadence). Buyers already sent this listing are
+  // deduped server-side via buyer_feed_sends, so re-clicking is safe.
+  async function sendNow(l: MMMListing) {
+    const buyers = matches.get(l.id) || []
+    if (
+      !window.confirm(
+        `Send this listing to its ${buyers.length} matching buyer${buyers.length === 1 ? '' : 's'} now?\n\n` +
+          `Buyers who already received this listing are skipped automatically.`,
+      )
+    )
+      return
+    setSendingId(l.id)
+    setSendResult((prev) => {
+      const next = new Map(prev)
+      next.delete(l.id)
+      return next
+    })
+    try {
+      const { data, error } = await supabase.functions.invoke('marketplace_distribute', {
+        body: { listing_id: l.id, manual: true },
+      })
+      if (error) throw error
+      const d = data as { ok?: boolean; sent?: number; failed?: number; skipped?: string } | null
+      let msg: string
+      if (d?.skipped === 'not_distributable') {
+        msg = 'Set status to Active and visibility to Market or Database to send.'
+      } else if (d?.skipped === 'no_warm_identity') {
+        msg = 'No warmed sending identity yet — set one up before sending.'
+      } else {
+        const sent = d?.sent || 0
+        const failed = d?.failed || 0
+        if (sent === 0 && failed === 0) msg = 'All matching buyers already have this listing.'
+        else msg = `Sent to ${sent} buyer${sent === 1 ? '' : 's'}${failed ? ` · ${failed} failed` : ''}.`
+      }
+      setSendResult((prev) => new Map(prev).set(l.id, msg))
+    } catch (e) {
+      setSendResult((prev) => new Map(prev).set(l.id, `Send failed: ${e instanceof Error ? e.message : String(e)}`))
+    } finally {
+      setSendingId(null)
+    }
+  }
+
   if (!currentTenant) {
     return (
       <div className="p-10 flex items-center gap-3 text-ink-500">
@@ -255,6 +301,7 @@ export default function MakeMeMove() {
           {listings.map((l) => {
             const buyers = matches.get(l.id) || []
             const open = expanded.has(l.id)
+            const distributable = l.status === 'active' && (l.visibility === 'market' || l.visibility === 'database')
             return (
               <div key={l.id} className="border border-ink-200 bg-cream p-5">
                 <div className="flex items-start gap-4">
@@ -353,14 +400,36 @@ export default function MakeMeMove() {
                     </span>
                   ) : (
                     <>
-                      <button
-                        onClick={() => toggleExpanded(l.id)}
-                        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
-                      >
-                        <Users className="w-3 h-3" />
-                        {buyers.length} matching buyer{buyers.length === 1 ? '' : 's'}
-                        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                      </button>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                          onClick={() => toggleExpanded(l.id)}
+                          className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
+                        >
+                          <Users className="w-3 h-3" />
+                          {buyers.length} matching buyer{buyers.length === 1 ? '' : 's'}
+                          {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                        </button>
+                        {distributable && (
+                          <button
+                            onClick={() => sendNow(l)}
+                            disabled={sendingId === l.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-800 disabled:opacity-50"
+                            title="Send this listing to all matching buyers now"
+                          >
+                            {sendingId === l.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Send className="w-3 h-3" />
+                            )}
+                            Send now
+                          </button>
+                        )}
+                      </div>
+                      {sendResult.get(l.id) && (
+                        <div className="mt-2 text-2xs uppercase tracking-widest text-ink-500">
+                          {sendResult.get(l.id)}
+                        </div>
+                      )}
                       {open && (
                         <ul className="mt-2 space-y-1.5">
                           {buyers.map((b) => (
