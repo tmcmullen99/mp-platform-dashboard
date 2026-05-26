@@ -23,13 +23,14 @@ import Brokerage from '@/pages/Brokerage'
 import DealDetail from '@/pages/DealDetail'
 import Referrals from '@/pages/Referrals'
 import MakeMeMove from '@/pages/MakeMeMove'
-import BuyerFeed from '@/pages/BuyerFeed'
+import BuyerFeed from '@/pages/buyerfeed'
 import Pipeline from '@/pages/Pipeline'
 import Analytics from '@/pages/Analytics'
 import Tasks from '@/pages/Tasks'
 import Notifications from '@/pages/Notifications'
 import Copilot from '@/pages/Copilot'
 import ColdDrip from '@/pages/ColdDrip'
+import OnboardingWizard from '@/pages/OnboardingWizard'
 // P9.13.0-.2: public pages (no auth required)
 import ListingsIndex from '@/pages/public/ListingsIndex'
 import PublicListingDetail from '@/pages/public/PublicListingDetail'
@@ -37,6 +38,8 @@ import TenantHome from '@/pages/public/TenantHome'
 import ClaimUnit from '@/pages/public/ClaimUnit'
 import Unsubscribe from '@/pages/public/Unsubscribe'
 import SharedDoc from '@/pages/public/SharedDoc'
+import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
+import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -50,6 +53,9 @@ export default function App() {
           <Route path="/listings" element={<ListingsIndex />} />
           <Route path="/listings/:slug" element={<PublicListingDetail />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
+          {/* P-Mkt.3: public buyer-facing Make-Me-Move browse + detail */}
+          <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
+          <Route path="/m/:tenantSlug/:listingId" element={<PublicMakeMeMoveDetail />} />
           {/* B.2: public ownership-claim link */}
           <Route path="/claim/:token" element={<ClaimUnit />} />
           {/* C.2: public unsubscribe */}
@@ -65,7 +71,7 @@ export default function App() {
 }
 
 function AuthGate() {
-  const { session, loading, isAgent, isClient } = useAuth()
+  const { session, loading, isAgent, isClient, currentTenant, currentBranding } = useAuth()
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -81,6 +87,21 @@ function AuthGate() {
       <Routes>
         <Route path="/portal/*" element={<Portal />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
+      </Routes>
+    )
+  }
+
+  // First-run gate: a freshly invited agent (tenant_branding.onboarded_at IS NULL)
+  // is routed into the concierge wizard and can't reach the dashboard until they
+  // finish or skip — both of which stamp onboarded_at, releasing the gate. Guarded
+  // on a loaded branding row so a tenant without one is never trapped.
+  const needsOnboarding =
+    isAgent && !!currentTenant && !!currentBranding && !currentBranding.onboarded_at
+  if (needsOnboarding) {
+    return (
+      <Routes>
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="*" element={<Navigate to="/onboarding" replace />} />
       </Routes>
     )
   }
@@ -152,6 +173,7 @@ function AuthGate() {
         <Route path="/analytics" element={<Analytics />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
+      <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/portal/*" element={<Portal />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
