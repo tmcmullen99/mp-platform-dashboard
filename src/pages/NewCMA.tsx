@@ -76,6 +76,8 @@ export default function NewCMA() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string>(presetClientId)
   const [selectedDealId, setSelectedDealId] = useState<string>('')
+  const [markets, setMarkets] = useState<{ id: string; name: string }[]>([])
+  const [selectedMarketId, setSelectedMarketId] = useState<string>('')
 
   const [subject, setSubject] = useState<CMASubject>(EMPTY_SUBJECT)
   const [comps, setComps] = useState<CMAComp[]>([])
@@ -98,6 +100,25 @@ export default function NewCMA() {
         .eq('tenant_id', currentTenant!.id)
         .order('name')
       if (!cancelled) setClients((data as Client[]) || [])
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentTenant])
+
+  // Load active markets for this tenant (to tag a recent-sales CMA)
+  useEffect(() => {
+    if (!currentTenant) return
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('markets')
+        .select('id, name')
+        .eq('tenant_id', currentTenant!.id)
+        .eq('status', 'active')
+        .order('name')
+      if (!cancelled) setMarkets((data as { id: string; name: string }[]) || [])
     }
     load()
     return () => {
@@ -205,6 +226,7 @@ export default function NewCMA() {
         tenant_id: currentTenant.id,
         client_id: selectedClientId || null,
         deal_id: selectedDealId || null,
+        market_id: selectedMarketId || null,
         slug,
         name: `${subject.address} — CMA`,
         property_address: subject.address,
@@ -286,7 +308,26 @@ export default function NewCMA() {
               </select>
             </Field>
           )}
+          <Field label="Market (optional)">
+            <select
+              value={selectedMarketId}
+              onChange={(e) => setSelectedMarketId(e.target.value)}
+              className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+            >
+              <option value="">— None —</option>
+              {markets.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
+        {selectedMarketId && (
+          <p className="text-2xs uppercase tracking-widest text-ink-400 mt-3">
+            Tagging a market publishes these comps as that market's public recent sales.
+          </p>
+        )}
       </section>
 
       {/* Step 2: upload */}
