@@ -23,6 +23,7 @@ import Brokerage from '@/pages/Brokerage'
 import DealDetail from '@/pages/DealDetail'
 import Referrals from '@/pages/Referrals'
 import MakeMeMove from '@/pages/MakeMeMove'
+import BuyerFeed from '@/pages/BuyerFeed'
 import Pipeline from '@/pages/Pipeline'
 import Analytics from '@/pages/Analytics'
 import Tasks from '@/pages/Tasks'
@@ -102,6 +103,7 @@ function AuthGate() {
         <Route path="/deals/:dealId" element={<DealDetail />} />
         <Route path="/referrals" element={<Referrals />} />
         <Route path="/make-me-move" element={<MakeMeMove />} />
+        <Route path="/buyer-feed" element={<BuyerFeed />} />
         <Route path="/pipeline" element={<Pipeline />} />
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/notifications" element={<Notifications />} />
