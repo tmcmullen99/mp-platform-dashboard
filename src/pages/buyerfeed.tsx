@@ -1,80 +1,90 @@
-// C2 + A — Buyer Feed agent surface, with listing matching.
+// C1 + A — Make-Me-Move agent surface, with buyer matching.
 //
-// Route: /buyer-feed
+// Route: /make-me-move
 //
-// Saved buyer searches. Each subscription now shows the supply side too — which
-// make-me-move listings currently match this buyer's criteria
-// (match_listings_for_subscription, only_unsent=false so we show all matches).
+// Off-MLS opportunities: a price an owner would accept, surfaced to qualified
+// buyers without a live listing. Each listing now shows the demand side too —
+// which active buyer-feed subscriptions it matches (match_buyers_for_listing).
 //
 // Backend (all verified live):
-//   table  public.buyer_feed_subscriptions
-//   frequency  instant | daily | weekly   (default instant)
-//   contact_id  REQUIRED (FK -> contacts, CASCADE) — the buyer
-//   RLS  bfs_rw — agent/admin read+write within tenant
-//   rpc  match_listings_for_subscription(p_subscription_id uuid, p_only_unsent boolean)
-//          -> listing_id, make_me_move_price, street_address, city,
-//             neighborhood, beds, baths, property_type
+//   table  public.make_me_move_listings
+//   status  active | paused | withdrawn | converted | expired   (default active)
+//   visibility  private | agent_only | market | database         (default database)
+//   RLS  mmm_rw — agent/admin read+write within tenant
+//   rpc  match_buyers_for_listing(p_listing_id uuid)
+//          -> subscription_id, contact_id, email, first_name, frequency
 
 import { useEffect, useMemo, useState } from 'react'
 import {
-  Rss,
+  Tag,
   Plus,
   Pencil,
   X,
   Loader2,
-  Pause,
-  Play,
   MapPin,
-  Home,
+  BedDouble,
+  Bath,
+  Ruler,
+  Users,
+  Mail,
+  Send,
   ChevronRight,
   ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 
-type Subscription = {
+type MMMListing = {
   id: string
   tenant_id: string
   market_id: string | null
-  contact_id: string
-  min_price: number | null
-  max_price: number | null
-  min_beds: number | null
-  property_types: string[] | null
-  neighborhoods: string[] | null
-  channel: string
-  frequency: string
-  is_active: boolean
+  contact_id: string | null
+  street_address: string | null
+  unit_label: string | null
+  city: string | null
+  state: string | null
+  postal_code: string | null
+  neighborhood: string | null
+  property_type: string | null
+  beds: number | null
+  baths: number | null
+  area_sqft: number | null
+  year_built: number | null
+  make_me_move_price: number
+  motivation: string | null
+  timeframe: string | null
+  description: string | null
+  visibility: string
+  status: string
+  source: string
   created_at: string
 }
 
-type ListingMatch = {
-  listing_id: string
-  make_me_move_price: number | null
-  street_address: string | null
-  city: string | null
-  neighborhood: string | null
-  beds: number | null
-  baths: number | null
-  property_type: string | null
+type BuyerMatch = {
+  subscription_id: string
+  contact_id: string | null
+  email: string | null
+  first_name: string | null
+  frequency: string | null
 }
 
 type Market = { id: string; name: string }
 type ContactLite = { id: string; first_name: string | null; last_name: string | null; email: string | null }
 
-const FREQUENCIES = ['instant', 'daily', 'weekly'] as const
+const STATUSES = ['active', 'paused', 'withdrawn', 'converted', 'expired'] as const
+const VISIBILITIES = ['private', 'agent_only', 'market', 'database'] as const
 const PROPERTY_TYPES = ['Single Family Home', 'Condo', 'TIC', 'Co-op', 'Loft', 'Multi-Family', 'Acreage']
+
+const VIS_LABEL: Record<string, string> = {
+  private: 'Private',
+  agent_only: 'Agent network',
+  market: 'Market feed',
+  database: 'Database',
+}
 
 function money(n: number | null): string {
   if (n == null) return '—'
   return `$${Math.round(n).toLocaleString()}`
-}
-
-function priceLabel(min: number | null, max: number | null): string | null {
-  if (min != null && max != null) return `${money(min)} – ${money(max)}`
-  if (min != null) return `${money(min)}+`
-  if (max != null) return `up to ${money(max)}`
-  return null
 }
 
 function contactLabel(c: ContactLite): string {
@@ -82,25 +92,40 @@ function contactLabel(c: ContactLite): string {
   return n || c.email || 'Unnamed contact'
 }
 
-export default function BuyerFeed() {
-  const { currentTenant } = useAuth()
-  const [subs, setSubs] = useState<Subscription[]>([])
+function statusBadge(status: string): string {
+  switch (status) {
+    case 'active':
+      return 'bg-ink-900 text-cream'
+    case 'converted':
+      return 'bg-emerald-50 text-emerald-700'
+    case 'paused':
+      return 'bg-sky-50 text-sky-700'
+    default:
+      return 'bg-ink-100 text-ink-500'
+  }
+}
+
+export default function MakeMeMove() {
+  const { currentTenant, profile } = useAuth()
+  const [listings, setListings] = useState<MMMListing[]>([])
   const [markets, setMarkets] = useState<Market[]>([])
   const [contacts, setContacts] = useState<ContactLite[]>([])
-  const [matches, setMatches] = useState<Map<string, ListingMatch[]>>(new Map())
+  const [matches, setMatches] = useState<Map<string, BuyerMatch[]>>(new Map())
   const [matchesLoading, setMatchesLoading] = useState(false)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState<Subscription | null>(null)
+  const [editing, setEditing] = useState<MMMListing | null>(null)
   const [creating, setCreating] = useState(false)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null)
+  const [sendingId, setSendingId] = useState<string | null>(null)
+  const [sendResult, setSendResult] = useState<Map<string, string>>(new Map())
 
   async function load() {
     if (!currentTenant) return
     setLoading(true)
-    const [{ data: sd }, { data: mk }, { data: ct }] = await Promise.all([
+    const [{ data: ld }, { data: mk }, { data: ct }] = await Promise.all([
       supabase
-        .from('buyer_feed_subscriptions')
+        .from('make_me_move_listings')
         .select('*')
         .eq('tenant_id', currentTenant.id)
         .order('created_at', { ascending: false }),
@@ -112,27 +137,24 @@ export default function BuyerFeed() {
         .order('last_name', { nullsFirst: false })
         .limit(500),
     ])
-    const rows = (sd as Subscription[]) || []
-    setSubs(rows)
+    const rows = (ld as MMMListing[]) || []
+    setListings(rows)
     setMarkets((mk as Market[]) || [])
     setContacts((ct as ContactLite[]) || [])
     setLoading(false)
     loadMatches(rows)
   }
 
-  async function loadMatches(rows: Subscription[]) {
+  async function loadMatches(rows: MMMListing[]) {
     if (rows.length === 0) {
       setMatches(new Map())
       return
     }
     setMatchesLoading(true)
     const entries = await Promise.all(
-      rows.map(async (s) => {
-        const { data } = await supabase.rpc('match_listings_for_subscription', {
-          p_subscription_id: s.id,
-          p_only_unsent: false,
-        })
-        return [s.id, (data as ListingMatch[]) || []] as const
+      rows.map(async (l) => {
+        const { data } = await supabase.rpc('match_buyers_for_listing', { p_listing_id: l.id })
+        return [l.id, (data as BuyerMatch[]) || []] as const
       }),
     )
     setMatches(new Map(entries))
@@ -165,19 +187,62 @@ export default function BuyerFeed() {
     return m
   }, [contacts])
 
-  async function toggleActive(sub: Subscription) {
-    setTogglingId(sub.id)
-    const next = !sub.is_active
+  async function changeStatus(listing: MMMListing, status: string) {
+    if (status === listing.status) return
+    setSavingStatusId(listing.id)
     const { error } = await supabase
-      .from('buyer_feed_subscriptions')
-      .update({ is_active: next, updated_at: new Date().toISOString() })
-      .eq('id', sub.id)
+      .from('make_me_move_listings')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', listing.id)
     if (!error) {
-      setSubs((prev) => prev.map((s) => (s.id === sub.id ? { ...s, is_active: next } : s)))
+      setListings((prev) => prev.map((l) => (l.id === listing.id ? { ...l, status } : l)))
     } else {
-      window.alert(`Couldn't update: ${error.message}`)
+      window.alert(`Couldn't update status: ${error.message}`)
     }
-    setTogglingId(null)
+    setSavingStatusId(null)
+  }
+
+  // Manual "send now": fire marketplace_distribute for this listing to ALL matching
+  // buyers (manual:true overrides cadence). Buyers already sent this listing are
+  // deduped server-side via buyer_feed_sends, so re-clicking is safe.
+  async function sendNow(l: MMMListing) {
+    const buyers = matches.get(l.id) || []
+    if (
+      !window.confirm(
+        `Send this listing to its ${buyers.length} matching buyer${buyers.length === 1 ? '' : 's'} now?\n\n` +
+          `Buyers who already received this listing are skipped automatically.`,
+      )
+    )
+      return
+    setSendingId(l.id)
+    setSendResult((prev) => {
+      const next = new Map(prev)
+      next.delete(l.id)
+      return next
+    })
+    try {
+      const { data, error } = await supabase.functions.invoke('marketplace_distribute', {
+        body: { listing_id: l.id, manual: true },
+      })
+      if (error) throw error
+      const d = data as { ok?: boolean; sent?: number; failed?: number; skipped?: string } | null
+      let msg: string
+      if (d?.skipped === 'not_distributable') {
+        msg = 'Set status to Active and visibility to Market or Database to send.'
+      } else if (d?.skipped === 'no_warm_identity') {
+        msg = 'No warmed sending identity yet — set one up before sending.'
+      } else {
+        const sent = d?.sent || 0
+        const failed = d?.failed || 0
+        if (sent === 0 && failed === 0) msg = 'All matching buyers already have this listing.'
+        else msg = `Sent to ${sent} buyer${sent === 1 ? '' : 's'}${failed ? ` · ${failed} failed` : ''}.`
+      }
+      setSendResult((prev) => new Map(prev).set(l.id, msg))
+    } catch (e) {
+      setSendResult((prev) => new Map(prev).set(l.id, `Send failed: ${e instanceof Error ? e.message : String(e)}`))
+    } finally {
+      setSendingId(null)
+    }
   }
 
   if (!currentTenant) {
@@ -188,41 +253,41 @@ export default function BuyerFeed() {
     )
   }
 
-  const activeCount = subs.filter((s) => s.is_active).length
+  const activeCount = listings.filter((l) => l.status === 'active').length
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
       <div className="flex items-start justify-between gap-4 mb-8 flex-wrap">
         <div>
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">Marketplace</div>
-          <h1 className="font-display text-3xl text-ink-900">Buyer feed</h1>
+          <h1 className="font-display text-3xl text-ink-900">Make-Me-Move</h1>
           <p className="text-ink-600 mt-2 max-w-2xl leading-relaxed">
-            Saved buyer searches. When matching off-market or coming-soon inventory appears, it goes
-            straight to these buyers — instant, daily, or weekly.
+            Prices owners would quietly accept — surfaced to qualified buyers with no listing and no
+            marketing spend until an offer materializes.
           </p>
         </div>
         <button
           onClick={() => setCreating(true)}
           className="inline-flex items-center gap-1.5 px-4 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 shrink-0"
         >
-          <Plus className="w-3.5 h-3.5" /> New subscription
+          <Plus className="w-3.5 h-3.5" /> New listing
         </button>
       </div>
 
-      {!loading && subs.length > 0 && (
+      {!loading && listings.length > 0 && (
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-6">
-          {activeCount} active · {subs.length} total
+          {activeCount} active · {listings.length} total
         </div>
       )}
 
       {loading ? (
         <div className="py-20 text-center text-2xs uppercase tracking-widest text-ink-500">Loading…</div>
-      ) : subs.length === 0 ? (
+      ) : listings.length === 0 ? (
         <div className="border border-dashed border-ink-200 py-16 text-center">
-          <Rss className="w-8 h-8 text-ink-300 mx-auto mb-3" strokeWidth={1.25} />
-          <div className="text-sm text-ink-700 font-medium">No buyer subscriptions yet</div>
+          <Tag className="w-8 h-8 text-ink-300 mx-auto mb-3" strokeWidth={1.25} />
+          <div className="text-sm text-ink-700 font-medium">No make-me-move listings yet</div>
           <p className="text-ink-500 text-sm mt-1">
-            Capture what a buyer is looking for and matching inventory routes to them automatically.
+            Capture an owner’s walk-away number and it becomes off-market inventory you can match to buyers.
           </p>
           <button
             onClick={() => setCreating(true)}
@@ -233,113 +298,159 @@ export default function BuyerFeed() {
         </div>
       ) : (
         <div className="space-y-3">
-          {subs.map((s) => {
-            const criteria = [
-              priceLabel(s.min_price, s.max_price),
-              s.min_beds != null ? `${s.min_beds}+ bd` : null,
-              s.property_types && s.property_types.length ? s.property_types.join(', ') : null,
-              s.neighborhoods && s.neighborhoods.length ? s.neighborhoods.join(', ') : null,
-            ].filter(Boolean) as string[]
-            const listings = matches.get(s.id) || []
-            const open = expanded.has(s.id)
+          {listings.map((l) => {
+            const buyers = matches.get(l.id) || []
+            const open = expanded.has(l.id)
+            const distributable = l.status === 'active' && (l.visibility === 'market' || l.visibility === 'database')
             return (
-              <div key={s.id} className={`border bg-cream p-5 ${s.is_active ? 'border-ink-200' : 'border-ink-100 opacity-70'}`}>
+              <div key={l.id} className="border border-ink-200 bg-cream p-5">
                 <div className="flex items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap mb-1">
                       <h3 className="font-display text-xl text-ink-900 truncate">
-                        {contactName.get(s.contact_id) || 'Unknown buyer'}
+                        {l.street_address || 'Address TBD'}
+                        {l.unit_label ? ` ${l.unit_label}` : ''}
                       </h3>
-                      <span
-                        className={`text-2xs uppercase tracking-widest px-2 py-0.5 ${
-                          s.is_active ? 'bg-ink-900 text-cream' : 'bg-ink-100 text-ink-500'
-                        }`}
-                      >
-                        {s.is_active ? 'active' : 'paused'}
+                      <span className={`text-2xs uppercase tracking-widest px-2 py-0.5 ${statusBadge(l.status)}`}>
+                        {l.status}
                       </span>
-                      <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-sky-50 text-sky-700">
-                        {s.frequency}
+                      <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-ink-100 text-ink-500">
+                        {VIS_LABEL[l.visibility] || l.visibility}
                       </span>
                     </div>
 
-                    {s.market_id && marketName.get(s.market_id) && (
-                      <div className="text-sm text-ink-600 inline-flex items-center gap-1">
+                    {(l.city || l.neighborhood || l.market_id) && (
+                      <div className="text-sm text-ink-600 truncate inline-flex items-center gap-1">
                         <MapPin className="w-3 h-3 text-ink-400 shrink-0" />
-                        {marketName.get(s.market_id)}
+                        {[l.neighborhood, l.city, l.state].filter(Boolean).join(', ') || '—'}
+                        {l.market_id && marketName.get(l.market_id) ? ` · ${marketName.get(l.market_id)}` : ''}
                       </div>
                     )}
 
-                    <div className="text-sm text-ink-700 mt-2">
-                      {criteria.length ? criteria.join('  ·  ') : 'Any listing in the feed'}
+                    <div className="flex items-center gap-3 mt-2 text-2xs uppercase tracking-widest text-ink-500 flex-wrap">
+                      {l.property_type && <span>{l.property_type}</span>}
+                      {l.beds != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <BedDouble className="w-3 h-3" /> {l.beds}
+                        </span>
+                      )}
+                      {l.baths != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Bath className="w-3 h-3" /> {l.baths}
+                        </span>
+                      )}
+                      {l.area_sqft != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Ruler className="w-3 h-3" /> {l.area_sqft.toLocaleString()} sqft
+                        </span>
+                      )}
                     </div>
+
+                    {(l.contact_id && contactName.get(l.contact_id)) || l.timeframe || l.motivation ? (
+                      <div className="text-xs text-ink-500 mt-2 truncate">
+                        {l.contact_id && contactName.get(l.contact_id) ? `Owner: ${contactName.get(l.contact_id)}` : ''}
+                        {l.timeframe ? `${l.contact_id ? ' · ' : ''}${l.timeframe}` : ''}
+                        {l.motivation ? `${l.contact_id || l.timeframe ? ' · ' : ''}${l.motivation}` : ''}
+                      </div>
+                    ) : null}
                   </div>
 
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <button
-                      onClick={() => setEditing(s)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink-300 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-900 hover:text-ink-900"
-                    >
-                      <Pencil className="w-3 h-3" /> Edit
-                    </button>
-                    <button
-                      onClick={() => toggleActive(s)}
-                      disabled={togglingId === s.id}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink-200 text-2xs uppercase tracking-widest text-ink-600 hover:border-ink-900 hover:text-ink-900 disabled:opacity-50"
-                    >
-                      {togglingId === s.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : s.is_active ? (
-                        <Pause className="w-3 h-3" />
-                      ) : (
-                        <Play className="w-3 h-3" />
-                      )}
-                      {s.is_active ? 'Pause' : 'Resume'}
-                    </button>
+                  <div className="text-right shrink-0">
+                    <div className="font-display text-2xl text-ink-900 tabular-nums leading-none">
+                      {money(l.make_me_move_price)}
+                    </div>
+                    <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">walk-away</div>
                   </div>
                 </div>
 
-                {/* A — matching listings */}
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-ink-100 flex-wrap">
+                  <button
+                    onClick={() => setEditing(l)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink-300 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-900 hover:text-ink-900"
+                  >
+                    <Pencil className="w-3 h-3" /> Edit
+                  </button>
+                  <label className="inline-flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 ml-auto">
+                    Status
+                    <select
+                      value={l.status}
+                      disabled={savingStatusId === l.id}
+                      onChange={(e) => changeStatus(l, e.target.value)}
+                      className="border border-ink-200 px-2 py-1 text-2xs uppercase tracking-widest bg-cream focus:outline-none focus:border-ink-900 disabled:opacity-50"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    {savingStatusId === l.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                  </label>
+                </div>
+
+                {/* A — matching buyers */}
                 <div className="mt-3 pt-3 border-t border-ink-100">
                   {matchesLoading ? (
                     <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Matching listings…
+                      <Loader2 className="w-3 h-3 animate-spin" /> Matching buyers…
                     </span>
-                  ) : listings.length === 0 ? (
+                  ) : buyers.length === 0 ? (
                     <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
-                      <Home className="w-3 h-3" /> No matching listings yet
+                      <Users className="w-3 h-3" /> No matching buyers yet
                     </span>
                   ) : (
                     <>
-                      <button
-                        onClick={() => toggleExpanded(s.id)}
-                        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
-                      >
-                        <Home className="w-3 h-3" />
-                        {listings.length} matching listing{listings.length === 1 ? '' : 's'}
-                        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
-                      </button>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                          onClick={() => toggleExpanded(l.id)}
+                          className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
+                        >
+                          <Users className="w-3 h-3" />
+                          {buyers.length} matching buyer{buyers.length === 1 ? '' : 's'}
+                          {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                        </button>
+                        {distributable && (
+                          <button
+                            onClick={() => sendNow(l)}
+                            disabled={sendingId === l.id}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-800 disabled:opacity-50"
+                            title="Send this listing to all matching buyers now"
+                          >
+                            {sendingId === l.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Send className="w-3 h-3" />
+                            )}
+                            Send now
+                          </button>
+                        )}
+                      </div>
+                      {sendResult.get(l.id) && (
+                        <div className="mt-2 text-2xs uppercase tracking-widest text-ink-500">
+                          {sendResult.get(l.id)}
+                        </div>
+                      )}
                       {open && (
                         <ul className="mt-2 space-y-1.5">
-                          {listings.map((m) => {
-                            const spec = [
-                              m.beds != null ? `${m.beds} bd` : null,
-                              m.baths != null ? `${m.baths} ba` : null,
-                              m.property_type,
-                            ]
-                              .filter(Boolean)
-                              .join(' · ')
-                            return (
-                              <li key={m.listing_id} className="flex items-center justify-between gap-3 text-sm">
-                                <span className="text-ink-800 truncate">
-                                  {m.street_address || m.neighborhood || m.city || 'Listing'}
-                                  {spec ? <span className="text-ink-400"> · {spec}</span> : null}
-                                </span>
-                                <span className="text-ink-900 tabular-nums shrink-0">
-                                  {money(m.make_me_move_price)}
-                                </span>
-                              </li>
-                            )
-                          })}
+                          {buyers.map((b) => (
+                            <li key={b.subscription_id} className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-ink-800 truncate">{b.first_name || b.email || 'Buyer'}</span>
+                              <span className="flex items-center gap-3 shrink-0">
+                                {b.frequency && (
+                                  <span className="text-2xs uppercase tracking-widest text-ink-400">{b.frequency}</span>
+                                )}
+                                {b.email && (
+                                  <a
+                                    href={`mailto:${b.email}`}
+                                    className="text-ink-500 hover:text-ink-900"
+                                    title={`Email ${b.first_name || b.email}`}
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </span>
+                            </li>
+                          ))}
                         </ul>
                       )}
                     </>
@@ -352,9 +463,10 @@ export default function BuyerFeed() {
       )}
 
       {(creating || editing) && (
-        <SubscriptionForm
-          sub={editing}
+        <ListingForm
+          listing={editing}
           tenantId={currentTenant.id}
+          userId={profile?.id ?? null}
           markets={markets}
           contacts={contacts}
           onClose={() => {
@@ -377,107 +489,123 @@ export default function BuyerFeed() {
 // ===========================================================================
 
 type FormState = {
-  contact_id: string
+  make_me_move_price: string
+  street_address: string
+  unit_label: string
+  city: string
+  state: string
+  postal_code: string
+  neighborhood: string
+  property_type: string
+  beds: string
+  baths: string
+  area_sqft: string
+  year_built: string
+  motivation: string
+  timeframe: string
+  description: string
+  visibility: string
+  status: string
   market_id: string
-  min_price: string
-  max_price: string
-  min_beds: string
-  property_types: string[]
-  neighborhoods: string
-  frequency: string
-  is_active: boolean
+  contact_id: string
 }
 
-function initialForm(sub: Subscription | null): FormState {
+function initialForm(listing: MMMListing | null): FormState {
   const num = (n: number | null) => (n == null ? '' : String(n))
   return {
-    contact_id: sub?.contact_id ?? '',
-    market_id: sub?.market_id ?? '',
-    min_price: num(sub?.min_price ?? null),
-    max_price: num(sub?.max_price ?? null),
-    min_beds: num(sub?.min_beds ?? null),
-    property_types: sub?.property_types ?? [],
-    neighborhoods: (sub?.neighborhoods ?? []).join(', '),
-    frequency: sub?.frequency ?? 'instant',
-    is_active: sub?.is_active ?? true,
+    make_me_move_price: num(listing?.make_me_move_price ?? null),
+    street_address: listing?.street_address ?? '',
+    unit_label: listing?.unit_label ?? '',
+    city: listing?.city ?? '',
+    state: listing?.state ?? '',
+    postal_code: listing?.postal_code ?? '',
+    neighborhood: listing?.neighborhood ?? '',
+    property_type: listing?.property_type ?? '',
+    beds: num(listing?.beds ?? null),
+    baths: num(listing?.baths ?? null),
+    area_sqft: num(listing?.area_sqft ?? null),
+    year_built: num(listing?.year_built ?? null),
+    motivation: listing?.motivation ?? '',
+    timeframe: listing?.timeframe ?? '',
+    description: listing?.description ?? '',
+    visibility: listing?.visibility ?? 'database',
+    status: listing?.status ?? 'active',
+    market_id: listing?.market_id ?? '',
+    contact_id: listing?.contact_id ?? '',
   }
 }
 
-function SubscriptionForm({
-  sub,
+function ListingForm({
+  listing,
   tenantId,
+  userId,
   markets,
   contacts,
   onClose,
   onSaved,
 }: {
-  sub: Subscription | null
+  listing: MMMListing | null
   tenantId: string
+  userId: string | null
   markets: Market[]
   contacts: ContactLite[]
   onClose: () => void
   onSaved: () => void
 }) {
-  const isEdit = !!sub
-  const [f, setF] = useState<FormState>(() => initialForm(sub))
+  const isEdit = !!listing
+  const [f, setF] = useState<FormState>(() => initialForm(listing))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function set<K extends keyof FormState>(key: K, value: FormState[K]) {
+  function set<K extends keyof FormState>(key: K, value: string) {
     setF((prev) => ({ ...prev, [key]: value }))
   }
 
-  function togglePropertyType(t: string) {
-    setF((prev) => ({
-      ...prev,
-      property_types: prev.property_types.includes(t)
-        ? prev.property_types.filter((x) => x !== t)
-        : [...prev.property_types, t],
-    }))
-  }
-
   async function handleSave() {
-    if (!f.contact_id) {
-      setError('Pick the buyer this feed is for.')
-      return
-    }
-    const minP = f.min_price.trim() === '' ? null : Number(f.min_price)
-    const maxP = f.max_price.trim() === '' ? null : Number(f.max_price)
-    if (minP != null && maxP != null && minP > maxP) {
-      setError('Min price can’t be greater than max price.')
+    const price = parseFloat(f.make_me_move_price)
+    if (!f.make_me_move_price || isNaN(price) || price <= 0) {
+      setError('A walk-away price is required.')
       return
     }
     setError(null)
     setSaving(true)
 
     const numOrNull = (s: string) => (s.trim() === '' ? null : Number(s))
-    const neighborhoods = f.neighborhoods
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
+    const txtOrNull = (s: string) => (s.trim() === '' ? null : s.trim())
 
     const payload = {
+      make_me_move_price: price,
+      street_address: txtOrNull(f.street_address),
+      unit_label: txtOrNull(f.unit_label),
+      city: txtOrNull(f.city),
+      state: txtOrNull(f.state),
+      postal_code: txtOrNull(f.postal_code),
+      neighborhood: txtOrNull(f.neighborhood),
+      property_type: txtOrNull(f.property_type),
+      beds: numOrNull(f.beds),
+      baths: numOrNull(f.baths),
+      area_sqft: numOrNull(f.area_sqft),
+      year_built: numOrNull(f.year_built),
+      motivation: txtOrNull(f.motivation),
+      timeframe: txtOrNull(f.timeframe),
+      description: txtOrNull(f.description),
+      visibility: f.visibility,
+      status: f.status,
       market_id: f.market_id || null,
-      min_price: minP,
-      max_price: maxP,
-      min_beds: numOrNull(f.min_beds),
-      property_types: f.property_types.length ? f.property_types : null,
-      neighborhoods: neighborhoods.length ? neighborhoods : null,
-      frequency: f.frequency,
-      is_active: f.is_active,
+      contact_id: f.contact_id || null,
       updated_at: new Date().toISOString(),
     }
 
     let errMsg: string | null = null
-    if (isEdit && sub) {
-      const { error } = await supabase.from('buyer_feed_subscriptions').update(payload).eq('id', sub.id)
+    if (isEdit && listing) {
+      const { error } = await supabase.from('make_me_move_listings').update(payload).eq('id', listing.id)
       errMsg = error?.message ?? null
     } else {
-      const { error } = await supabase.from('buyer_feed_subscriptions').insert({
+      const { error } = await supabase.from('make_me_move_listings').insert({
         ...payload,
         tenant_id: tenantId,
-        contact_id: f.contact_id,
-        channel: 'email',
+        source: 'agent_added',
+        created_by_user_id: userId,
       })
       errMsg = error?.message ?? null
     }
@@ -501,27 +629,127 @@ function SubscriptionForm({
       >
         <div className="flex items-start justify-between mb-5 pb-4 border-b border-ink-200">
           <h2 className="font-display text-2xl text-ink-900 leading-tight">
-            {isEdit ? 'Edit buyer subscription' : 'New buyer subscription'}
+            {isEdit ? 'Edit make-me-move listing' : 'New make-me-move listing'}
           </h2>
           <button onClick={onClose} className="text-ink-500 hover:text-ink-900">
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Buyer" required>
-            <select value={f.contact_id} onChange={(e) => set('contact_id', e.target.value)} className={inputCls}>
-              <option value="">— Select buyer —</option>
-              {contacts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {contactLabel(c)}
-                </option>
-              ))}
-            </select>
+        {/* Price */}
+        <Field label="Walk-away price" required>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={f.make_me_move_price}
+            onChange={(e) => set('make_me_move_price', e.target.value)}
+            placeholder="2750000"
+            className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream focus:outline-none focus:border-ink-900"
+          />
+        </Field>
+
+        {/* Address */}
+        <div className="grid grid-cols-3 gap-3 mt-4">
+          <div className="col-span-2">
+            <Field label="Street address">
+              <input value={f.street_address} onChange={(e) => set('street_address', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <Field label="Unit">
+            <input value={f.unit_label} onChange={(e) => set('unit_label', e.target.value)} className={inputCls} />
           </Field>
+        </div>
+        <div className="grid grid-cols-4 gap-3 mt-4">
+          <div className="col-span-2">
+            <Field label="Neighborhood">
+              <input value={f.neighborhood} onChange={(e) => set('neighborhood', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <Field label="City">
+            <input value={f.city} onChange={(e) => set('city', e.target.value)} className={inputCls} />
+          </Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="State">
+              <input value={f.state} onChange={(e) => set('state', e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="ZIP">
+              <input value={f.postal_code} onChange={(e) => set('postal_code', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+        </div>
+
+        {/* Property */}
+        <div className="grid grid-cols-5 gap-3 mt-4">
+          <div className="col-span-1">
+            <Field label="Beds">
+              <input type="number" value={f.beds} onChange={(e) => set('beds', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <div className="col-span-1">
+            <Field label="Baths">
+              <input type="number" value={f.baths} onChange={(e) => set('baths', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <div className="col-span-1">
+            <Field label="Sq ft">
+              <input type="number" value={f.area_sqft} onChange={(e) => set('area_sqft', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <div className="col-span-1">
+            <Field label="Year">
+              <input type="number" value={f.year_built} onChange={(e) => set('year_built', e.target.value)} className={inputCls} />
+            </Field>
+          </div>
+          <div className="col-span-1">
+            <Field label="Type">
+              <select value={f.property_type} onChange={(e) => set('property_type', e.target.value)} className={inputCls}>
+                <option value="">—</option>
+                {PROPERTY_TYPES.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        </div>
+
+        {/* Context */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Field label="Timeframe">
+            <input
+              value={f.timeframe}
+              onChange={(e) => set('timeframe', e.target.value)}
+              placeholder="e.g. Spring 2027, no rush"
+              className={inputCls}
+            />
+          </Field>
+          <Field label="Motivation">
+            <input
+              value={f.motivation}
+              onChange={(e) => set('motivation', e.target.value)}
+              placeholder="e.g. Downsizing once kids graduate"
+              className={inputCls}
+            />
+          </Field>
+        </div>
+
+        <div className="mt-4">
+          <Field label="Description">
+            <textarea
+              value={f.description}
+              onChange={(e) => set('description', e.target.value)}
+              rows={3}
+              className={inputCls}
+            />
+          </Field>
+        </div>
+
+        {/* Links + controls */}
+        <div className="grid grid-cols-2 gap-3 mt-4">
           <Field label="Market">
             <select value={f.market_id} onChange={(e) => set('market_id', e.target.value)} className={inputCls}>
-              <option value="">— Any —</option>
+              <option value="">— None —</option>
               {markets.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}
@@ -529,71 +757,36 @@ function SubscriptionForm({
               ))}
             </select>
           </Field>
-        </div>
-
-        <div className="grid grid-cols-3 gap-3 mt-4">
-          <Field label="Min price">
-            <input type="number" value={f.min_price} onChange={(e) => set('min_price', e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Max price">
-            <input type="number" value={f.max_price} onChange={(e) => set('max_price', e.target.value)} className={inputCls} />
-          </Field>
-          <Field label="Min beds">
-            <input type="number" value={f.min_beds} onChange={(e) => set('min_beds', e.target.value)} className={inputCls} />
-          </Field>
-        </div>
-
-        <div className="mt-4">
-          <span className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">Property types</span>
-          <div className="flex flex-wrap gap-2">
-            {PROPERTY_TYPES.map((t) => {
-              const on = f.property_types.includes(t)
-              return (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => togglePropertyType(t)}
-                  className={`px-2.5 py-1 text-2xs uppercase tracking-widest border transition-colors ${
-                    on ? 'bg-ink-900 text-cream border-ink-900' : 'bg-cream text-ink-600 border-ink-200 hover:border-ink-900'
-                  }`}
-                >
-                  {t}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="mt-4">
-          <Field label="Neighborhoods (comma-separated)">
-            <input
-              value={f.neighborhoods}
-              onChange={(e) => set('neighborhoods', e.target.value)}
-              placeholder="e.g. Monte Sereno, Almaden Valley"
-              className={inputCls}
-            />
-          </Field>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mt-4 items-end">
-          <Field label="Frequency">
-            <select value={f.frequency} onChange={(e) => set('frequency', e.target.value)} className={inputCls}>
-              {FREQUENCIES.map((fr) => (
-                <option key={fr} value={fr}>
-                  {fr}
+          <Field label="Owner contact">
+            <select value={f.contact_id} onChange={(e) => set('contact_id', e.target.value)} className={inputCls}>
+              <option value="">— None —</option>
+              {contacts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {contactLabel(c)}
                 </option>
               ))}
             </select>
           </Field>
-          <label className="inline-flex items-center gap-2 text-sm text-ink-800 pb-2">
-            <input
-              type="checkbox"
-              checked={f.is_active}
-              onChange={(e) => set('is_active', e.target.checked)}
-              className="w-4 h-4 accent-ink-900"
-            />
-            Active
-          </label>
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-4">
+          <Field label="Visibility">
+            <select value={f.visibility} onChange={(e) => set('visibility', e.target.value)} className={inputCls}>
+              {VISIBILITIES.map((v) => (
+                <option key={v} value={v}>
+                  {VIS_LABEL[v]}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Status">
+            <select value={f.status} onChange={(e) => set('status', e.target.value)} className={inputCls}>
+              {STATUSES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
 
         {error && (
@@ -614,7 +807,7 @@ function SubscriptionForm({
             className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            {isEdit ? 'Save changes' : 'Create subscription'}
+            {isEdit ? 'Save changes' : 'Create listing'}
           </button>
         </div>
       </div>
