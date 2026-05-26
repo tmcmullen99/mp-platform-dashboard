@@ -1,21 +1,34 @@
-// C2 — Buyer Feed agent surface.
+// C2 + A — Buyer Feed agent surface, with listing matching.
 //
 // Route: /buyer-feed
 //
-// Saved buyer searches. When matching off-market or coming-soon inventory
-// appears, it goes straight to these buyers (instant / daily / weekly). This is
-// the demand side of the marketplace flywheel — the agent manages who's looking
-// for what, so make-me-move and coming-soon listings have somewhere to land.
+// Saved buyer searches. Each subscription now shows the supply side too — which
+// make-me-move listings currently match this buyer's criteria
+// (match_listings_for_subscription, only_unsent=false so we show all matches).
 //
 // Backend (all verified live):
 //   table  public.buyer_feed_subscriptions
 //   frequency  instant | daily | weekly   (default instant)
 //   contact_id  REQUIRED (FK -> contacts, CASCADE) — the buyer
-//   market_id   optional (FK -> markets, SET NULL)
 //   RLS  bfs_rw — agent/admin read+write within tenant
+//   rpc  match_listings_for_subscription(p_subscription_id uuid, p_only_unsent boolean)
+//          -> listing_id, make_me_move_price, street_address, city,
+//             neighborhood, beds, baths, property_type
 
 import { useEffect, useMemo, useState } from 'react'
-import { Rss, Plus, Pencil, X, Loader2, Pause, Play, MapPin } from 'lucide-react'
+import {
+  Rss,
+  Plus,
+  Pencil,
+  X,
+  Loader2,
+  Pause,
+  Play,
+  MapPin,
+  Home,
+  ChevronRight,
+  ChevronDown,
+} from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 
@@ -33,6 +46,17 @@ type Subscription = {
   frequency: string
   is_active: boolean
   created_at: string
+}
+
+type ListingMatch = {
+  listing_id: string
+  make_me_move_price: number | null
+  street_address: string | null
+  city: string | null
+  neighborhood: string | null
+  beds: number | null
+  baths: number | null
+  property_type: string | null
 }
 
 type Market = { id: string; name: string }
@@ -63,6 +87,9 @@ export default function BuyerFeed() {
   const [subs, setSubs] = useState<Subscription[]>([])
   const [markets, setMarkets] = useState<Market[]>([])
   const [contacts, setContacts] = useState<ContactLite[]>([])
+  const [matches, setMatches] = useState<Map<string, ListingMatch[]>>(new Map())
+  const [matchesLoading, setMatchesLoading] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<Subscription | null>(null)
   const [creating, setCreating] = useState(false)
@@ -85,16 +112,46 @@ export default function BuyerFeed() {
         .order('last_name', { nullsFirst: false })
         .limit(500),
     ])
-    setSubs((sd as Subscription[]) || [])
+    const rows = (sd as Subscription[]) || []
+    setSubs(rows)
     setMarkets((mk as Market[]) || [])
     setContacts((ct as ContactLite[]) || [])
     setLoading(false)
+    loadMatches(rows)
+  }
+
+  async function loadMatches(rows: Subscription[]) {
+    if (rows.length === 0) {
+      setMatches(new Map())
+      return
+    }
+    setMatchesLoading(true)
+    const entries = await Promise.all(
+      rows.map(async (s) => {
+        const { data } = await supabase.rpc('match_listings_for_subscription', {
+          p_subscription_id: s.id,
+          p_only_unsent: false,
+        })
+        return [s.id, (data as ListingMatch[]) || []] as const
+      }),
+    )
+    setMatches(new Map(entries))
+    setMatchesLoading(false)
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTenant?.id])
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const marketName = useMemo(() => {
     const m = new Map<string, string>()
@@ -183,6 +240,8 @@ export default function BuyerFeed() {
               s.property_types && s.property_types.length ? s.property_types.join(', ') : null,
               s.neighborhoods && s.neighborhoods.length ? s.neighborhoods.join(', ') : null,
             ].filter(Boolean) as string[]
+            const listings = matches.get(s.id) || []
+            const open = expanded.has(s.id)
             return (
               <div key={s.id} className={`border bg-cream p-5 ${s.is_active ? 'border-ink-200' : 'border-ink-100 opacity-70'}`}>
                 <div className="flex items-start gap-4">
@@ -237,6 +296,54 @@ export default function BuyerFeed() {
                       {s.is_active ? 'Pause' : 'Resume'}
                     </button>
                   </div>
+                </div>
+
+                {/* A — matching listings */}
+                <div className="mt-3 pt-3 border-t border-ink-100">
+                  {matchesLoading ? (
+                    <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Matching listings…
+                    </span>
+                  ) : listings.length === 0 ? (
+                    <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
+                      <Home className="w-3 h-3" /> No matching listings yet
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => toggleExpanded(s.id)}
+                        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
+                      >
+                        <Home className="w-3 h-3" />
+                        {listings.length} matching listing{listings.length === 1 ? '' : 's'}
+                        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      </button>
+                      {open && (
+                        <ul className="mt-2 space-y-1.5">
+                          {listings.map((m) => {
+                            const spec = [
+                              m.beds != null ? `${m.beds} bd` : null,
+                              m.baths != null ? `${m.baths} ba` : null,
+                              m.property_type,
+                            ]
+                              .filter(Boolean)
+                              .join(' · ')
+                            return (
+                              <li key={m.listing_id} className="flex items-center justify-between gap-3 text-sm">
+                                <span className="text-ink-800 truncate">
+                                  {m.street_address || m.neighborhood || m.city || 'Listing'}
+                                  {spec ? <span className="text-ink-400"> · {spec}</span> : null}
+                                </span>
+                                <span className="text-ink-900 tabular-nums shrink-0">
+                                  {money(m.make_me_move_price)}
+                                </span>
+                              </li>
+                            )
+                          })}
+                        </ul>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
             )
