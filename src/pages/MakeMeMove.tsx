@@ -1,18 +1,18 @@
-// C1 — Make-Me-Move agent surface.
+// C1 + A — Make-Me-Move agent surface, with buyer matching.
 //
 // Route: /make-me-move
 //
 // Off-MLS opportunities: a price an owner would accept, surfaced to qualified
-// buyers without a live listing and no marketing spend until an offer lands.
-// This is the agent cockpit for that inventory — create, edit, and run the
-// status lifecycle (active → paused → withdrawn → converted → expired).
+// buyers without a live listing. Each listing now shows the demand side too —
+// which active buyer-feed subscriptions it matches (match_buyers_for_listing).
 //
 // Backend (all verified live):
 //   table  public.make_me_move_listings
 //   status  active | paused | withdrawn | converted | expired   (default active)
 //   visibility  private | agent_only | market | database         (default database)
 //   RLS  mmm_rw — agent/admin read+write within tenant
-//   FKs  market_id→markets, contact_id→contacts, unit_id→units (all SET NULL)
+//   rpc  match_buyers_for_listing(p_listing_id uuid)
+//          -> subscription_id, contact_id, email, first_name, frequency
 
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -25,6 +25,10 @@ import {
   BedDouble,
   Bath,
   Ruler,
+  Users,
+  Mail,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -53,6 +57,14 @@ type MMMListing = {
   status: string
   source: string
   created_at: string
+}
+
+type BuyerMatch = {
+  subscription_id: string
+  contact_id: string | null
+  email: string | null
+  first_name: string | null
+  frequency: string | null
 }
 
 type Market = { id: string; name: string }
@@ -97,6 +109,9 @@ export default function MakeMeMove() {
   const [listings, setListings] = useState<MMMListing[]>([])
   const [markets, setMarkets] = useState<Market[]>([])
   const [contacts, setContacts] = useState<ContactLite[]>([])
+  const [matches, setMatches] = useState<Map<string, BuyerMatch[]>>(new Map())
+  const [matchesLoading, setMatchesLoading] = useState(false)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [editing, setEditing] = useState<MMMListing | null>(null)
   const [creating, setCreating] = useState(false)
@@ -119,16 +134,43 @@ export default function MakeMeMove() {
         .order('last_name', { nullsFirst: false })
         .limit(500),
     ])
-    setListings((ld as MMMListing[]) || [])
+    const rows = (ld as MMMListing[]) || []
+    setListings(rows)
     setMarkets((mk as Market[]) || [])
     setContacts((ct as ContactLite[]) || [])
     setLoading(false)
+    loadMatches(rows)
+  }
+
+  async function loadMatches(rows: MMMListing[]) {
+    if (rows.length === 0) {
+      setMatches(new Map())
+      return
+    }
+    setMatchesLoading(true)
+    const entries = await Promise.all(
+      rows.map(async (l) => {
+        const { data } = await supabase.rpc('match_buyers_for_listing', { p_listing_id: l.id })
+        return [l.id, (data as BuyerMatch[]) || []] as const
+      }),
+    )
+    setMatches(new Map(entries))
+    setMatchesLoading(false)
   }
 
   useEffect(() => {
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTenant?.id])
+
+  function toggleExpanded(id: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const marketName = useMemo(() => {
     const m = new Map<string, string>()
@@ -210,93 +252,144 @@ export default function MakeMeMove() {
         </div>
       ) : (
         <div className="space-y-3">
-          {listings.map((l) => (
-            <div key={l.id} className="border border-ink-200 bg-cream p-5">
-              <div className="flex items-start gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h3 className="font-display text-xl text-ink-900 truncate">
-                      {l.street_address || 'Address TBD'}
-                      {l.unit_label ? ` ${l.unit_label}` : ''}
-                    </h3>
-                    <span className={`text-2xs uppercase tracking-widest px-2 py-0.5 ${statusBadge(l.status)}`}>
-                      {l.status}
-                    </span>
-                    <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-ink-100 text-ink-500">
-                      {VIS_LABEL[l.visibility] || l.visibility}
-                    </span>
+          {listings.map((l) => {
+            const buyers = matches.get(l.id) || []
+            const open = expanded.has(l.id)
+            return (
+              <div key={l.id} className="border border-ink-200 bg-cream p-5">
+                <div className="flex items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <h3 className="font-display text-xl text-ink-900 truncate">
+                        {l.street_address || 'Address TBD'}
+                        {l.unit_label ? ` ${l.unit_label}` : ''}
+                      </h3>
+                      <span className={`text-2xs uppercase tracking-widest px-2 py-0.5 ${statusBadge(l.status)}`}>
+                        {l.status}
+                      </span>
+                      <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-ink-100 text-ink-500">
+                        {VIS_LABEL[l.visibility] || l.visibility}
+                      </span>
+                    </div>
+
+                    {(l.city || l.neighborhood || l.market_id) && (
+                      <div className="text-sm text-ink-600 truncate inline-flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-ink-400 shrink-0" />
+                        {[l.neighborhood, l.city, l.state].filter(Boolean).join(', ') || '—'}
+                        {l.market_id && marketName.get(l.market_id) ? ` · ${marketName.get(l.market_id)}` : ''}
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-3 mt-2 text-2xs uppercase tracking-widest text-ink-500 flex-wrap">
+                      {l.property_type && <span>{l.property_type}</span>}
+                      {l.beds != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <BedDouble className="w-3 h-3" /> {l.beds}
+                        </span>
+                      )}
+                      {l.baths != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Bath className="w-3 h-3" /> {l.baths}
+                        </span>
+                      )}
+                      {l.area_sqft != null && (
+                        <span className="inline-flex items-center gap-1">
+                          <Ruler className="w-3 h-3" /> {l.area_sqft.toLocaleString()} sqft
+                        </span>
+                      )}
+                    </div>
+
+                    {(l.contact_id && contactName.get(l.contact_id)) || l.timeframe || l.motivation ? (
+                      <div className="text-xs text-ink-500 mt-2 truncate">
+                        {l.contact_id && contactName.get(l.contact_id) ? `Owner: ${contactName.get(l.contact_id)}` : ''}
+                        {l.timeframe ? `${l.contact_id ? ' · ' : ''}${l.timeframe}` : ''}
+                        {l.motivation ? `${l.contact_id || l.timeframe ? ' · ' : ''}${l.motivation}` : ''}
+                      </div>
+                    ) : null}
                   </div>
 
-                  {(l.city || l.neighborhood || l.market_id) && (
-                    <div className="text-sm text-ink-600 truncate inline-flex items-center gap-1">
-                      <MapPin className="w-3 h-3 text-ink-400 shrink-0" />
-                      {[l.neighborhood, l.city, l.state].filter(Boolean).join(', ') || '—'}
-                      {l.market_id && marketName.get(l.market_id) ? ` · ${marketName.get(l.market_id)}` : ''}
+                  <div className="text-right shrink-0">
+                    <div className="font-display text-2xl text-ink-900 tabular-nums leading-none">
+                      {money(l.make_me_move_price)}
                     </div>
-                  )}
-
-                  <div className="flex items-center gap-3 mt-2 text-2xs uppercase tracking-widest text-ink-500 flex-wrap">
-                    {l.property_type && <span>{l.property_type}</span>}
-                    {l.beds != null && (
-                      <span className="inline-flex items-center gap-1">
-                        <BedDouble className="w-3 h-3" /> {l.beds}
-                      </span>
-                    )}
-                    {l.baths != null && (
-                      <span className="inline-flex items-center gap-1">
-                        <Bath className="w-3 h-3" /> {l.baths}
-                      </span>
-                    )}
-                    {l.area_sqft != null && (
-                      <span className="inline-flex items-center gap-1">
-                        <Ruler className="w-3 h-3" /> {l.area_sqft.toLocaleString()} sqft
-                      </span>
-                    )}
+                    <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">walk-away</div>
                   </div>
-
-                  {(l.contact_id && contactName.get(l.contact_id)) || l.timeframe || l.motivation ? (
-                    <div className="text-xs text-ink-500 mt-2 truncate">
-                      {l.contact_id && contactName.get(l.contact_id) ? `Owner: ${contactName.get(l.contact_id)}` : ''}
-                      {l.timeframe ? `${l.contact_id ? ' · ' : ''}${l.timeframe}` : ''}
-                      {l.motivation ? `${l.contact_id || l.timeframe ? ' · ' : ''}${l.motivation}` : ''}
-                    </div>
-                  ) : null}
                 </div>
 
-                <div className="text-right shrink-0">
-                  <div className="font-display text-2xl text-ink-900 tabular-nums leading-none">
-                    {money(l.make_me_move_price)}
-                  </div>
-                  <div className="text-2xs uppercase tracking-widest text-ink-500 mt-1">walk-away</div>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 mt-4 pt-4 border-t border-ink-100 flex-wrap">
-                <button
-                  onClick={() => setEditing(l)}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink-300 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-900 hover:text-ink-900"
-                >
-                  <Pencil className="w-3 h-3" /> Edit
-                </button>
-                <label className="inline-flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 ml-auto">
-                  Status
-                  <select
-                    value={l.status}
-                    disabled={savingStatusId === l.id}
-                    onChange={(e) => changeStatus(l, e.target.value)}
-                    className="border border-ink-200 px-2 py-1 text-2xs uppercase tracking-widest bg-cream focus:outline-none focus:border-ink-900 disabled:opacity-50"
+                <div className="flex items-center gap-2 mt-4 pt-4 border-t border-ink-100 flex-wrap">
+                  <button
+                    onClick={() => setEditing(l)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-ink-300 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-900 hover:text-ink-900"
                   >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  {savingStatusId === l.id && <Loader2 className="w-3 h-3 animate-spin" />}
-                </label>
+                    <Pencil className="w-3 h-3" /> Edit
+                  </button>
+                  <label className="inline-flex items-center gap-2 text-2xs uppercase tracking-widest text-ink-500 ml-auto">
+                    Status
+                    <select
+                      value={l.status}
+                      disabled={savingStatusId === l.id}
+                      onChange={(e) => changeStatus(l, e.target.value)}
+                      className="border border-ink-200 px-2 py-1 text-2xs uppercase tracking-widest bg-cream focus:outline-none focus:border-ink-900 disabled:opacity-50"
+                    >
+                      {STATUSES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    {savingStatusId === l.id && <Loader2 className="w-3 h-3 animate-spin" />}
+                  </label>
+                </div>
+
+                {/* A — matching buyers */}
+                <div className="mt-3 pt-3 border-t border-ink-100">
+                  {matchesLoading ? (
+                    <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
+                      <Loader2 className="w-3 h-3 animate-spin" /> Matching buyers…
+                    </span>
+                  ) : buyers.length === 0 ? (
+                    <span className="text-2xs uppercase tracking-widest text-ink-400 inline-flex items-center gap-1.5">
+                      <Users className="w-3 h-3" /> No matching buyers yet
+                    </span>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => toggleExpanded(l.id)}
+                        className="inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-ink-900 hover:text-ink-600"
+                      >
+                        <Users className="w-3 h-3" />
+                        {buyers.length} matching buyer{buyers.length === 1 ? '' : 's'}
+                        {open ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                      </button>
+                      {open && (
+                        <ul className="mt-2 space-y-1.5">
+                          {buyers.map((b) => (
+                            <li key={b.subscription_id} className="flex items-center justify-between gap-3 text-sm">
+                              <span className="text-ink-800 truncate">{b.first_name || b.email || 'Buyer'}</span>
+                              <span className="flex items-center gap-3 shrink-0">
+                                {b.frequency && (
+                                  <span className="text-2xs uppercase tracking-widest text-ink-400">{b.frequency}</span>
+                                )}
+                                {b.email && (
+                                  <a
+                                    href={`mailto:${b.email}`}
+                                    className="text-ink-500 hover:text-ink-900"
+                                    title={`Email ${b.first_name || b.email}`}
+                                  >
+                                    <Mail className="w-3.5 h-3.5" />
+                                  </a>
+                                )}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
