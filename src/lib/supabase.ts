@@ -62,6 +62,7 @@ export type TenantBranding = {
   hero_subtitle: string | null
   hero_image_url: string | null
   service_areas: string[]
+  onboarded_at: string | null
 }
 
 export type UserProfile = {
