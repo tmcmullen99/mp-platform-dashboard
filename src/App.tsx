@@ -43,11 +43,20 @@ import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import PublicMarket from '@/pages/public/PublicMarket'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
+// Vanity market subdomains → market slug, so a branded host like
+// campbell.mcmullen.properties serves its market page at the root.
+const MARKET_HOSTS: Record<string, string> = {
+  'campbell.mcmullen.properties': 'campbell',
+}
+const hostMarketSlug =
+  typeof window !== 'undefined' ? MARKET_HOSTS[window.location.hostname] ?? null : null
+
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {hostMarketSlug && <Route path="/" element={<PublicMarket slugOverride={hostMarketSlug} />} />}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           {/* P9.13.0-.2: public-facing routes, no auth */}
