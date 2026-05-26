@@ -254,6 +254,14 @@ export default function DealDetail() {
         </Fact>
       </div>
 
+      {/* Commission & close-out */}
+      <CommissionSection
+        deal={deal}
+        tenantId={currentTenant?.id ?? null}
+        currentUserId={user?.id ?? null}
+        onClosed={refresh}
+      />
+
       {/* Net sheets */}
       <section className="mb-14">
         <div className="flex items-center justify-between mb-4">
@@ -512,6 +520,347 @@ function OfferStatusBadge({ status }: { status: string }) {
         ? 'bg-red-50 text-red-700'
         : 'bg-ink-100 text-ink-700'
   return <span className={`px-1.5 py-0.5 text-2xs uppercase tracking-widest ${tone}`}>{status}</span>
+}
+
+// ===========================================================================
+// Commission & close-out  (computes the split against commission_plans via RPC)
+// ===========================================================================
+
+type LedgerRow = {
+  id: string
+  source_type: string
+  gross_gci_cents: number
+  agent_pct_applied: number | null
+  agent_net_cents: number
+  company_dollar_cents: number
+  counted_toward_cap_cents: number
+  crossed_cap: boolean
+  occurred_on: string
+}
+type AcctRow = { id: string; company_dollar_ytd_cents: number; is_capped: boolean; cap_period_start: string }
+type PlanRow = {
+  id: string
+  standard_agent_pct: number
+  cap_company_dollar_cents: number
+  mp_generated_agent_pct: number
+  monthly_fee_cents: number
+}
+type Salesperson = { id: string; name: string }
+type DealX = Deal & {
+  agent_user_id?: string | null
+  is_mp_generated?: boolean | null
+  source_enrollment_id?: string | null
+}
+
+const cents = (n: number | null | undefined) => money(Number(n ?? 0) / 100)
+
+function CommissionSection({
+  deal,
+  tenantId,
+  currentUserId,
+  onClosed,
+}: {
+  deal: DealX
+  tenantId: string | null
+  currentUserId: string | null
+  onClosed: () => void
+}) {
+  const [ledger, setLedger] = useState<LedgerRow | null>(null)
+  const [account, setAccount] = useState<AcctRow | null>(null)
+  const [plan, setPlan] = useState<PlanRow | null>(null)
+  const [people, setPeople] = useState<Salesperson[]>([])
+
+  const [open, setOpen] = useState(false)
+  const [agentId, setAgentId] = useState('')
+  const [mpGen, setMpGen] = useState(false)
+  const [gci, setGci] = useState('')
+  const [closeDate, setCloseDate] = useState('')
+  const [closing, setClosing] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  const load = useCallback(async () => {
+    if (!tenantId) return
+    const [ledR, planR, tuR] = await Promise.all([
+      supabase
+        .from('commission_ledger')
+        .select('*')
+        .eq('deal_id', deal.id)
+        .in('source_type', ['deal_self', 'deal_mp_generated'])
+        .maybeSingle(),
+      supabase
+        .from('commission_plans')
+        .select('id, standard_agent_pct, cap_company_dollar_cents, mp_generated_agent_pct, monthly_fee_cents')
+        .eq('tenant_id', tenantId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase.from('tenant_users').select('user_id').eq('tenant_id', tenantId),
+    ])
+    setLedger((ledR.data as LedgerRow) ?? null)
+    setPlan((planR.data as PlanRow) ?? null)
+
+    const ids = ((tuR.data as { user_id: string }[]) || []).map((r) => r.user_id)
+    if (ids.length) {
+      const { data: profs } = await supabase
+        .from('user_profiles')
+        .select('id, first_name, last_name, email')
+        .in('id', ids)
+      const rows =
+        (profs as { id: string; first_name: string | null; last_name: string | null; email: string | null }[]) || []
+      setPeople(
+        rows.map((p) => ({
+          id: p.id,
+          name: [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || p.email || 'Agent',
+        })),
+      )
+    } else {
+      setPeople([])
+    }
+
+    const earner = deal.agent_user_id || null
+    if (earner) {
+      const { data: acct } = await supabase
+        .from('agent_commission_accounts')
+        .select('id, company_dollar_ytd_cents, is_capped, cap_period_start')
+        .eq('tenant_id', tenantId)
+        .eq('agent_user_id', earner)
+        .order('cap_period_start', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      setAccount((acct as AcctRow) ?? null)
+    } else {
+      setAccount(null)
+    }
+
+    setAgentId(deal.agent_user_id || currentUserId || '')
+    setMpGen(Boolean(deal.is_mp_generated) || Boolean(deal.source_enrollment_id))
+    setGci(
+      deal.actual_commission != null
+        ? String(deal.actual_commission)
+        : deal.estimated_commission != null
+          ? String(deal.estimated_commission)
+          : '',
+    )
+    setCloseDate(deal.close_date || new Date().toISOString().slice(0, 10))
+  }, [
+    deal.id,
+    deal.agent_user_id,
+    deal.is_mp_generated,
+    deal.source_enrollment_id,
+    deal.actual_commission,
+    deal.estimated_commission,
+    deal.close_date,
+    tenantId,
+    currentUserId,
+  ])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  async function closeDeal() {
+    if (closing) return
+    const amt = parseFloat(gci.replace(/[^0-9.]/g, ''))
+    if (!agentId) {
+      setErr('Pick the agent who earns this deal.')
+      return
+    }
+    if (!amt || amt <= 0) {
+      setErr('Enter the commission (GCI) for this deal.')
+      return
+    }
+    setClosing(true)
+    setErr(null)
+    const { error: upErr } = await supabase
+      .from('deals')
+      .update({
+        agent_user_id: agentId,
+        is_mp_generated: mpGen,
+        actual_commission: amt,
+        close_date: closeDate || new Date().toISOString().slice(0, 10),
+        stage: 'closed',
+      })
+      .eq('id', deal.id)
+    if (upErr) {
+      setErr(upErr.message)
+      setClosing(false)
+      return
+    }
+    const { error: rpcErr } = await supabase.rpc('apply_commission_for_deal', { p_deal_id: deal.id })
+    if (rpcErr) {
+      setErr(rpcErr.message)
+      setClosing(false)
+      return
+    }
+    setClosing(false)
+    setOpen(false)
+    await load()
+    onClosed()
+  }
+
+  const capCents = plan?.cap_company_dollar_cents ?? 1000000
+  const ytd = account?.company_dollar_ytd_cents ?? 0
+  const capPct = Math.min(100, Math.round((ytd / capCents) * 100))
+  const capped = account?.is_capped ?? false
+  const stdPct = Number(plan?.standard_agent_pct ?? 90)
+  const mpPct = Number(plan?.mp_generated_agent_pct ?? 70)
+
+  const inputCls =
+    'w-full px-3 py-2 border border-ink-200 bg-white text-sm focus:outline-none focus:border-ink-900'
+  const labelCls = 'block text-2xs uppercase tracking-widest text-ink-500 mb-1.5'
+
+  // ---- Result view: deal already commissioned ----
+  if (ledger) {
+    const isMp = ledger.source_type === 'deal_mp_generated'
+    const appliedPct = Number(ledger.agent_pct_applied ?? (isMp ? mpPct : stdPct))
+    const trackLabel = isMp
+      ? `MP-generated · ${appliedPct}/${100 - appliedPct}`
+      : appliedPct === 100
+        ? 'Self-generated · capped 100%'
+        : `Self-generated · ${appliedPct}/${100 - appliedPct}`
+    return (
+      <section className="mb-14">
+        <SectionLabel>Commission</SectionLabel>
+        <div className="bg-white border border-ink-100 p-7">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <span className="px-2 py-0.5 text-2xs uppercase tracking-widest bg-ink-100 text-ink-700">
+              {trackLabel}
+            </span>
+            {ledger.crossed_cap && (
+              <span className="px-2 py-0.5 text-2xs uppercase tracking-widest bg-emerald-50 text-emerald-700">
+                Crossed cap
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
+            <div>
+              <div className="text-2xs uppercase tracking-widest text-ink-400 mb-1">Gross commission</div>
+              <div className="font-display text-3xl text-ink-900 tabular-nums">{cents(ledger.gross_gci_cents)}</div>
+            </div>
+            <div>
+              <div className="text-2xs uppercase tracking-widest text-ink-400 mb-1">To agent</div>
+              <div className="font-display text-3xl text-ink-900 tabular-nums">{cents(ledger.agent_net_cents)}</div>
+            </div>
+            <div>
+              <div className="text-2xs uppercase tracking-widest text-ink-400 mb-1">To MP</div>
+              <div className="font-display text-3xl text-ink-900 tabular-nums">
+                {cents(ledger.company_dollar_cents)}
+              </div>
+            </div>
+          </div>
+          <div className="mt-7 pt-6 border-t border-ink-100">
+            <div className="flex items-center justify-between text-2xs uppercase tracking-widest text-ink-500 mb-2">
+              <span>Annual cap{capped ? ' · reached' : ''}</span>
+              <span className="tabular-nums">
+                {cents(ytd)} / {cents(capCents)}
+              </span>
+            </div>
+            <div className="h-1.5 bg-ink-100 overflow-hidden">
+              <div className={`h-full ${capped ? 'bg-emerald-500' : 'bg-ink-900'}`} style={{ width: `${capPct}%` }} />
+            </div>
+            {capped && (
+              <div className="mt-2 inline-flex items-center gap-1.5 text-2xs uppercase tracking-widest text-emerald-700">
+                <Check className="w-3 h-3" /> Capped — self-generated deals now 100%, $99/mo waived through year-end
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  // ---- Close-out form / prompt ----
+  return (
+    <section className="mb-14">
+      <div className="flex items-center justify-between mb-4">
+        <SectionLabel>Commission</SectionLabel>
+        {!open && (
+          <button
+            onClick={() => setOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-2 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 shrink-0"
+          >
+            <CircleDollarSign className="w-3.5 h-3.5" /> Close out &amp; calculate
+          </button>
+        )}
+      </div>
+
+      {!open ? (
+        <Card>
+          <div className="text-sm text-ink-500">
+            {plan
+              ? `Not closed yet. Closing computes the split against the brokerage plan — self-generated ${stdPct}/${100 - stdPct} up to a ${cents(capCents)} cap, then 100%; MP-generated ${mpPct}/${100 - mpPct} all year.`
+              : 'No commission plan is configured for this brokerage yet.'}
+          </div>
+        </Card>
+      ) : (
+        <div className="bg-white border border-ink-100 p-7">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className={labelCls}>Earning agent</label>
+              <select value={agentId} onChange={(e) => setAgentId(e.target.value)} className={inputCls}>
+                <option value="">Select agent…</option>
+                {people.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Lead source</label>
+              <select
+                value={mpGen ? 'mp' : 'self'}
+                onChange={(e) => setMpGen(e.target.value === 'mp')}
+                className={inputCls}
+              >
+                <option value="self">
+                  Self-generated ({stdPct}/{100 - stdPct})
+                </option>
+                <option value="mp">
+                  MP-generated ({mpPct}/{100 - mpPct})
+                </option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Commission (GCI)</label>
+              <input
+                value={gci}
+                onChange={(e) => setGci(e.target.value)}
+                placeholder="$0"
+                className={inputCls}
+                inputMode="decimal"
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Close date</label>
+              <input type="date" value={closeDate} onChange={(e) => setCloseDate(e.target.value)} className={inputCls} />
+            </div>
+          </div>
+          {err && <div className="text-sm text-red-700 mb-3">{err}</div>}
+          <div className="flex items-center justify-end gap-3">
+            <button
+              onClick={() => {
+                setOpen(false)
+                setErr(null)
+              }}
+              className="px-4 py-2.5 text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={closeDeal}
+              disabled={closing}
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
+            >
+              {closing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Check className="w-3.5 h-3.5" />}
+              Close deal &amp; calculate
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  )
 }
 
 // ===========================================================================
