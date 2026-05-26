@@ -22,6 +22,8 @@ import {
   CheckSquare,
   Sparkles,
   Radio,
+  Tag,
+  Rss,
   LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -54,6 +56,13 @@ const navGroups: NavGroup[] = [
       { to: '/outreach', label: 'Outreach', Icon: Megaphone },
       { to: '/listings', label: 'Listings', Icon: Home },
       { to: '/content', label: 'Content Studio', Icon: PenLine },
+    ],
+  },
+  {
+    label: 'Marketplace',
+    items: [
+      { to: '/make-me-move', label: 'Make-Me-Move', Icon: Tag },
+      { to: '/buyer-feed', label: 'Buyer feed', Icon: Rss },
     ],
   },
   {
