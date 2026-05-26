@@ -40,6 +40,7 @@ import Unsubscribe from '@/pages/public/Unsubscribe'
 import SharedDoc from '@/pages/public/SharedDoc'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
 import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
+import PublicMarket from '@/pages/public/PublicMarket'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
 export default function App() {
@@ -56,6 +57,7 @@ export default function App() {
           {/* P-Mkt.3: public buyer-facing Make-Me-Move browse + detail */}
           <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
           <Route path="/m/:tenantSlug/:listingId" element={<PublicMakeMeMoveDetail />} />
+          <Route path="/market/:slug" element={<PublicMarket />} />
           {/* B.2: public ownership-claim link */}
           <Route path="/claim/:token" element={<ClaimUnit />} />
           {/* C.2: public unsubscribe */}
