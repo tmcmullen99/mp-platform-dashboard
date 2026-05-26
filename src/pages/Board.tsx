@@ -47,6 +47,10 @@ type Lead = {
 
 type Market = { id: string; name: string }
 
+// Tier literals come straight from the hot_leads RPC:
+// score >= 6 -> 'hot', score >= 2 -> 'warm', else 'cool'.
+type TierKey = 'all' | 'hot' | 'warm' | 'cool'
+
 function leadName(l: Lead): string {
   const n = [l.first_name, l.last_name].filter(Boolean).join(' ').trim()
   return n || l.email || 'Unknown owner'
@@ -77,6 +81,7 @@ export default function Board() {
   const [leads, setLeads] = useState<Lead[]>([])
   const [markets, setMarkets] = useState<Market[]>([])
   const [marketId, setMarketId] = useState<string>('')
+  const [tier, setTier] = useState<TierKey>('all')
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
@@ -105,6 +110,21 @@ export default function Board() {
     }
     return c
   }, [leads])
+
+  // Rank reflects position in the full score-sorted list, so a lead's number
+  // stays honest even when a tier filter is applied (the global #4 reads "4").
+  const ranked = useMemo(() => leads.map((lead, i) => ({ lead, rank: i + 1 })), [leads])
+  const visible = useMemo(
+    () => (tier === 'all' ? ranked : ranked.filter((r) => r.lead.tier === tier)),
+    [ranked, tier],
+  )
+
+  const tierChips = [
+    { key: 'all', label: 'All', count: leads.length, cls: 'bg-cream text-ink-700 border border-ink-200' },
+    { key: 'hot', label: 'Hot', count: counts.hot, cls: 'bg-ink-900 text-cream' },
+    { key: 'warm', label: 'Warm', count: counts.warm, cls: 'bg-sky-50 text-sky-700' },
+    { key: 'cool', label: 'Cool', count: counts.cool, cls: 'bg-ink-100 text-ink-500' },
+  ] as const
 
   return (
     <div className="max-w-4xl mx-auto px-8 py-10">
@@ -143,12 +163,24 @@ export default function Board() {
         </div>
       </div>
 
-      {/* Tier strip */}
+      {/* Tier filter — click to narrow, click the active one again to clear */}
       {!loading && leads.length > 0 && (
-        <div className="flex items-center gap-2 mb-6 text-2xs uppercase tracking-widest">
-          <span className="px-2 py-1 bg-ink-900 text-cream">{counts.hot} hot</span>
-          <span className="px-2 py-1 bg-sky-50 text-sky-700">{counts.warm} warm</span>
-          <span className="px-2 py-1 bg-ink-100 text-ink-500">{counts.cool} cool</span>
+        <div className="flex items-center gap-2 mb-6">
+          {tierChips.map((ch) => {
+            const active = tier === ch.key
+            return (
+              <button
+                key={ch.key}
+                onClick={() => setTier((t) => (t === ch.key ? 'all' : ch.key))}
+                aria-pressed={active}
+                className={`px-2.5 py-1 text-2xs uppercase tracking-widest transition-all ${ch.cls} ${
+                  active ? 'ring-2 ring-offset-1 ring-ink-900' : 'opacity-60 hover:opacity-100'
+                }`}
+              >
+                {ch.count} {ch.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
@@ -162,10 +194,20 @@ export default function Board() {
             Send a wave from Outreach — opens, clicks, and claims will surface owners here.
           </p>
         </div>
+      ) : visible.length === 0 ? (
+        <div className="border border-dashed border-ink-200 py-16 text-center">
+          <div className="text-sm text-ink-700 font-medium">No {tier} leads right now</div>
+          <button
+            onClick={() => setTier('all')}
+            className="text-2xs uppercase tracking-widest text-ink-900 underline mt-2"
+          >
+            Show all leads
+          </button>
+        </div>
       ) : (
         <div className="space-y-3">
-          {leads.map((l, i) => (
-            <LeadCard key={l.contact_id} lead={l} rank={i + 1} />
+          {visible.map(({ lead, rank }) => (
+            <LeadCard key={lead.contact_id} lead={lead} rank={rank} />
           ))}
         </div>
       )}
