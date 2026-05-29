@@ -1,10 +1,14 @@
 // P9.1 — CMA visual template. Renders structured CMASubject + CMAComp[] as a
 // polished single-page CMA. Uses the McMullen brand tokens; safe to render both
 // in the agent dashboard and inside the client portal (no nav, just content).
-// P9.4 Sprint A — Adds SellerScenario block driven by listing_type (2.5% regular
-// vs 3% MMM Campbell double-end) vs traditional 5%, with SF transfer tax + escrow
-// + title/recording rolled into net proceeds. Hidden if listPrice is unknown.
+// P9.4 Sprint A — SellerScenario block driven by listing_type (2.5% regular vs
+//                 3% MMM Campbell double-end) vs traditional 5%, with SF transfer
+//                 tax + escrow + title/recording rolled into net proceeds.
+// P9.4 Sprint B — SellerScenario becomes interactive: sale-price slider (85%–115%
+//                 of listPrice) drives live recalc of all rows + savings callout.
+//                 Slider hides on print so PDFs snapshot the modeled scenario.
 
+import { useEffect, useState } from 'react'
 import type { CMASubject, CMAComp } from '@/lib/supabase'
 import { MapPin, Home, Bath, Maximize2, Calendar, TrendingUp } from 'lucide-react'
 
@@ -26,6 +30,13 @@ type Props = {
 function fmtMoney(n: number | null | undefined, fallback = '—'): string {
   if (n == null || isNaN(n)) return fallback
   return '$' + Number(n).toLocaleString()
+}
+
+function fmtMoneyShort(n: number): string {
+  // Compact bound labels ($1.23M, $987K)
+  if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M'
+  if (n >= 1_000) return '$' + Math.round(n / 1_000) + 'K'
+  return '$' + n.toLocaleString()
 }
 
 function fmtSqft(n: number | null | undefined): string {
@@ -170,7 +181,7 @@ export default function CMATemplate({
         </section>
       )}
 
-      {/* ============ SELLER SCENARIO (P9.4 Sprint A) ============ */}
+      {/* ============ SELLER SCENARIO (P9.4 Sprints A + B) ============ */}
       {showScenario && (
         <SellerScenario
           listPrice={subject.listPrice as number}
@@ -205,11 +216,13 @@ export default function CMATemplate({
 }
 
 // ============================================================
-// SellerScenario — P9.4 Sprint A
-// Side-by-side net proceeds at the recommended list price.
+// SellerScenario — P9.4 Sprints A + B
+// Side-by-side net proceeds at the modeled sale price.
 // McMullen rate: 2.5% (regular) or 3% (MMM double-end). Traditional: 5%.
-// SF transfer tax assumed at the $1M–$5M tier (0.75%); escrow $1,200 discounted vs
-// $1,800 average; title/recording/misc $2,800 on both sides. Excludes mortgage payoff.
+// SF transfer tax assumed at the $1M–$5M tier (0.75%); escrow $1,200 discounted
+// vs $1,800 average; title/recording/misc $2,800 on both sides.
+// Sprint B: interactive sale-price slider (85%–115% of listPrice, $1k steps)
+// drives live recalc; slider hides on print so PDFs snapshot the modeled value.
 // ============================================================
 function SellerScenario({
   listPrice,
@@ -218,6 +231,18 @@ function SellerScenario({
   listPrice: number
   listingType: ListingType
 }) {
+  // Slider bounds — 85% to 115% of the recommended ask, rounded to nearest $1,000
+  const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
+  const maxPrice = Math.round((listPrice * 1.15) / 1000) * 1000
+
+  const [salePrice, setSalePrice] = useState<number>(listPrice)
+
+  // Reset slider if user navigates to a different CMA (listPrice changes)
+  useEffect(() => {
+    setSalePrice(listPrice)
+  }, [listPrice])
+
+  // Math — recomputed on every render (cheap)
   const mcRate = listingType === 'mmm' ? 0.03 : 0.025
   const tdRate = 0.05
   const transferTaxRate = 0.0075
@@ -225,11 +250,11 @@ function SellerScenario({
   const mcEscrow = 1200
   const tdEscrow = 1800
 
-  const transferTax = Math.round(listPrice * transferTaxRate)
-  const mcCommission = Math.round(listPrice * mcRate)
-  const tdCommission = Math.round(listPrice * tdRate)
-  const mcNet = listPrice - mcCommission - mcEscrow - transferTax - titleEtc
-  const tdNet = listPrice - tdCommission - tdEscrow - transferTax - titleEtc
+  const transferTax = Math.round(salePrice * transferTaxRate)
+  const mcCommission = Math.round(salePrice * mcRate)
+  const tdCommission = Math.round(salePrice * tdRate)
+  const mcNet = salePrice - mcCommission - mcEscrow - transferTax - titleEtc
+  const tdNet = salePrice - tdCommission - tdEscrow - transferTax - titleEtc
   const savings = mcNet - tdNet
 
   const mcRateLabel = (mcRate * 100).toFixed(1).replace(/\.0$/, '') + '%'
@@ -238,19 +263,101 @@ function SellerScenario({
       ? `With McMullen · MMM · ${mcRateLabel} fee`
       : `With McMullen · ${mcRateLabel} fee`
 
+  // Indicator of where current slider position sits vs the recommended ask
+  const deltaVsList = salePrice - listPrice
+  const deltaPct = (deltaVsList / listPrice) * 100
+  const atList = Math.abs(deltaVsList) < 500 // within $500 = at list
+
+  // Slider track classes — Tailwind arbitrary selectors style the WebKit & Moz thumbs
+  const sliderClasses = [
+    'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
+    '[&::-webkit-slider-thumb]:appearance-none',
+    '[&::-webkit-slider-thumb]:w-5',
+    '[&::-webkit-slider-thumb]:h-5',
+    '[&::-webkit-slider-thumb]:rounded-full',
+    '[&::-webkit-slider-thumb]:bg-blue-700',
+    '[&::-webkit-slider-thumb]:border-2',
+    '[&::-webkit-slider-thumb]:border-cream',
+    '[&::-webkit-slider-thumb]:shadow-md',
+    '[&::-webkit-slider-thumb]:cursor-grab',
+    '[&::-webkit-slider-thumb]:active:cursor-grabbing',
+    '[&::-moz-range-thumb]:w-5',
+    '[&::-moz-range-thumb]:h-5',
+    '[&::-moz-range-thumb]:rounded-full',
+    '[&::-moz-range-thumb]:bg-blue-700',
+    '[&::-moz-range-thumb]:border-2',
+    '[&::-moz-range-thumb]:border-cream',
+    '[&::-moz-range-thumb]:cursor-grab',
+    'print:hidden',
+  ].join(' ')
+
   return (
     <section className="border-b border-ink-200 pb-12 mb-12">
       <div className="text-2xs uppercase tracking-widest text-blue-700 mb-3">
-        What you'd net at the recommended ask
+        Model your own scenarios
       </div>
       <h2 className="font-display text-3xl text-ink-900 mb-3">
-        Net proceeds, side by side.
+        Net proceeds at any sale price.
       </h2>
       <p className="text-sm text-ink-600 max-w-2xl mb-8 leading-relaxed">
-        At a sale price of {fmtMoney(listPrice)}. Escrow, SF transfer tax (0.75% tier),
-        and standard closing costs are included on both sides. Excludes mortgage payoff
-        and capital gains.
+        Drag the slider to model any sale price between {fmtMoneyShort(minPrice)} and {fmtMoneyShort(maxPrice)}.
+        The comparison runs side-by-side: McMullen at {mcRateLabel} vs traditional at 5%, with escrow,
+        SF transfer tax (0.75% tier), and standard closing costs included on both sides. Excludes
+        mortgage payoff and capital gains.
       </p>
+
+      {/* Slider block */}
+      <div className="border border-ink-200 bg-cream px-6 py-6 mb-6">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+              If you sold for…
+            </div>
+            <div className="font-display text-4xl text-ink-900 leading-none">
+              {fmtMoney(salePrice)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+              vs recommended ask
+            </div>
+            <div
+              className={
+                'font-display text-lg ' +
+                (atList
+                  ? 'text-ink-500 italic'
+                  : deltaVsList > 0
+                  ? 'text-emerald-700'
+                  : 'text-ink-700')
+              }
+            >
+              {atList
+                ? 'at list'
+                : (deltaVsList > 0 ? '+' : '') +
+                  fmtMoney(deltaVsList) +
+                  ' · ' +
+                  (deltaPct > 0 ? '+' : '') +
+                  deltaPct.toFixed(1) +
+                  '%'}
+            </div>
+          </div>
+        </div>
+        <input
+          type="range"
+          min={minPrice}
+          max={maxPrice}
+          step={1000}
+          value={salePrice}
+          onChange={(e) => setSalePrice(Number(e.target.value))}
+          className={sliderClasses}
+          aria-label="Sale price"
+        />
+        <div className="flex justify-between text-2xs uppercase tracking-widest text-ink-500 mt-2 print:hidden">
+          <span>{fmtMoneyShort(minPrice)}</span>
+          <span>Recommended ask · {fmtMoneyShort(listPrice)}</span>
+          <span>{fmtMoneyShort(maxPrice)}</span>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* McMullen column */}
@@ -262,7 +369,7 @@ function SellerScenario({
             Net proceeds, before mortgage
           </div>
           <dl className="text-sm space-y-2.5">
-            <ScenarioRow label="Sale price" value={fmtMoney(listPrice)} />
+            <ScenarioRow label="Sale price" value={fmtMoney(salePrice)} />
             <ScenarioRow
               label={`Total commission (${mcRateLabel})`}
               value={'−' + fmtMoney(mcCommission)}
@@ -288,7 +395,7 @@ function SellerScenario({
             Net proceeds, before mortgage
           </div>
           <dl className="text-sm space-y-2.5">
-            <ScenarioRow label="Sale price" value={fmtMoney(listPrice)} />
+            <ScenarioRow label="Sale price" value={fmtMoney(salePrice)} />
             <ScenarioRow label="Total commission (5%)" value={'−' + fmtMoney(tdCommission)} />
             <ScenarioRow label="Escrow (avg SF)" value={'−' + fmtMoney(tdEscrow)} />
             <ScenarioRow label="SF transfer tax" value={'−' + fmtMoney(transferTax)} />
@@ -309,7 +416,7 @@ function SellerScenario({
           {fmtMoney(savings)}
         </div>
         <div className="text-sm text-ink-700 italic mt-2 max-w-xl mx-auto">
-          more in your pocket vs a traditional 5% sale, at the same {fmtMoney(listPrice)} closing price
+          more in your pocket vs a traditional 5% sale, at the same {fmtMoney(salePrice)} closing price
         </div>
       </div>
     </section>
