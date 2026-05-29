@@ -5,13 +5,13 @@
 // P9.4 Sprint B — SellerScenario becomes interactive (sale-price slider).
 // P9.4 Sprint C — MMMBuyerCalculator added (buyer cost + income @ 28% DTI).
 // P9.4 Sprint D — All rate/fee constants moved to commissionSettings prop.
-// P9.4 Sprint F — CompPositioningChart added: SVG scatter of sold-date x $/sqft
-//                 with subject as a dashed reference line. Renders between
-//                 Market Context and Comps Grid when at least 2 comps have
-//                 parseable soldDate + sqft + soldPrice.
-// P9.4 Sprint G — Optional cmaType prop ('sell' | 'buy'); on buy-side, hides
-//                 SellerScenario (no commission to model) and adapts the buyer
-//                 calculator copy to first-person.
+// P9.4 Sprint F — CompPositioningChart added: SVG scatter of sold-date x $/sqft.
+// P9.4 Sprint G — cmaType prop drives buy-side rendering (hide SellerScenario,
+//                 first-person buyer calculator copy).
+// P9.4 Sprint H — Print stylesheet polish: @page rules + print-color-adjust so
+//                 the platform's cream + royal-blue accents survive print. All
+//                 print:hidden / print:break-inside-avoid utilities from Wave 1
+//                 remain in place.
 
 import { useEffect, useState } from 'react'
 import type { CMASubject, CMAComp } from '@/lib/supabase'
@@ -58,6 +58,28 @@ type Props = {
   preparedFor?: string | null
   preparedAt?: string | null
 }
+
+// P9.4 Sprint H — Print stylesheet. @page sets letter page size + outer margins;
+// body background is forced white so the browser's own page chrome doesn't show
+// through behind the article; the article itself uses print-color-adjust: exact
+// so the cream + royal-blue accents survive the print pipeline. Tailwind print:
+// utilities (print:hidden, print:break-inside-avoid) on individual elements
+// handle the rest.
+const PRINT_CSS = `
+@media print {
+  @page {
+    size: letter;
+    margin: 0.5in 0.55in;
+  }
+  html, body {
+    background: white !important;
+  }
+  article {
+    print-color-adjust: exact !important;
+    -webkit-print-color-adjust: exact !important;
+  }
+}
+`.trim()
 
 const SLIDER_THUMB_CLASSES = [
   'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
@@ -154,6 +176,9 @@ export default function CMATemplate({
 
   return (
     <article className="bg-cream text-ink-900 font-body">
+      {/* P9.4 Sprint H — print-only stylesheet (no effect on screen render) */}
+      <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
+
       {/* ============ HERO ============ */}
       <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
@@ -305,10 +330,6 @@ export default function CMATemplate({
 
 // ============================================================
 // CompPositioningChart — P9.4 Sprint F
-// SVG scatter of sold-date (x) x $/sqft (y). Subject rendered as a horizontal
-// dashed royal-blue reference line. Each comp is a dot, colored by over/under
-// list outcome. Renders only when at least 2 comps have parseable soldDate +
-// sqft + soldPrice. Print-friendly fixed viewBox; no interactivity.
 // ============================================================
 function CompPositioningChart({
   subject,
@@ -339,7 +360,6 @@ function CompPositioningChart({
       ? Math.round(Number(subject.listPrice) / Number(subject.sqft))
       : null
 
-  // Axis ranges (with 5% padding)
   const dates = points.map((p) => p.date.getTime())
   const ppsfsForRange = points.map((p) => p.ppsf)
   if (subjectPpsf) ppsfsForRange.push(subjectPpsf)
@@ -372,7 +392,6 @@ function CompPositioningChart({
       </h2>
       <div className="border border-ink-200 bg-cream p-6 overflow-x-auto">
         <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-full h-auto block">
-          {/* Horizontal gridlines */}
           {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
             <line
               key={`grid-${i}`}
@@ -385,7 +404,6 @@ function CompPositioningChart({
             />
           ))}
 
-          {/* Subject reference line */}
           {subjectPpsf && subjectPpsf >= minPpsf && subjectPpsf <= maxPpsf && (
             <>
               <line
@@ -411,7 +429,6 @@ function CompPositioningChart({
             </>
           )}
 
-          {/* Comp dots */}
           {points.map((p, i) => {
             const cx = xScale(p.date.getTime())
             const cy = yScale(p.ppsf)
@@ -441,7 +458,6 @@ function CompPositioningChart({
             )
           })}
 
-          {/* X axis tick labels */}
           {[0, 0.33, 0.66, 1].map((t, i) => {
             const date = new Date(minDate + t * (maxDate - minDate))
             return (
@@ -459,7 +475,6 @@ function CompPositioningChart({
             )
           })}
 
-          {/* Y axis tick labels */}
           {[0, 0.5, 1].map((t, i) => {
             const ppsf = minPpsf + (1 - t) * (maxPpsf - minPpsf)
             return (
@@ -477,7 +492,6 @@ function CompPositioningChart({
             )
           })}
 
-          {/* Axis titles */}
           <text
             x={W / 2}
             y={H - 12}
@@ -515,9 +529,7 @@ function CompPositioningChart({
 }
 
 // ============================================================
-// MMMBuyerCalculator — Sprint C + D + G
-// Buyer-side cost model. Asking-price slider drives buyer math; HOA + rate
-// editable. Adapts intro copy to first-person on buy-side CMAs.
+// MMMBuyerCalculator — Sprints C + D + G
 // ============================================================
 function MMMBuyerCalculator({
   listPrice,
@@ -576,7 +588,6 @@ function MMMBuyerCalculator({
           : `Drag the slider to see the all-in monthly cost a buyer would face at any asking price — and the household income they'd need to qualify. This is what creates the bidding floor. Standard assumptions: 20% down, fixed-rate 30-year mortgage, property tax at ${propertyTaxLabel}, household debt-to-income at 28%.`}
       </p>
 
-      {/* Slider block */}
       <div className="border border-ink-200 bg-cream px-6 py-6 mb-6">
         <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
@@ -613,7 +624,6 @@ function MMMBuyerCalculator({
         </div>
       </div>
 
-      {/* Stat grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <BuyerStat label="Down (20%)" value={fmtMoney(down)} />
         <BuyerStat
@@ -625,7 +635,6 @@ function MMMBuyerCalculator({
         <BuyerStat label="Tax · monthly" value={fmtMoney(tax)} suffix="/mo" />
       </div>
 
-      {/* Total monthly highlight */}
       <div className="mt-4 border border-ink-200 border-l-2 border-l-blue-700 bg-cream px-6 py-4 flex items-baseline justify-between flex-wrap gap-3">
         <span className="text-2xs uppercase tracking-widest text-blue-700 font-semibold">
           Total monthly · all-in
@@ -636,7 +645,6 @@ function MMMBuyerCalculator({
         </span>
       </div>
 
-      {/* Income callout */}
       <div className="mt-4 text-sm text-ink-700 italic leading-relaxed">
         {isBuy ? 'Household income needed at 28% DTI: ' : 'Buyer household income needed at 28% DTI: '}
         <span className="font-display not-italic text-lg text-blue-700 font-semibold">
@@ -648,7 +656,6 @@ function MMMBuyerCalculator({
           : `At ${fmtMoney(askingPrice)} this is the income threshold for a qualified buyer — below this, the bidding floor weakens.`}
       </div>
 
-      {/* Adjustments — hidden on print */}
       <div className="mt-6 pt-4 border-t border-dashed border-ink-200 flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
         <span className="text-2xs uppercase tracking-widest text-ink-500">Adjust to match your unit</span>
         <label className="flex items-center gap-2 text-sm text-ink-700">
