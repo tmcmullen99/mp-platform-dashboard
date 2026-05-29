@@ -1,5 +1,6 @@
 // P9.1 — Agent-side CMA creation. PDF upload → Claude extraction (extract_cma_pdf
 // Edge Function) → editable review form → save to cmas table linked to a client/deal.
+// P9.4 — Adds listing_type selector (Regular 2.5% vs MMM Campbell double-end 3%).
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -23,6 +24,8 @@ import {
   CMASubject,
   CMAComp,
 } from '@/lib/supabase'
+
+type ListingType = 'regular' | 'mmm'
 
 const EMPTY_SUBJECT: CMASubject = {
   address: '',
@@ -76,8 +79,8 @@ export default function NewCMA() {
   const [deals, setDeals] = useState<Deal[]>([])
   const [selectedClientId, setSelectedClientId] = useState<string>(presetClientId)
   const [selectedDealId, setSelectedDealId] = useState<string>('')
-  const [markets, setMarkets] = useState<{ id: string; name: string }[]>([])
-  const [selectedMarketId, setSelectedMarketId] = useState<string>('')
+
+  const [listingType, setListingType] = useState<ListingType>('regular')
 
   const [subject, setSubject] = useState<CMASubject>(EMPTY_SUBJECT)
   const [comps, setComps] = useState<CMAComp[]>([])
@@ -100,25 +103,6 @@ export default function NewCMA() {
         .eq('tenant_id', currentTenant!.id)
         .order('name')
       if (!cancelled) setClients((data as Client[]) || [])
-    }
-    load()
-    return () => {
-      cancelled = true
-    }
-  }, [currentTenant])
-
-  // Load active markets for this tenant (to tag a recent-sales CMA)
-  useEffect(() => {
-    if (!currentTenant) return
-    let cancelled = false
-    async function load() {
-      const { data } = await supabase
-        .from('markets')
-        .select('id, name')
-        .eq('tenant_id', currentTenant!.id)
-        .eq('status', 'active')
-        .order('name')
-      if (!cancelled) setMarkets((data as { id: string; name: string }[]) || [])
     }
     load()
     return () => {
@@ -226,13 +210,13 @@ export default function NewCMA() {
         tenant_id: currentTenant.id,
         client_id: selectedClientId || null,
         deal_id: selectedDealId || null,
-        market_id: selectedMarketId || null,
         slug,
         name: `${subject.address} — CMA`,
         property_address: subject.address,
         list_price: subject.listPrice ? `$${subject.listPrice.toLocaleString()}` : null,
         subject_data: subject,
         comps_data: comps,
+        listing_type: listingType,
         status: 'published' as const,
         agent_notes: agentNotes || null,
         published_at: new Date().toISOString(),
@@ -274,6 +258,46 @@ export default function NewCMA() {
         </p>
       </div>
 
+      {/* Listing type — drives the seller scenario commission rate */}
+      <section className="mb-10">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+          Listing type
+        </div>
+        <div className="inline-flex border border-ink-200 bg-cream rounded-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setListingType('regular')}
+            aria-pressed={listingType === 'regular'}
+            className={
+              'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors ' +
+              (listingType === 'regular'
+                ? 'bg-ink-900 text-cream'
+                : 'bg-cream text-ink-700 hover:bg-ink-100')
+            }
+          >
+            Regular listing · 2.5%
+          </button>
+          <button
+            type="button"
+            onClick={() => setListingType('mmm')}
+            aria-pressed={listingType === 'mmm'}
+            className={
+              'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors border-l border-ink-200 ' +
+              (listingType === 'mmm'
+                ? 'bg-ink-900 text-cream'
+                : 'bg-cream text-ink-700 hover:bg-ink-100')
+            }
+          >
+            MMM · Campbell double-end · 3%
+          </button>
+        </div>
+        <p className="text-2xs text-ink-500 mt-2 max-w-xl leading-relaxed">
+          {listingType === 'regular'
+            ? 'Standard McMullen listing: 2.5% all-in listing fee. The CMA seller scenario will model net proceeds at 2.5% vs traditional 5%.'
+            : 'Make-Me-Move deal on the Campbell Market: 3% total fee (double-end, McMullen represents both sides). The CMA seller scenario will model net proceeds at 3% vs traditional 5%.'}
+        </p>
+      </section>
+
       {/* Step 1: link to client / deal */}
       <section className="mb-10">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Step 1 · Attach to</div>
@@ -308,26 +332,7 @@ export default function NewCMA() {
               </select>
             </Field>
           )}
-          <Field label="Market (optional)">
-            <select
-              value={selectedMarketId}
-              onChange={(e) => setSelectedMarketId(e.target.value)}
-              className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
-            >
-              <option value="">— None —</option>
-              {markets.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
-          </Field>
         </div>
-        {selectedMarketId && (
-          <p className="text-2xs uppercase tracking-widest text-ink-400 mt-3">
-            Tagging a market publishes these comps as that market's public recent sales.
-          </p>
-        )}
       </section>
 
       {/* Step 2: upload */}
@@ -453,6 +458,10 @@ export default function NewCMA() {
               {selectedClientId
                 ? `Will appear in ${clients.find((c) => c.id === selectedClientId)?.name || '…'}'s portal`
                 : 'Not attached to a client'}
+              {' · '}
+              <span className="text-ink-700">
+                {listingType === 'mmm' ? 'MMM 3%' : 'Regular 2.5%'}
+              </span>
             </div>
             <button
               onClick={handleSave}
