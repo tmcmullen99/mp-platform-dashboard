@@ -1,12 +1,11 @@
-// src/portal/PortalSidebar.tsx
+// src/components/PortalSidebar.tsx
 //
-// Left navigation. Brand block at the top, nav items in the middle, account
-// + sign-out at the bottom. Active route gets a navy left border and slightly
-// heavier text weight. Fetches client_portal_overview once to derive client
-// name, client_type (for the conditional "My Listing" link), and the
-// unsigned-docs/war-room-unread badges.
+// Left navigation. Brand block, nav items, account + sign-out. Active route
+// gets a navy left border. Reads client_type + unread/unsigned badge counts
+// from PortalContext (no separate fetch). Routes are relative to /portal
+// because Portal.tsx is mounted under /portal/* in App.tsx.
 
-import { NavLink, useNavigate } from "react-router-dom";
+import { useNavigate, NavLink } from 'react-router-dom'
 import {
   LayoutDashboard,
   Home,
@@ -17,16 +16,16 @@ import {
   FileText,
   LogOut,
   Bell,
-} from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase"; // TODO: adjust to your project's path
+} from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { usePortal } from '@/components/PortalLayout'
 
 interface NavItemProps {
-  to: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  label: string;
-  badge?: number;
-  onNavigate: () => void;
+  to: string
+  icon: React.ComponentType<{ size?: number; className?: string }>
+  label: string
+  badge?: number
+  onNavigate: () => void
 }
 
 function NavItem({ to, icon: Icon, label, badge, onNavigate }: NavItemProps) {
@@ -37,11 +36,11 @@ function NavItem({ to, icon: Icon, label, badge, onNavigate }: NavItemProps) {
       onClick={onNavigate}
       className={({ isActive }) =>
         [
-          "group flex items-center gap-3 pl-5 pr-4 py-2.5 mx-2 rounded-md text-sm transition-colors relative",
+          'group flex items-center gap-3 pl-5 pr-4 py-2.5 mx-2 rounded-md text-sm transition-colors relative',
           isActive
-            ? "bg-[#f5f3ee] text-[#1a1f2e] font-medium"
-            : "text-[#353535] hover:bg-[#f5f3ee] hover:text-[#1a1f2e]",
-        ].join(" ")
+            ? 'bg-cream text-[#1a1f2e] font-medium'
+            : 'text-[#353535] hover:bg-cream hover:text-[#1a1f2e]',
+        ].join(' ')
       }
     >
       {({ isActive }) => (
@@ -51,70 +50,52 @@ function NavItem({ to, icon: Icon, label, badge, onNavigate }: NavItemProps) {
           )}
           <Icon
             size={18}
-            className={isActive ? "text-[#1a1f2e]" : "text-[#91a1ba] group-hover:text-[#1a1f2e]"}
+            className={
+              isActive ? 'text-[#1a1f2e]' : 'text-[#91a1ba] group-hover:text-[#1a1f2e]'
+            }
           />
           <span className="flex-1">{label}</span>
           {badge != null && badge > 0 && (
             <span className="bg-[#1a1f2e] text-white text-[10px] font-semibold rounded-full px-1.5 py-0.5 min-w-[18px] text-center">
-              {badge > 99 ? "99+" : badge}
+              {badge > 99 ? '99+' : badge}
             </span>
           )}
         </>
       )}
     </NavLink>
-  );
+  )
 }
 
 interface SidebarProps {
-  onNavigate: () => void;
+  onNavigate: () => void
 }
 
 export default function PortalSidebar({ onNavigate }: SidebarProps) {
-  const navigate = useNavigate();
-  const [profile, setProfile] = useState<{
-    name: string;
-    clientType: string;
-    unreadMessages: number;
-    unsignedDocs: number;
-  } | null>(null);
+  const navigate = useNavigate()
+  const { signOut } = useAuth() as { signOut?: () => Promise<void> } // optional method
+  const { overview } = usePortal()
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const { data: sess } = await supabase.auth.getSession();
-        const token = sess.session?.access_token;
-        if (!token) return;
-        const resp = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/client_portal_overview`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        const json = await resp.json();
-        if (json.ok) {
-          // Sum unread across recent war rooms (recent list is capped at 5,
-          // fine for typical one-room-per-client setups)
-          const unread = (json.recent?.war_rooms || []).reduce(
-            (acc: number, r: { unread_client?: number }) => acc + (r.unread_client || 0),
-            0,
-          );
-          setProfile({
-            name: json.client?.name || "Client",
-            clientType: json.client?.client_type || "buyer",
-            unreadMessages: unread,
-            unsignedDocs: json.counts?.documents?.unsigned || 0,
-          });
-        }
-      } catch {
-        // Sidebar renders without badges if the call fails
-      }
-    })();
-  }, []);
+  const clientName = overview?.client.name || '—'
+  const clientType = overview?.client.client_type || 'buyer'
+  const showMyListing = clientType === 'seller' || clientType === 'both'
 
-  const showMyListing =
-    profile?.clientType === "seller" || profile?.clientType === "both";
+  // Sum unread across recent war rooms (capped at 5 in the overview response;
+  // sufficient for typical one-room-per-client setups).
+  const unreadMessages = (overview?.recent.war_rooms || []).reduce(
+    (acc, r) => acc + (r.unread_client || 0),
+    0,
+  )
+  const unsignedDocs = overview?.counts.documents.unsigned || 0
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
-    navigate("/");
+    if (signOut) {
+      await signOut()
+    } else {
+      // Fallback if AuthContext doesn't expose signOut directly
+      const { supabase } = await import('@/lib/supabase')
+      await supabase.auth.signOut()
+    }
+    navigate('/login')
   }
 
   return (
@@ -126,34 +107,49 @@ export default function PortalSidebar({ onNavigate }: SidebarProps) {
           <br />
           Properties
         </div>
-        <div className="mt-2 text-[10px] tracking-[0.2em] uppercase text-[#91a1ba]">
+        <div className="mt-2 text-2xs uppercase tracking-widest text-ink-500">
           Client Portal
         </div>
       </div>
 
       <div className="h-px bg-[#e8e3d8] mx-4" />
 
-      {/* Nav */}
+      {/* Nav — paths are relative to /portal */}
       <nav className="flex-1 py-4 flex flex-col gap-0.5">
         <NavItem to="/portal" icon={LayoutDashboard} label="Dashboard" onNavigate={onNavigate} />
         {showMyListing && (
-          <NavItem to="/portal/my-listing" icon={Home} label="My Listing" onNavigate={onNavigate} />
+          <NavItem
+            to="/portal/my-listing"
+            icon={Home}
+            label="My Listing"
+            onNavigate={onNavigate}
+          />
         )}
-        <NavItem to="/portal/saved" icon={Heart} label="Saved Properties" onNavigate={onNavigate} />
-        <NavItem to="/portal/cmas" icon={BarChart3} label="Market Analyses" onNavigate={onNavigate} />
+        <NavItem
+          to="/portal/saved"
+          icon={Heart}
+          label="Saved Properties"
+          onNavigate={onNavigate}
+        />
+        <NavItem
+          to="/portal/cmas"
+          icon={BarChart3}
+          label="Market Analyses"
+          onNavigate={onNavigate}
+        />
         <NavItem to="/portal/schedule" icon={Calendar} label="Schedule" onNavigate={onNavigate} />
         <NavItem
           to="/portal/war-room"
           icon={MessageSquare}
           label="War Room"
-          badge={profile?.unreadMessages}
+          badge={unreadMessages}
           onNavigate={onNavigate}
         />
         <NavItem
           to="/portal/documents"
           icon={FileText}
           label="Documents"
-          badge={profile?.unsignedDocs}
+          badge={unsignedDocs}
           onNavigate={onNavigate}
         />
       </nav>
@@ -164,25 +160,23 @@ export default function PortalSidebar({ onNavigate }: SidebarProps) {
       <div className="px-4 py-4 flex flex-col gap-1">
         <button
           onClick={onNavigate}
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[#353535] hover:bg-[#f5f3ee]"
+          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[#353535] hover:bg-cream"
         >
           <Bell size={18} className="text-[#91a1ba]" />
           <span>Notifications</span>
         </button>
         <div className="px-3 py-2">
-          <div className="text-sm font-medium text-[#1a1f2e] truncate">
-            {profile?.name || "—"}
-          </div>
-          <div className="text-xs text-[#91a1ba]">Signed in</div>
+          <div className="text-sm font-medium text-[#1a1f2e] truncate">{clientName}</div>
+          <div className="text-xs text-ink-500">Signed in</div>
         </div>
         <button
           onClick={handleSignOut}
-          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[#353535] hover:bg-[#f5f3ee] hover:text-[#1a1f2e]"
+          className="flex items-center gap-3 px-3 py-2 rounded-md text-sm text-[#353535] hover:bg-cream hover:text-[#1a1f2e]"
         >
           <LogOut size={18} className="text-[#91a1ba]" />
           <span>Sign out</span>
         </button>
       </div>
     </>
-  );
+  )
 }
