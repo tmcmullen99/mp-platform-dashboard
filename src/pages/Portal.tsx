@@ -1,4 +1,4 @@
-// P8.2 + P9.1 + P9.2 + P9.4 + P9.7 — Client-facing portal. Only renders when useAuth().isClient is true.
+// P8.2 + P9.1 + P9.2 + P9.4 + P9.7 + P9.8 — Client-facing portal. Only renders when useAuth().isClient is true.
 // Routes: /portal (home), /portal/listing, /portal/cmas, /portal/cmas/:slug,
 // /portal/saved, /portal/war-room, /portal/documents
 import { useEffect, useState } from 'react'
@@ -16,6 +16,12 @@ import {
   Heart,
   ArrowUpRight,
   MapPin,
+  Pencil,
+  Trash2,
+  Plus,
+  X,
+  AlertTriangle,
+  Banknote,
   type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -49,6 +55,15 @@ type ComingSoonListing = {
   description_html: string | null
   hero_image_url: string | null
   gallery_urls: unknown
+}
+
+// Local extension — mortgage fields were added to deals in the latest migration but
+// the shared Deal type in @/lib/supabase has not been bumped yet. Augmenting locally
+// keeps this PR scoped to Portal.tsx; supabase.ts update can ride PR 2.
+type DealWithMortgage = Deal & {
+  mortgage_balance: number | null
+  mortgage_rate: number | null
+  mortgage_lender: string | null
 }
 
 // Local subset type for the portal home — full tour_requests row not needed here
@@ -156,7 +171,7 @@ function PortalNavLink({
 }
 
 // ===========================================================================
-// Portal Home — P9.7 rebuild
+// Portal Home — P9.7 rebuild (unchanged in this PR)
 // ===========================================================================
 function PortalHome() {
   const { clientProfile, currentBranding } = useAuth()
@@ -532,13 +547,18 @@ function ServicePackagesEducation() {
 }
 
 // ===========================================================================
-// Portal Listing
+// Portal Listing — rebuilt with edit / delete / add (PR 1)
 // ===========================================================================
 function PortalListing() {
   const { clientProfile } = useAuth()
-  const [deals, setDeals] = useState<Deal[]>([])
+  const [deals, setDeals] = useState<DealWithMortgage[]>([])
   const [listings, setListings] = useState<Map<string, ComingSoonListing>>(new Map())
   const [loading, setLoading] = useState(true)
+  const [refreshKey, setRefreshKey] = useState(0)
+
+  const [editingDealId, setEditingDealId] = useState<string | null>(null)
+  const [deletingDealId, setDeletingDealId] = useState<string | null>(null)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   useEffect(() => {
     if (!clientProfile) return
@@ -548,8 +568,11 @@ function PortalListing() {
         .from('deals')
         .select('*')
         .eq('client_id', clientProfile!.id)
-      const dealsList = (dData as Deal[]) || []
-      const listingIds = dealsList.map((d) => d.coming_soon_listing_id).filter(Boolean) as string[]
+        .order('created_at', { ascending: false })
+      const dealsList = (dData as DealWithMortgage[]) || []
+      const listingIds = dealsList
+        .map((d) => d.coming_soon_listing_id)
+        .filter(Boolean) as string[]
       const map = new Map<string, ComingSoonListing>()
       if (listingIds.length > 0) {
         const { data: lData } = await supabase
@@ -569,73 +592,202 @@ function PortalListing() {
     return () => {
       cancelled = true
     }
-  }, [clientProfile])
+  }, [clientProfile, refreshKey])
 
-  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
-  if (deals.length === 0) {
-    return <p className="text-ink-600">No active engagement yet.</p>
+  function reload() {
+    setRefreshKey((k) => k + 1)
   }
 
+  if (loading) return <Loader2 className="w-5 h-5 animate-spin text-ink-500" />
+
+  const sellDeals = deals.filter((d) => d.deal_type === 'sell')
+  const editingDeal = editingDealId ? sellDeals.find((d) => d.id === editingDealId) : null
+  const editingListing = editingDeal?.coming_soon_listing_id
+    ? listings.get(editingDeal.coming_soon_listing_id)
+    : null
+  const deletingDeal = deletingDealId ? sellDeals.find((d) => d.id === deletingDealId) : null
+  const deletingListing = deletingDeal?.coming_soon_listing_id
+    ? listings.get(deletingDeal.coming_soon_listing_id)
+    : null
+
   return (
-    <div className="space-y-12">
-      {deals.map((deal) => {
-        const listing = deal.coming_soon_listing_id
-          ? listings.get(deal.coming_soon_listing_id)
-          : null
-        const pkg = SERVICE_PACKAGES.find((p) => p.value === deal.service_package)
-        return (
-          <article key={deal.id}>
-            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">
-              {deal.deal_type === 'sell' ? 'Selling' : deal.deal_type}
-            </div>
-            <h1 className="font-display text-3xl text-ink-900 leading-tight">{deal.title}</h1>
-            {listing?.subtitle && (
-              <p className="text-ink-600 mt-2">{listing.subtitle}</p>
-            )}
+    <div>
+      <div className="mb-10">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">My listing</div>
+        <h1 className="font-display text-3xl text-ink-900 leading-tight mb-3">
+          Your property.
+        </h1>
+        <p className="text-ink-600 max-w-2xl">
+          The home you’re working with your agent to sell. Edit details, share mortgage info,
+          delete and start over if needed — this is your space.
+        </p>
+      </div>
 
-            <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 mt-8 pb-8 border-b border-ink-200">
-              <Stat
-                label="List price"
-                value={
-                  deal.estimated_value ? `$${deal.estimated_value.toLocaleString()}` : '—'
-                }
-              />
-              <Stat label="Package" value={pkg?.label || '—'} />
-              <Stat label="Stage" value={deal.stage} />
-              <Stat
-                label="Going live"
-                value={
-                  listing?.expected_list_date
-                    ? new Date(listing.expected_list_date).toLocaleDateString()
-                    : 'TBD'
-                }
-              />
-            </dl>
+      {sellDeals.length === 0 ? (
+        <PortalListingEmptyState onAdd={() => setShowAddForm(true)} />
+      ) : (
+        <div className="space-y-16">
+          {sellDeals.map((deal) => {
+            const listing = deal.coming_soon_listing_id
+              ? listings.get(deal.coming_soon_listing_id)
+              : null
+            const pkg = SERVICE_PACKAGES.find((p) => p.value === deal.service_package)
+            const hasMortgage =
+              deal.mortgage_balance != null ||
+              deal.mortgage_rate != null ||
+              (deal.mortgage_lender && deal.mortgage_lender.length > 0)
 
-            {pkg && (
-              <section className="mt-8">
-                <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-                  What "{pkg.label}" means for you
-                </h3>
-                <p className="text-sm text-ink-700 leading-relaxed max-w-3xl">{pkg.blurb}</p>
-              </section>
-            )}
+            return (
+              <article key={deal.id}>
+                {/* Header + action buttons */}
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="min-w-0">
+                    <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">
+                      {deal.deal_type === 'sell' ? 'Selling' : deal.deal_type}
+                    </div>
+                    <h2 className="font-display text-3xl text-ink-900 leading-tight">
+                      {deal.title}
+                    </h2>
+                    {listing?.subtitle && (
+                      <p className="text-ink-600 mt-2">{listing.subtitle}</p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => setEditingDealId(deal.id)}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-ink-200 hover:border-ink-900 text-sm text-ink-900 transition-colors bg-white"
+                    >
+                      <Pencil className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Edit details
+                    </button>
+                    <button
+                      onClick={() => setDeletingDealId(deal.id)}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-ink-200 hover:border-red-700 hover:text-red-700 text-sm text-ink-500 transition-colors bg-white"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Delete
+                    </button>
+                  </div>
+                </div>
 
-            {deal.notes && (
-              <section className="mt-8">
-                <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-                  Agent notes
-                </h3>
-                <p className="text-sm text-ink-700 whitespace-pre-wrap leading-relaxed max-w-3xl">
-                  {deal.notes}
-                </p>
-              </section>
-            )}
+                <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-4 mt-8 pb-8 border-b border-ink-200">
+                  <Stat
+                    label="List price"
+                    value={
+                      deal.estimated_value ? `$${deal.estimated_value.toLocaleString()}` : '—'
+                    }
+                  />
+                  <Stat label="Package" value={pkg?.label || '—'} />
+                  <Stat label="Stage" value={deal.stage} />
+                  <Stat
+                    label="Going live"
+                    value={
+                      listing?.expected_list_date
+                        ? new Date(listing.expected_list_date).toLocaleDateString()
+                        : 'TBD'
+                    }
+                  />
+                </dl>
 
-            <ListingEditor deal={deal} />
-          </article>
-        )
-      })}
+                {/* Mortgage block — only shown if any field is set */}
+                {hasMortgage && (
+                  <section className="mt-8 pb-8 border-b border-ink-200">
+                    <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-4 flex items-center gap-2">
+                      <Banknote className="w-3.5 h-3.5" strokeWidth={1.5} />
+                      Mortgage on file
+                      <span className="text-ink-400 normal-case tracking-normal text-xs">
+                        · only you and your agent see this
+                      </span>
+                    </h3>
+                    <dl className="grid grid-cols-2 md:grid-cols-3 gap-x-8 gap-y-4">
+                      {deal.mortgage_balance != null && (
+                        <Stat
+                          label="Balance"
+                          value={`$${deal.mortgage_balance.toLocaleString()}`}
+                        />
+                      )}
+                      {deal.mortgage_rate != null && (
+                        <Stat label="Rate" value={`${deal.mortgage_rate}%`} />
+                      )}
+                      {deal.mortgage_lender && (
+                        <Stat label="Lender" value={deal.mortgage_lender} />
+                      )}
+                    </dl>
+                  </section>
+                )}
+
+                {pkg && (
+                  <section className="mt-8">
+                    <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+                      What "{pkg.label}" means for you
+                    </h3>
+                    <p className="text-sm text-ink-700 leading-relaxed max-w-3xl">{pkg.blurb}</p>
+                  </section>
+                )}
+
+                {deal.notes && (
+                  <section className="mt-8">
+                    <h3 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+                      Agent notes
+                    </h3>
+                    <p className="text-sm text-ink-700 whitespace-pre-wrap leading-relaxed max-w-3xl">
+                      {deal.notes}
+                    </p>
+                  </section>
+                )}
+
+                <ListingEditor deal={deal} />
+              </article>
+            )
+          })}
+
+          {/* Bottom CTA for multi-property sellers */}
+          <div className="pt-4 border-t border-ink-200">
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-ink-200 hover:border-ink-900 text-sm text-ink-700 hover:text-ink-900 transition-colors bg-white"
+            >
+              <Plus className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Add another property
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modals */}
+      {showAddForm && clientProfile && (
+        <AddPropertyForm
+          clientId={clientProfile.id}
+          tenantId={clientProfile.tenant_id}
+          onClose={() => setShowAddForm(false)}
+          onCreated={() => {
+            setShowAddForm(false)
+            reload()
+          }}
+        />
+      )}
+      {editingDeal && (
+        <EditListingForm
+          deal={editingDeal}
+          listing={editingListing || null}
+          onClose={() => setEditingDealId(null)}
+          onSaved={() => {
+            setEditingDealId(null)
+            reload()
+          }}
+        />
+      )}
+      {deletingDeal && (
+        <DeleteListingDialog
+          deal={deletingDeal}
+          listing={deletingListing || null}
+          onClose={() => setDeletingDealId(null)}
+          onDeleted={() => {
+            setDeletingDealId(null)
+            reload()
+          }}
+        />
+      )}
     </div>
   )
 }
@@ -646,6 +798,674 @@ function Stat({ label, value }: { label: string; value: string }) {
       <dt className="text-2xs uppercase tracking-widest text-ink-500 mb-1">{label}</dt>
       <dd className="text-sm text-ink-900">{value}</dd>
     </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// Portal Listing sub-components — empty state, modal shell, field, forms, dialog
+// ---------------------------------------------------------------------------
+
+function PortalListingEmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="border border-ink-200 bg-white p-12 text-center">
+      <Home className="w-10 h-10 text-ink-300 mx-auto mb-4" strokeWidth={1.5} />
+      <h2 className="font-display text-xl text-ink-900 mb-2">No property yet</h2>
+      <p className="text-sm text-ink-600 max-w-md mx-auto mb-6">
+        If you’re selling a home, add it here to start tracking pricing, mortgage, and CMAs. Your
+        agent can also add one for you.
+      </p>
+      <button
+        onClick={onAdd}
+        className="inline-flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 transition-colors"
+      >
+        <Plus className="w-3.5 h-3.5" />
+        Add a property
+      </button>
+    </div>
+  )
+}
+
+function PortalModal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center p-6 md:p-12 overflow-y-auto">
+      <div className="bg-cream w-full max-w-lg shadow-2xl">
+        <div className="flex items-center justify-between p-6 border-b border-ink-200">
+          <h2 className="font-display text-xl text-ink-900">{title}</h2>
+          <button onClick={onClose} className="text-ink-500 hover:text-ink-900" aria-label="Close">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
+function PortalField({
+  label,
+  required,
+  children,
+  hint,
+}: {
+  label: string
+  required?: boolean
+  children: React.ReactNode
+  hint?: string
+}) {
+  return (
+    <div>
+      <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-2">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+      {children}
+      {hint && <p className="text-xs text-ink-500 mt-1.5">{hint}</p>}
+    </div>
+  )
+}
+
+function PortalFormError({ message }: { message: string }) {
+  return (
+    <div className="bg-red-50 text-red-700 text-xs px-3 py-2 flex items-start gap-2">
+      <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" strokeWidth={1.5} />
+      <span className="whitespace-pre-wrap">{message}</span>
+    </div>
+  )
+}
+
+function parseNumericInput(v: string): number | null {
+  const trimmed = v.trim()
+  if (!trimmed) return null
+  const cleaned = trimmed.replace(/,/g, '')
+  const n = Number(cleaned)
+  return Number.isFinite(n) ? n : null
+}
+
+function makeListingSlug(address: string): string {
+  const base = address
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 50)
+  const suffix = Math.random().toString(36).slice(2, 8)
+  return `${base || 'listing'}-${suffix}`
+}
+
+function EditListingForm({
+  deal,
+  listing,
+  onClose,
+  onSaved,
+}: {
+  deal: DealWithMortgage
+  listing: ComingSoonListing | null
+  onClose: () => void
+  onSaved: () => void
+}) {
+  // Property fields
+  const [address, setAddress] = useState(listing?.name || deal.title || '')
+  const [subtitle, setSubtitle] = useState(listing?.subtitle || '')
+  const [neighborhood, setNeighborhood] = useState(listing?.neighborhood || '')
+  const [bedrooms, setBedrooms] = useState<string>(
+    listing?.bedrooms != null ? String(listing.bedrooms) : '',
+  )
+  const [bathrooms, setBathrooms] = useState<string>(
+    listing?.bathrooms != null ? String(listing.bathrooms) : '',
+  )
+  const [areaSqft, setAreaSqft] = useState<string>(
+    listing?.area_sqft != null ? String(listing.area_sqft) : '',
+  )
+  // Pricing
+  const [estimatedValue, setEstimatedValue] = useState<string>(
+    deal.estimated_value != null ? String(deal.estimated_value) : '',
+  )
+  // Mortgage
+  const [mortgageBalance, setMortgageBalance] = useState<string>(
+    deal.mortgage_balance != null ? String(deal.mortgage_balance) : '',
+  )
+  const [mortgageRate, setMortgageRate] = useState<string>(
+    deal.mortgage_rate != null ? String(deal.mortgage_rate) : '',
+  )
+  const [mortgageLender, setMortgageLender] = useState<string>(deal.mortgage_lender || '')
+  const [showMortgage, setShowMortgage] = useState<boolean>(
+    deal.mortgage_balance != null ||
+      deal.mortgage_rate != null ||
+      !!(deal.mortgage_lender && deal.mortgage_lender.length > 0),
+  )
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!address.trim()) {
+      setError('Property address is required.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      // Update deal (title + estimated_value + mortgage)
+      const dealUpdates: Record<string, unknown> = {
+        title: address.trim(),
+        estimated_value: parseNumericInput(estimatedValue),
+        mortgage_balance: parseNumericInput(mortgageBalance),
+        mortgage_rate: parseNumericInput(mortgageRate),
+        mortgage_lender: mortgageLender.trim() || null,
+        updated_at: new Date().toISOString(),
+      }
+      const { error: dealErr } = await supabase
+        .from('deals')
+        .update(dealUpdates)
+        .eq('id', deal.id)
+      if (dealErr) throw dealErr
+
+      // Update or create listing record
+      const listingFields: Record<string, unknown> = {
+        name: address.trim(),
+        subtitle: subtitle.trim() || null,
+        neighborhood: neighborhood.trim() || null,
+        bedrooms: parseNumericInput(bedrooms),
+        bathrooms: parseNumericInput(bathrooms),
+        area_sqft: parseNumericInput(areaSqft),
+        updated_at: new Date().toISOString(),
+      }
+
+      if (listing) {
+        const { error: lErr } = await supabase
+          .from('coming_soon_listings')
+          .update(listingFields)
+          .eq('id', listing.id)
+        if (lErr) throw lErr
+      } else {
+        const insertPayload = {
+          ...listingFields,
+          slug: makeListingSlug(address),
+          is_published: false,
+          is_archived: false,
+        }
+        const { data: newL, error: cErr } = await supabase
+          .from('coming_soon_listings')
+          .insert(insertPayload)
+          .select('id')
+          .single()
+        if (cErr) throw cErr
+        const { error: linkErr } = await supabase
+          .from('deals')
+          .update({ coming_soon_listing_id: (newL as { id: string }).id })
+          .eq('id', deal.id)
+        if (linkErr) throw linkErr
+      }
+
+      onSaved()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <PortalModal title="Edit listing details" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="p-6 space-y-6">
+        <section className="space-y-4">
+          <h3 className="text-2xs uppercase tracking-widest text-ink-700 border-b border-ink-100 pb-2">
+            Property
+          </h3>
+          <PortalField label="Property address" required>
+            <input
+              type="text"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              required
+              placeholder="123 Main Street, City, State"
+              className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+            />
+          </PortalField>
+          <PortalField
+            label="Tagline / subtitle"
+            hint="A short description shown beneath the address."
+          >
+            <input
+              type="text"
+              value={subtitle}
+              onChange={(e) => setSubtitle(e.target.value)}
+              placeholder="e.g. Sunny Bernal Heights flat"
+              className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+            />
+          </PortalField>
+          <PortalField label="Neighborhood">
+            <input
+              type="text"
+              value={neighborhood}
+              onChange={(e) => setNeighborhood(e.target.value)}
+              placeholder="e.g. Bernal Heights"
+              className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+            />
+          </PortalField>
+          <div className="grid grid-cols-3 gap-3">
+            <PortalField label="Beds">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={bedrooms}
+                onChange={(e) => setBedrooms(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+              />
+            </PortalField>
+            <PortalField label="Baths">
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={bathrooms}
+                onChange={(e) => setBathrooms(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+              />
+            </PortalField>
+            <PortalField label="Sqft">
+              <input
+                type="number"
+                min="0"
+                step="1"
+                value={areaSqft}
+                onChange={(e) => setAreaSqft(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+              />
+            </PortalField>
+          </div>
+        </section>
+
+        <section className="space-y-4">
+          <h3 className="text-2xs uppercase tracking-widest text-ink-700 border-b border-ink-100 pb-2">
+            Pricing
+          </h3>
+          <PortalField
+            label="Target list price (USD)"
+            hint="What you’d like to list at, or your current ballpark."
+          >
+            <input
+              type="text"
+              inputMode="numeric"
+              value={estimatedValue}
+              onChange={(e) => setEstimatedValue(e.target.value)}
+              placeholder="1,200,000"
+              className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900 font-mono"
+            />
+          </PortalField>
+        </section>
+
+        <section className="space-y-3">
+          <button
+            type="button"
+            onClick={() => setShowMortgage((v) => !v)}
+            className="w-full text-left flex items-center justify-between text-2xs uppercase tracking-widest text-ink-700 border-b border-ink-100 pb-2"
+          >
+            <span className="flex items-center gap-2">
+              <Banknote className="w-3.5 h-3.5" strokeWidth={1.5} />
+              Mortgage (private)
+            </span>
+            <span className="text-ink-500 normal-case tracking-normal">
+              {showMortgage ? 'Hide' : 'Add'}
+            </span>
+          </button>
+          {showMortgage && (
+            <div className="space-y-4 pt-1">
+              <p className="text-xs text-ink-500 leading-relaxed">
+                Sharing your mortgage payoff lets us calculate your true net at sale. Only you and
+                your agent see these numbers.
+              </p>
+              <PortalField label="Current mortgage balance (USD)">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={mortgageBalance}
+                  onChange={(e) => setMortgageBalance(e.target.value)}
+                  placeholder="600,000"
+                  className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900 font-mono"
+                />
+              </PortalField>
+              <div className="grid grid-cols-2 gap-3">
+                <PortalField label="Rate (%)">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={mortgageRate}
+                    onChange={(e) => setMortgageRate(e.target.value)}
+                    placeholder="6.50"
+                    className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900 font-mono"
+                  />
+                </PortalField>
+                <PortalField label="Lender">
+                  <input
+                    type="text"
+                    value={mortgageLender}
+                    onChange={(e) => setMortgageLender(e.target.value)}
+                    placeholder="Chase, Wells Fargo…"
+                    className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+                  />
+                </PortalField>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {error && <PortalFormError message={error} />}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-ink-600 hover:text-ink-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            Save changes
+          </button>
+        </div>
+      </form>
+    </PortalModal>
+  )
+}
+
+function DeleteListingDialog({
+  deal,
+  listing,
+  onClose,
+  onDeleted,
+}: {
+  deal: DealWithMortgage
+  listing: ComingSoonListing | null
+  onClose: () => void
+  onDeleted: () => void
+}) {
+  const [confirmText, setConfirmText] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const canDelete = confirmText.trim().toLowerCase() === 'delete'
+
+  async function handleDelete() {
+    if (!canDelete) return
+    setDeleting(true)
+    setError(null)
+    try {
+      // 1) Unlink dependent records so they survive the delete
+      await supabase.from('cmas').update({ deal_id: null }).eq('deal_id', deal.id)
+      await supabase.from('net_sheets').update({ deal_id: null }).eq('deal_id', deal.id)
+      await supabase.from('documents').update({ deal_id: null }).eq('deal_id', deal.id)
+      // 2) Delete the deal itself
+      const { error: dErr } = await supabase.from('deals').delete().eq('id', deal.id)
+      if (dErr) throw dErr
+      // 3) Delete the linked listing row if any
+      if (listing) {
+        await supabase.from('coming_soon_listings').delete().eq('id', listing.id)
+      }
+      onDeleted()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <PortalModal title="Delete this listing?" onClose={onClose}>
+      <div className="p-6 space-y-5">
+        <div className="bg-red-50 border-l-2 border-red-700 px-4 py-3">
+          <div className="flex items-start gap-2 mb-2">
+            <AlertTriangle
+              className="w-4 h-4 mt-0.5 text-red-700 shrink-0"
+              strokeWidth={1.5}
+            />
+            <span className="text-sm text-red-700 font-medium">
+              This permanently removes the property from your account.
+            </span>
+          </div>
+          <p className="text-xs text-red-700 leading-relaxed pl-6">
+            Any CMAs, documents, or net sheets attached will be unlinked but preserved on your
+            account. The deal and property record cannot be recovered.
+          </p>
+        </div>
+
+        <div className="text-sm">
+          <span className="text-2xs uppercase tracking-widest text-ink-500">Deleting:</span>
+          <div className="font-medium text-ink-900 mt-1">{deal.title}</div>
+          {listing?.subtitle && (
+            <div className="text-xs text-ink-500 mt-0.5">{listing.subtitle}</div>
+          )}
+        </div>
+
+        <PortalField label="Type 'delete' to confirm" required>
+          <input
+            type="text"
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            autoFocus
+            placeholder="delete"
+            className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-red-700"
+          />
+        </PortalField>
+
+        {error && <PortalFormError message={error} />}
+
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-ink-600 hover:text-ink-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={!canDelete || deleting}
+            className="px-4 py-2 bg-red-700 text-white text-sm hover:bg-red-800 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            {deleting && <Loader2 className="w-3 h-3 animate-spin" />}
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.5} />
+            Permanently delete
+          </button>
+        </div>
+      </div>
+    </PortalModal>
+  )
+}
+
+function AddPropertyForm({
+  clientId,
+  tenantId,
+  onClose,
+  onCreated,
+}: {
+  clientId: string
+  tenantId: string
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const [address, setAddress] = useState('')
+  const [subtitle, setSubtitle] = useState('')
+  const [estimatedValue, setEstimatedValue] = useState('')
+  const [showOptional, setShowOptional] = useState(false)
+  const [neighborhood, setNeighborhood] = useState('')
+  const [bedrooms, setBedrooms] = useState('')
+  const [bathrooms, setBathrooms] = useState('')
+  const [areaSqft, setAreaSqft] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!address.trim()) {
+      setError('Property address is required.')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      // 1) Create the listing record
+      const { data: newListing, error: lErr } = await supabase
+        .from('coming_soon_listings')
+        .insert({
+          slug: makeListingSlug(address),
+          name: address.trim(),
+          subtitle: subtitle.trim() || null,
+          neighborhood: neighborhood.trim() || null,
+          bedrooms: parseNumericInput(bedrooms),
+          bathrooms: parseNumericInput(bathrooms),
+          area_sqft: parseNumericInput(areaSqft),
+          is_published: false,
+          is_archived: false,
+        })
+        .select('id')
+        .single()
+      if (lErr) throw lErr
+
+      // 2) Create the deal linked to that listing
+      const { error: dErr } = await supabase.from('deals').insert({
+        tenant_id: tenantId,
+        client_id: clientId,
+        deal_type: 'sell',
+        stage: 'exploring',
+        service_package: 'tbd',
+        title: address.trim(),
+        estimated_value: parseNumericInput(estimatedValue),
+        coming_soon_listing_id: (newListing as { id: string }).id,
+      })
+      if (dErr) throw dErr
+
+      onCreated()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <PortalModal title="Add your property" onClose={onClose}>
+      <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <p className="text-xs text-ink-500 leading-relaxed">
+          Just the address is required to start. Your agent can help fill in the rest, and you can
+          edit anytime.
+        </p>
+        <PortalField label="Property address" required>
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            required
+            autoFocus
+            placeholder="123 Main Street, City, State"
+            className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+          />
+        </PortalField>
+        <PortalField label="Tagline / subtitle">
+          <input
+            type="text"
+            value={subtitle}
+            onChange={(e) => setSubtitle(e.target.value)}
+            placeholder="A one-liner about the home (optional)"
+            className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+          />
+        </PortalField>
+        <PortalField label="Target list price (USD)">
+          <input
+            type="text"
+            inputMode="numeric"
+            value={estimatedValue}
+            onChange={(e) => setEstimatedValue(e.target.value)}
+            placeholder="Optional"
+            className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900 font-mono"
+          />
+        </PortalField>
+        <button
+          type="button"
+          onClick={() => setShowOptional((v) => !v)}
+          className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+        >
+          {showOptional ? '− Hide' : '+ Add'} more details (neighborhood, beds, baths, sqft)
+        </button>
+        {showOptional && (
+          <div className="space-y-4 pt-1">
+            <PortalField label="Neighborhood">
+              <input
+                type="text"
+                value={neighborhood}
+                onChange={(e) => setNeighborhood(e.target.value)}
+                className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+              />
+            </PortalField>
+            <div className="grid grid-cols-3 gap-3">
+              <PortalField label="Beds">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={bedrooms}
+                  onChange={(e) => setBedrooms(e.target.value)}
+                  className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+                />
+              </PortalField>
+              <PortalField label="Baths">
+                <input
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  value={bathrooms}
+                  onChange={(e) => setBathrooms(e.target.value)}
+                  className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+                />
+              </PortalField>
+              <PortalField label="Sqft">
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={areaSqft}
+                  onChange={(e) => setAreaSqft(e.target.value)}
+                  className="w-full px-3 py-2 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+                />
+              </PortalField>
+            </div>
+          </div>
+        )}
+        {error && <PortalFormError message={error} />}
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-ink-100">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 text-sm text-ink-600 hover:text-ink-900"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 disabled:opacity-50 transition-colors flex items-center gap-2"
+          >
+            {saving && <Loader2 className="w-3 h-3 animate-spin" />}
+            Add property
+          </button>
+        </div>
+      </form>
+    </PortalModal>
   )
 }
 
@@ -1145,7 +1965,7 @@ function ScheduleTourCard({
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="min-w-0">
               {tour.property_url ? (
-                <a
+                
                   href={tour.property_url}
                   target="_blank"
                   rel="noreferrer"
