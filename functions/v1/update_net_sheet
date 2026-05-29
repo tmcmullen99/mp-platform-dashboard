@@ -1,0 +1,3 @@
+{ id, name?, sale_price?, inputs?, notes? }
+
+→ { ok, net_sheet, summary?: { sale_price, net_to_seller } }
