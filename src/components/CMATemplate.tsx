@@ -1,23 +1,22 @@
 // P9.1 — CMA visual template. Renders structured CMASubject + CMAComp[] as a
 // polished single-page CMA. Uses the McMullen brand tokens; safe to render both
 // in the agent dashboard and inside the client portal (no nav, just content).
-// P9.4 Sprint A — SellerScenario block driven by listing_type (2.5% regular vs
-//                 3% MMM Campbell double-end) vs traditional 5%, with SF transfer
-//                 tax + escrow + title/recording rolled into net proceeds.
-// P9.4 Sprint B — SellerScenario becomes interactive: sale-price slider drives
-//                 live recalc; slider hides on print so PDFs snapshot the scenario.
-// P9.4 Sprint C — MMMBuyerCalculator added: 20% down + P&I + HOA + tax + total
-//                 monthly + buyer income needed @ 28% DTI. HOA + rate editable.
-// P9.4 Sprint D — All rate/fee constants moved from hardcoded values to a
-//                 commissionSettings prop sourced from tenant_commission_settings
-//                 in the DB. CMAViewer fetches per-tenant; falls back to
-//                 DEFAULT_COMMISSION_SETTINGS (McMullen rate card) if absent.
+// P9.4 Sprint A — SellerScenario block driven by listing_type.
+// P9.4 Sprint B — SellerScenario becomes interactive (sale-price slider).
+// P9.4 Sprint C — MMMBuyerCalculator added (buyer cost + income @ 28% DTI).
+// P9.4 Sprint D — All rate/fee constants moved to commissionSettings prop.
+// P9.4 Sprint F — CompPositioningChart added: SVG scatter of sold-date x $/sqft
+//                 with subject as a dashed reference line. Renders between
+//                 Market Context and Comps Grid when at least 2 comps have
+//                 parseable soldDate + sqft + soldPrice.
+// P9.4 Sprint G — Optional cmaType prop ('sell' | 'buy'); on buy-side, hides
+//                 SellerScenario (no commission to model) and adapts the buyer
+//                 calculator copy to first-person.
 
 import { useEffect, useState } from 'react'
 import type { CMASubject, CMAComp } from '@/lib/supabase'
+import type { CMAListingType, CMAType } from '@/lib/cma-types'
 import { MapPin, Home, Bath, Maximize2, Calendar, TrendingUp } from 'lucide-react'
-
-type ListingType = 'regular' | 'mmm'
 
 // Per-tenant rate card. Stored in tenant_commission_settings; CMAViewer reads it
 // and passes it down. Falls back to DEFAULT_COMMISSION_SETTINGS if absent.
@@ -48,7 +47,8 @@ export const DEFAULT_COMMISSION_SETTINGS: CommissionSettings = {
 type Props = {
   subject: CMASubject
   comps: CMAComp[]
-  listingType?: ListingType | null
+  listingType?: CMAListingType | null
+  cmaType?: CMAType | null
   commissionSettings?: CommissionSettings | null
   agentName?: string | null
   agentPhone?: string | null
@@ -59,9 +59,6 @@ type Props = {
   preparedAt?: string | null
 }
 
-// Shared slider styling — used by both SellerScenario and MMMBuyerCalculator.
-// Tailwind arbitrary selectors target the WebKit and Moz range thumbs; the
-// slider + bound labels hide on print.
 const SLIDER_THUMB_CLASSES = [
   'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
   '[&::-webkit-slider-thumb]:appearance-none',
@@ -112,14 +109,22 @@ function fmtPpsf(price: number | null, sqft: number | null): string {
 }
 
 function fmtRatePct(decimal: number): string {
-  // 0.025 -> "2.5%", 0.0075 -> "0.75%". Strip trailing .0.
   return (decimal * 100).toFixed(2).replace(/\.?0+$/, '') + '%'
+}
+
+function parseCompDate(c: CMAComp): Date | null {
+  const raw = c.soldDateIso || c.soldDate
+  if (!raw) return null
+  const d = new Date(raw)
+  if (isNaN(d.getTime())) return null
+  return d
 }
 
 export default function CMATemplate({
   subject,
   comps,
   listingType,
+  cmaType,
   commissionSettings,
   agentName,
   agentPhone,
@@ -142,16 +147,17 @@ export default function CMATemplate({
     : null
   const subjectPpsf = subject.listPrice && subject.sqft ? Math.round(subject.listPrice / subject.sqft) : null
 
-  // Scenario gating — only renders when we have a list price to model
   const showScenario = subject.listPrice != null && subject.listPrice > 0
-  const effectiveListingType: ListingType = listingType === 'mmm' ? 'mmm' : 'regular'
+  const effectiveListingType: CMAListingType = listingType === 'mmm' ? 'mmm' : 'regular'
+  const effectiveCmaType: CMAType = cmaType === 'buy' ? 'buy' : 'sell'
+  const isBuy = effectiveCmaType === 'buy'
 
   return (
     <article className="bg-cream text-ink-900 font-body">
       {/* ============ HERO ============ */}
-      <section className="border-b border-ink-200 pb-12 mb-12">
+      <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-          Comparative Market Analysis
+          {isBuy ? 'Comparative Market Analysis · buyer-side' : 'Comparative Market Analysis'}
           {preparedAt && <span className="ml-3">{new Date(preparedAt).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>}
         </div>
 
@@ -174,7 +180,11 @@ export default function CMATemplate({
 
         {/* Key stats */}
         <dl className="grid grid-cols-2 md:grid-cols-4 gap-x-8 gap-y-6 mt-10">
-          <Stat label="List price" value={fmtMoney(subject.listPrice)} accent />
+          <Stat
+            label={isBuy ? 'Asking price' : 'List price'}
+            value={fmtMoney(subject.listPrice)}
+            accent
+          />
           <Stat label="Beds / Baths" value={`${subject.beds ?? '—'} / ${fmtBaths(subject.bathsFull, subject.bathsPartial)}`} />
           <Stat label="Living area" value={fmtSqft(subject.sqft)} />
           <Stat label="$ / sqft" value={subjectPpsf ? '$' + subjectPpsf.toLocaleString() : '—'} />
@@ -193,7 +203,7 @@ export default function CMATemplate({
 
       {/* ============ MARKET CONTEXT ============ */}
       {comps.length > 0 && (avgSold || medianPpsf) && (
-        <section className="border-b border-ink-200 pb-12 mb-12">
+        <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Market context</div>
           <h2 className="font-display text-3xl text-ink-900 mb-8">What the comps tell us.</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -216,7 +226,7 @@ export default function CMATemplate({
             {avgSold && subject.listPrice && (
               <StatCard
                 Icon={Home}
-                label="Subject vs market avg"
+                label={isBuy ? 'Asking vs market avg' : 'Subject vs market avg'}
                 value={
                   subject.listPrice > avgSold
                     ? `+${Math.round(((subject.listPrice - avgSold) / avgSold) * 100)}%`
@@ -228,6 +238,9 @@ export default function CMATemplate({
           </div>
         </section>
       )}
+
+      {/* ============ COMP POSITIONING CHART (P9.4 Sprint F) ============ */}
+      <CompPositioningChart subject={subject} comps={comps} />
 
       {/* ============ COMPS GRID ============ */}
       {comps.length > 0 && (
@@ -251,11 +264,12 @@ export default function CMATemplate({
           listPrice={subject.listPrice as number}
           defaultHoa={subject.hoaMonthly}
           settings={settings}
+          isBuy={isBuy}
         />
       )}
 
-      {/* ============ SELLER SCENARIO (P9.4 Sprints A + B) ============ */}
-      {showScenario && (
+      {/* ============ SELLER SCENARIO (Sprints A + B + D) — sell-side only ============ */}
+      {showScenario && !isBuy && (
         <SellerScenario
           listPrice={subject.listPrice as number}
           listingType={effectiveListingType}
@@ -265,7 +279,7 @@ export default function CMATemplate({
 
       {/* ============ AGENT NOTES ============ */}
       {agentNotes && (
-        <section className="border-t border-ink-200 pt-10 mb-12">
+        <section className="border-t border-ink-200 pt-10 mb-12 print:break-inside-avoid">
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Agent notes</div>
           <p className="text-sm text-ink-700 leading-relaxed max-w-3xl whitespace-pre-wrap">
             {agentNotes}
@@ -275,7 +289,7 @@ export default function CMATemplate({
 
       {/* ============ AGENT FOOTER ============ */}
       {(agentName || agentEmail || agentPhone || brokerageName) && (
-        <footer className="border-t border-ink-200 pt-8 mt-12 text-sm text-ink-600 leading-relaxed">
+        <footer className="border-t border-ink-200 pt-8 mt-12 text-sm text-ink-600 leading-relaxed print:break-inside-avoid">
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">Prepared by</div>
           {agentName && <div className="text-ink-900 font-medium">{agentName}</div>}
           {brokerageName && <div>{brokerageName}</div>}
@@ -290,20 +304,231 @@ export default function CMATemplate({
 }
 
 // ============================================================
-// MMMBuyerCalculator — P9.4 Sprint C + D
-// Buyer-side cost model. Drag asking price (85%–115% of listPrice) to see
-// 20% down + P&I @ editable rate + editable HOA + monthly tax + total monthly +
-// buyer household income needed at 28% DTI. Property tax rate and default
-// mortgage rate come from tenant commission settings.
+// CompPositioningChart — P9.4 Sprint F
+// SVG scatter of sold-date (x) x $/sqft (y). Subject rendered as a horizontal
+// dashed royal-blue reference line. Each comp is a dot, colored by over/under
+// list outcome. Renders only when at least 2 comps have parseable soldDate +
+// sqft + soldPrice. Print-friendly fixed viewBox; no interactivity.
+// ============================================================
+function CompPositioningChart({
+  subject,
+  comps,
+}: {
+  subject: CMASubject
+  comps: CMAComp[]
+}) {
+  const points = comps
+    .map((c) => {
+      const date = parseCompDate(c)
+      if (!date || !c.soldPrice || !c.sqft) return null
+      return {
+        date,
+        ppsf: Math.round(c.soldPrice / c.sqft),
+        address: c.address,
+        soldPrice: c.soldPrice,
+        sqft: c.sqft,
+        overList: c.percentOverList,
+      }
+    })
+    .filter((p): p is NonNullable<typeof p> => p !== null)
+
+  if (points.length < 2) return null
+
+  const subjectPpsf =
+    subject.listPrice && subject.sqft
+      ? Math.round(Number(subject.listPrice) / Number(subject.sqft))
+      : null
+
+  // Axis ranges (with 5% padding)
+  const dates = points.map((p) => p.date.getTime())
+  const ppsfsForRange = points.map((p) => p.ppsf)
+  if (subjectPpsf) ppsfsForRange.push(subjectPpsf)
+  const minDate = Math.min(...dates)
+  const maxDate = Math.max(...dates)
+  const minPpsf = Math.min(...ppsfsForRange) * 0.95
+  const maxPpsf = Math.max(...ppsfsForRange) * 1.05
+
+  const W = 800
+  const H = 380
+  const M = 60
+  const innerW = W - M * 2
+  const innerH = H - M * 2
+
+  const xScale = (date: number) =>
+    M + ((date - minDate) / (maxDate - minDate || 1)) * innerW
+  const yScale = (ppsf: number) =>
+    H - M - ((ppsf - minPpsf) / (maxPpsf - minPpsf || 1)) * innerH
+
+  const fmtAxisDate = (d: Date) =>
+    d.toLocaleDateString('en-US', { month: 'short', year: '2-digit' })
+
+  return (
+    <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
+      <div className="text-2xs uppercase tracking-widest text-blue-700 mb-3">
+        Comp positioning
+      </div>
+      <h2 className="font-display text-3xl text-ink-900 mb-8">
+        Time and price · where these sales sit.
+      </h2>
+      <div className="border border-ink-200 bg-cream p-6 overflow-x-auto">
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-full h-auto block">
+          {/* Horizontal gridlines */}
+          {[0, 0.25, 0.5, 0.75, 1].map((t, i) => (
+            <line
+              key={`grid-${i}`}
+              x1={M}
+              y1={M + t * innerH}
+              x2={W - M}
+              y2={M + t * innerH}
+              stroke="#e5e7eb"
+              strokeWidth="0.5"
+            />
+          ))}
+
+          {/* Subject reference line */}
+          {subjectPpsf && subjectPpsf >= minPpsf && subjectPpsf <= maxPpsf && (
+            <>
+              <line
+                x1={M}
+                y1={yScale(subjectPpsf)}
+                x2={W - M}
+                y2={yScale(subjectPpsf)}
+                stroke="#1d4ed8"
+                strokeWidth="1.5"
+                strokeDasharray="6,3"
+              />
+              <text
+                x={W - M - 6}
+                y={yScale(subjectPpsf) - 6}
+                fontSize="12"
+                fill="#1d4ed8"
+                textAnchor="end"
+                fontFamily="serif"
+                fontStyle="italic"
+              >
+                Subject · ${subjectPpsf.toLocaleString()}/sqft
+              </text>
+            </>
+          )}
+
+          {/* Comp dots */}
+          {points.map((p, i) => {
+            const cx = xScale(p.date.getTime())
+            const cy = yScale(p.ppsf)
+            const overList = p.overList != null && p.overList > 1
+            return (
+              <g key={`pt-${i}`}>
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r={5.5}
+                  fill={overList ? '#1f7a4d' : '#91a1ba'}
+                  stroke="#1a1f2e"
+                  strokeWidth="0.5"
+                  fillOpacity="0.85"
+                />
+                <text
+                  x={cx}
+                  y={cy - 11}
+                  fontSize="10"
+                  fill="#41454f"
+                  textAnchor="middle"
+                  fontFamily="sans-serif"
+                >
+                  ${p.ppsf.toLocaleString()}
+                </text>
+              </g>
+            )
+          })}
+
+          {/* X axis tick labels */}
+          {[0, 0.33, 0.66, 1].map((t, i) => {
+            const date = new Date(minDate + t * (maxDate - minDate))
+            return (
+              <text
+                key={`xt-${i}`}
+                x={M + t * innerW}
+                y={H - M + 22}
+                fontSize="11"
+                fill="#7a8298"
+                textAnchor="middle"
+                fontFamily="sans-serif"
+              >
+                {fmtAxisDate(date)}
+              </text>
+            )
+          })}
+
+          {/* Y axis tick labels */}
+          {[0, 0.5, 1].map((t, i) => {
+            const ppsf = minPpsf + (1 - t) * (maxPpsf - minPpsf)
+            return (
+              <text
+                key={`yt-${i}`}
+                x={M - 10}
+                y={M + t * innerH + 4}
+                fontSize="11"
+                fill="#7a8298"
+                textAnchor="end"
+                fontFamily="sans-serif"
+              >
+                ${Math.round(ppsf).toLocaleString()}
+              </text>
+            )
+          })}
+
+          {/* Axis titles */}
+          <text
+            x={W / 2}
+            y={H - 12}
+            fontSize="11"
+            fill="#7a8298"
+            textAnchor="middle"
+            fontStyle="italic"
+            fontFamily="serif"
+          >
+            Sold date
+          </text>
+          <text
+            x={18}
+            y={H / 2}
+            fontSize="11"
+            fill="#7a8298"
+            textAnchor="middle"
+            fontStyle="italic"
+            fontFamily="serif"
+            transform={`rotate(-90 18 ${H / 2})`}
+          >
+            $/sqft sold
+          </text>
+        </svg>
+      </div>
+      <p className="text-sm text-ink-600 mt-4 max-w-2xl leading-relaxed">
+        Each dot is a comp, plotted by sold date and $/sqft.
+        {subjectPpsf
+          ? ' The dashed royal-blue line marks the subject\'s asking $/sqft — anything above it sold richer, anything below it sold cheaper.'
+          : ' Add a list price + sqft on the subject to see a reference line.'}{' '}
+        Green dots sold over list; blue-gray dots sold at or under list.
+      </p>
+    </section>
+  )
+}
+
+// ============================================================
+// MMMBuyerCalculator — Sprint C + D + G
+// Buyer-side cost model. Asking-price slider drives buyer math; HOA + rate
+// editable. Adapts intro copy to first-person on buy-side CMAs.
 // ============================================================
 function MMMBuyerCalculator({
   listPrice,
   defaultHoa,
   settings,
+  isBuy,
 }: {
   listPrice: number
   defaultHoa?: number | null
   settings: CommissionSettings
+  isBuy: boolean
 }) {
   const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
   const maxPrice = Math.round((listPrice * 1.15) / 1000) * 1000
@@ -312,8 +537,6 @@ function MMMBuyerCalculator({
   const [hoa, setHoa] = useState<number>(defaultHoa ?? 0)
   const [ratePct, setRatePct] = useState<number>(settings.defaultMortgageRatePct)
 
-  // Reset when navigating to a different CMA, or when the tenant's default
-  // mortgage rate changes (settings hot-reload).
   useEffect(() => {
     setAskingPrice(listPrice)
   }, [listPrice])
@@ -324,7 +547,6 @@ function MMMBuyerCalculator({
     setRatePct(settings.defaultMortgageRatePct)
   }, [settings.defaultMortgageRatePct])
 
-  // Math
   const down = askingPrice * 0.20
   const loan = askingPrice - down
   const monthlyRate = ratePct / 100 / 12
@@ -341,18 +563,17 @@ function MMMBuyerCalculator({
   const propertyTaxLabel = fmtRatePct(settings.propertyTaxRate)
 
   return (
-    <section className="border-b border-ink-200 pb-12 mb-12">
+    <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
       <div className="text-2xs uppercase tracking-widest text-blue-700 mb-3">
-        What a buyer would pay
+        {isBuy ? 'Your monthly cost' : 'What a buyer would pay'}
       </div>
       <h2 className="font-display text-3xl text-ink-900 mb-3">
-        Make-Me-Move math.
+        {isBuy ? 'Buyer-side math.' : 'Make-Me-Move math.'}
       </h2>
       <p className="text-sm text-ink-600 max-w-2xl mb-8 leading-relaxed">
-        Drag the slider to see the all-in monthly cost a buyer would face at any
-        asking price — and the household income they'd need to qualify. This is
-        what creates the bidding floor. Standard assumptions: 20% down, fixed-rate
-        30-year mortgage, property tax at {propertyTaxLabel}, household debt-to-income at 28%.
+        {isBuy
+          ? `Drag the slider to see your all-in monthly cost at any offer price — and the household income you'd need to qualify. Standard assumptions: 20% down, fixed-rate 30-year mortgage, property tax at ${propertyTaxLabel}, household debt-to-income at 28%.`
+          : `Drag the slider to see the all-in monthly cost a buyer would face at any asking price — and the household income they'd need to qualify. This is what creates the bidding floor. Standard assumptions: 20% down, fixed-rate 30-year mortgage, property tax at ${propertyTaxLabel}, household debt-to-income at 28%.`}
       </p>
 
       {/* Slider block */}
@@ -360,7 +581,7 @@ function MMMBuyerCalculator({
         <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
             <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
-              If you asked…
+              {isBuy ? 'If you offered…' : 'If you asked…'}
             </div>
             <div className="font-display text-4xl text-ink-900 leading-none">
               {fmtMoney(askingPrice)}
@@ -368,7 +589,7 @@ function MMMBuyerCalculator({
           </div>
           <div className="text-right">
             <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
-              Buyer income needed
+              {isBuy ? 'Income needed' : 'Buyer income needed'}
             </div>
             <div className="font-display text-2xl text-blue-700 leading-none">
               {fmtMoney(income)}
@@ -383,11 +604,11 @@ function MMMBuyerCalculator({
           value={askingPrice}
           onChange={(e) => setAskingPrice(Number(e.target.value))}
           className={SLIDER_THUMB_CLASSES}
-          aria-label="Asking price"
+          aria-label={isBuy ? 'Offer price' : 'Asking price'}
         />
         <div className="flex justify-between text-2xs uppercase tracking-widest text-ink-500 mt-2 print:hidden">
           <span>{fmtMoneyShort(minPrice)}</span>
-          <span>Recommended ask · {fmtMoneyShort(listPrice)}</span>
+          <span>{isBuy ? 'Listed at' : 'Recommended ask'} · {fmtMoneyShort(listPrice)}</span>
           <span>{fmtMoneyShort(maxPrice)}</span>
         </div>
       </div>
@@ -417,15 +638,17 @@ function MMMBuyerCalculator({
 
       {/* Income callout */}
       <div className="mt-4 text-sm text-ink-700 italic leading-relaxed">
-        Buyer household income needed at 28% DTI:{' '}
+        {isBuy ? 'Household income needed at 28% DTI: ' : 'Buyer household income needed at 28% DTI: '}
         <span className="font-display not-italic text-lg text-blue-700 font-semibold">
           {fmtMoney(income)}
         </span>{' '}
-        annually. At {fmtMoney(askingPrice)} this is the income threshold for a
-        qualified buyer — below this, the bidding floor weakens.
+        annually.{' '}
+        {isBuy
+          ? `At ${fmtMoney(askingPrice)} this is the qualifying threshold.`
+          : `At ${fmtMoney(askingPrice)} this is the income threshold for a qualified buyer — below this, the bidding floor weakens.`}
       </div>
 
-      {/* Adjustments — hidden on print, so PDF snapshots reflect the modeled values */}
+      {/* Adjustments — hidden on print */}
       <div className="mt-6 pt-4 border-t border-dashed border-ink-200 flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
         <span className="text-2xs uppercase tracking-widest text-ink-500">Adjust to match your unit</span>
         <label className="flex items-center gap-2 text-sm text-ink-700">
@@ -483,10 +706,7 @@ function BuyerStat({
 }
 
 // ============================================================
-// SellerScenario — P9.4 Sprints A + B + D
-// Side-by-side net proceeds at the modeled sale price. McMullen rate
-// (regular vs MMM), traditional rate, escrow fees, transfer tax rate, and
-// title/recording all sourced from tenant commission settings.
+// SellerScenario — Sprints A + B + D (sell-side only)
 // ============================================================
 function SellerScenario({
   listPrice,
@@ -494,21 +714,18 @@ function SellerScenario({
   settings,
 }: {
   listPrice: number
-  listingType: ListingType
+  listingType: CMAListingType
   settings: CommissionSettings
 }) {
-  // Slider bounds — 85% to 115% of the recommended ask, rounded to nearest $1,000
   const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
   const maxPrice = Math.round((listPrice * 1.15) / 1000) * 1000
 
   const [salePrice, setSalePrice] = useState<number>(listPrice)
 
-  // Reset slider if user navigates to a different CMA (listPrice changes)
   useEffect(() => {
     setSalePrice(listPrice)
   }, [listPrice])
 
-  // Math — recomputed on every render (cheap), all rates from tenant settings
   const mcRate = listingType === 'mmm' ? settings.mmmListingRate : settings.regularListingRate
   const tdRate = settings.traditionalComparisonRate
   const transferTaxRate = settings.transferTaxRate
@@ -531,13 +748,12 @@ function SellerScenario({
       ? `With McMullen · MMM · ${mcRateLabel} fee`
       : `With McMullen · ${mcRateLabel} fee`
 
-  // Indicator of where current slider position sits vs the recommended ask
   const deltaVsList = salePrice - listPrice
   const deltaPct = (deltaVsList / listPrice) * 100
   const atList = Math.abs(deltaVsList) < 500
 
   return (
-    <section className="border-b border-ink-200 pb-12 mb-12">
+    <section className="border-b border-ink-200 pb-12 mb-12 print:break-inside-avoid">
       <div className="text-2xs uppercase tracking-widest text-blue-700 mb-3">
         Model your own scenarios
       </div>
@@ -551,7 +767,6 @@ function SellerScenario({
         Excludes mortgage payoff and capital gains.
       </p>
 
-      {/* Slider block */}
       <div className="border border-ink-200 bg-cream px-6 py-6 mb-6">
         <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
           <div>
@@ -605,8 +820,7 @@ function SellerScenario({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* McMullen column */}
-        <div className="border border-ink-200 border-l-2 border-l-blue-700 p-6 bg-cream">
+        <div className="border border-ink-200 border-l-2 border-l-blue-700 p-6 bg-cream print:break-inside-avoid">
           <div className="text-2xs uppercase tracking-widest text-blue-700 font-semibold mb-2">
             {mcStamp}
           </div>
@@ -631,8 +845,7 @@ function SellerScenario({
           </div>
         </div>
 
-        {/* Traditional column */}
-        <div className="border border-ink-200 p-6 bg-cream">
+        <div className="border border-ink-200 p-6 bg-cream print:break-inside-avoid">
           <div className="text-2xs uppercase tracking-widest text-ink-500 font-semibold mb-2">
             Traditional sale · {tdRateLabel} fee
           </div>
@@ -655,8 +868,7 @@ function SellerScenario({
         </div>
       </div>
 
-      {/* Savings callout */}
-      <div className="mt-6 bg-blue-50 border-l-2 border-blue-700 px-6 py-5 text-center">
+      <div className="mt-6 bg-blue-50 border-l-2 border-blue-700 px-6 py-5 text-center print:break-inside-avoid">
         <div className="font-display text-3xl text-blue-700 leading-none">
           {fmtMoney(savings)}
         </div>
@@ -720,7 +932,7 @@ function StatCard({
 
 function CompCard({ comp, index }: { comp: CMAComp; index: number }) {
   return (
-    <div className="border border-ink-200 p-5">
+    <div className="border border-ink-200 p-5 print:break-inside-avoid">
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
