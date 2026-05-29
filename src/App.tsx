@@ -2,10 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from '@/contexts/AuthContext'
 import Layout from '@/components/Layout'
 import Login from '@/pages/Login'
-import Signup from '@/pages/Signup'
 import Today from '@/pages/Today'
-import Schedule from '@/pages/Schedule'
-import Settings from '@/pages/Settings'
 import CRM from '@/pages/CRM'
 import CSVImport from '@/pages/CSVImport'
 import Clients from '@/pages/Clients'
@@ -13,64 +10,24 @@ import Campaigns from '@/pages/Campaigns'
 import Placeholder from '@/pages/Placeholder'
 import Portal from '@/pages/Portal'
 import NewCMA from '@/pages/NewCMA'
+import CommissionSettings from '@/pages/CommissionSettings'
 import CMAViewer from '@/components/CMAViewer'
-import Markets from '@/pages/Markets'
-import MarketDetail from '@/pages/MarketDetail'
-import Audiences from '@/pages/Audiences'
-import Outreach from '@/pages/Outreach'
-import Board from '@/pages/Board'
-import Brokerage from '@/pages/Brokerage'
-import DealDetail from '@/pages/DealDetail'
-import Referrals from '@/pages/Referrals'
-import MakeMeMove from '@/pages/MakeMeMove'
-import BuyerFeed from '@/pages/buyerfeed'
-import Pipeline from '@/pages/Pipeline'
-import Analytics from '@/pages/Analytics'
-import Tasks from '@/pages/Tasks'
-import Notifications from '@/pages/Notifications'
-import Copilot from '@/pages/Copilot'
-import ColdDrip from '@/pages/ColdDrip'
-import OnboardingWizard from '@/pages/OnboardingWizard'
-// P9.13.0-.2: public pages (no auth required)
-import ListingsIndex from '@/pages/public/ListingsIndex'
-import PublicListingDetail from '@/pages/public/PublicListingDetail'
-import TenantHome from '@/pages/public/TenantHome'
-import ClaimUnit from '@/pages/public/ClaimUnit'
-import Unsubscribe from '@/pages/public/Unsubscribe'
-import SharedDoc from '@/pages/public/SharedDoc'
-import PublicMarket from '@/pages/public/PublicMarket'
-import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
-
-// Vanity market subdomains → market slug, so a branded host like
-// campbell.mcmullen.properties serves its market page at the root.
-const MARKET_HOSTS: Record<string, string> = {
-  'campbell.mcmullen.properties': 'campbell',
-}
-const hostMarketSlug =
-  typeof window !== 'undefined' ? MARKET_HOSTS[window.location.hostname] ?? null : null
+import {
+  Search,
+  Send,
+  Home,
+  PenLine,
+  Globe,
+  BarChart3,
+  Settings,
+} from 'lucide-react'
 
 export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {hostMarketSlug && (
-            <Route path="/" element={<Navigate to={`/market/${hostMarketSlug}`} replace />} />
-          )}
           <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          {/* P9.13.0-.2: public-facing routes, no auth */}
-          <Route path="/listings" element={<ListingsIndex />} />
-          <Route path="/listings/:slug" element={<PublicListingDetail />} />
-          <Route path="/t/:tenantSlug" element={<TenantHome />} />
-          <Route path="/market/:slug" element={<PublicMarket />} />
-          {/* B.2: public ownership-claim link */}
-          <Route path="/claim/:token" element={<ClaimUnit />} />
-          {/* C.2: public unsubscribe */}
-          <Route path="/unsubscribe" element={<Unsubscribe />} />
-          {/* Public read-only shared documents (CMAs, Net Sheets, …) */}
-          <Route path="/share/:token" element={<SharedDoc />} />
-          {/* Everything else goes through the auth gate */}
           <Route path="*" element={<AuthGate />} />
         </Routes>
       </BrowserRouter>
@@ -79,7 +36,7 @@ export default function App() {
 }
 
 function AuthGate() {
-  const { session, loading, isAgent, isClient, currentTenant, currentBranding } = useAuth()
+  const { session, loading, isAgent, isClient } = useAuth()
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -99,45 +56,14 @@ function AuthGate() {
     )
   }
 
-  // First-run gate: a freshly invited agent (tenant_branding.onboarded_at IS NULL)
-  // is routed into the concierge wizard and can't reach the dashboard until they
-  // finish or skip — both of which stamp onboarded_at, releasing the gate. Guarded
-  // on a loaded branding row so a tenant without one is never trapped.
-  const needsOnboarding =
-    isAgent && !!currentTenant && !!currentBranding && !currentBranding.onboarded_at
-  if (needsOnboarding) {
-    return (
-      <Routes>
-        <Route path="/onboarding" element={<OnboardingWizard />} />
-        <Route path="*" element={<Navigate to="/onboarding" replace />} />
-      </Routes>
-    )
-  }
-
   // Agent (possibly dual-role): full dashboard + portal preview
   return (
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<Today />} />
-        <Route path="/schedule" element={<Schedule />} />
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/clients/*" element={<Clients />} />
-        <Route path="/markets" element={<Markets />} />
-        <Route path="/markets/:marketId" element={<MarketDetail />} />
-        <Route path="/audiences" element={<Audiences />} />
-        <Route path="/outreach" element={<Outreach />} />
-        <Route path="/board" element={<Board />} />
-        <Route path="/brokerage" element={<Brokerage />} />
-        <Route path="/deals/:dealId" element={<DealDetail />} />
-        <Route path="/referrals" element={<Referrals />} />
-        <Route path="/make-me-move" element={<MakeMeMove />} />
-        <Route path="/buyer-feed" element={<BuyerFeed />} />
-        <Route path="/pipeline" element={<Pipeline />} />
-        <Route path="/tasks" element={<Tasks />} />
-        <Route path="/notifications" element={<Notifications />} />
-        <Route path="/copilot" element={<Copilot />} />
-        <Route path="/cold-drip" element={<ColdDrip />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
@@ -153,7 +79,18 @@ function AuthGate() {
           }
         />
         <Route path="/campaigns/*" element={<Campaigns />} />
-        {/* /listings is now a PUBLIC route (handled above, outside AuthGate). */}
+        <Route
+          path="/listings"
+          element={
+            <Placeholder
+              title="Listings"
+              description="MLS sync via RESO Web API once broker-licensed. Zillow Premier Agent lead routing. Per-listing landing pages with built-in lead capture. Status workflow: Coming Soon → Active → Pending → Sold."
+              Icon={Home}
+              phase="P7"
+              replaces="Showcase IDX / iHomeFinder"
+            />
+          }
+        />
         <Route
           path="/content"
           element={
@@ -178,10 +115,34 @@ function AuthGate() {
             />
           }
         />
-        <Route path="/analytics" element={<Analytics />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route
+          path="/analytics"
+          element={
+            <Placeholder
+              title="Analytics"
+              description="Lead-source attribution, funnel metrics, ROI by campaign and content piece. Engagement-as-conversion-signal: click + return + content-depth + form-submit, not vanity opens. Closes the content → CRM → outreach loop."
+              Icon={BarChart3}
+              phase="P10"
+              replaces="Google Analytics"
+            />
+          }
+        />
+        {/* Commission settings — P9.4 Sprint D. More-specific route declared BEFORE
+            the /settings placeholder so it matches first. */}
+        <Route path="/settings/commission" element={<CommissionSettings />} />
+        <Route
+          path="/settings"
+          element={
+            <Placeholder
+              title="Settings & Integrations"
+              description="Branding (logo, colors, typography, hero copy, social links, service areas, DRE), team management with per-tenant roles, third-party connections (Resend, ATTOM Data, Zillow Premier Agent, Instagram Business, LinkedIn, MLS), billing, and the audit log."
+              Icon={Settings}
+              phase="P1.5"
+              replaces="—"
+            />
+          }
+        />
       </Route>
-      <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/portal/*" element={<Portal />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
