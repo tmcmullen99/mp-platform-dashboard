@@ -38,8 +38,6 @@ import TenantHome from '@/pages/public/TenantHome'
 import ClaimUnit from '@/pages/public/ClaimUnit'
 import Unsubscribe from '@/pages/public/Unsubscribe'
 import SharedDoc from '@/pages/public/SharedDoc'
-import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
-import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import PublicMarket from '@/pages/public/PublicMarket'
 import { Search, PenLine, Globe, BarChart3 } from 'lucide-react'
 
@@ -56,16 +54,15 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {hostMarketSlug && <Route path="/" element={<PublicMarket slugOverride={hostMarketSlug} />} />}
+          {hostMarketSlug && (
+            <Route path="/" element={<Navigate to={`/market/${hostMarketSlug}`} replace />} />
+          )}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           {/* P9.13.0-.2: public-facing routes, no auth */}
           <Route path="/listings" element={<ListingsIndex />} />
           <Route path="/listings/:slug" element={<PublicListingDetail />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
-          {/* P-Mkt.3: public buyer-facing Make-Me-Move browse + detail */}
-          <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
-          <Route path="/m/:tenantSlug/:listingId" element={<PublicMakeMeMoveDetail />} />
           <Route path="/market/:slug" element={<PublicMarket />} />
           {/* B.2: public ownership-claim link */}
           <Route path="/claim/:token" element={<ClaimUnit />} />
