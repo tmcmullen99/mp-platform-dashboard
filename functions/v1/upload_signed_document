@@ -1,0 +1,8 @@
+{ name, file_url,                               // required
+  file_type?, file_size?,
+  category?: 'disclosure'|'contract'|...,       // defaults 'other'
+  signed_status?: 'signed'|'unsigned'|'pending',// defaults 'signed'
+  deal_id?, client_external_listing_id?, client_id?,
+  metadata? }
+
+→ { ok, document }
