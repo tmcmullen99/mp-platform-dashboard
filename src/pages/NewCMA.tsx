@@ -1,6 +1,11 @@
 // P9.1 — Agent-side CMA creation. PDF upload → Claude extraction (extract_cma_pdf
 // Edge Function) → editable review form → save to cmas table linked to a client/deal.
 // P9.4 — Adds listing_type selector (Regular 2.5% vs MMM Campbell double-end 3%).
+// P9.4 Sprint E — Adds "Generate with Claude" button in Step 5 (Agent notes).
+//                 Calls generate_cma_recommendation Edge Function with subject +
+//                 comps + listing_type, fills the textarea with 2-4 paragraphs
+//                 of pricing rationale modeled on the Downtown PDF voice. Fully
+//                 editable before publish.
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -13,6 +18,7 @@ import {
   Trash2,
   FileText,
   ChevronLeft,
+  Sparkles,
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
@@ -91,6 +97,10 @@ export default function NewCMA() {
   const [extractError, setExtractError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [hasData, setHasData] = useState(false)
+
+  // Sprint E — AI recommendation generation state
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
 
   // Load clients for this tenant
   useEffect(() => {
@@ -189,6 +199,56 @@ export default function NewCMA() {
     setSubject({ ...EMPTY_SUBJECT })
     setComps([])
     setHasData(true)
+  }
+
+  // Sprint E — Generate the agent-notes paragraphs with Claude
+  async function handleGenerate() {
+    if (!subject.address) {
+      setGenerateError('Subject address is required before generating')
+      return
+    }
+    if (comps.length === 0) {
+      setGenerateError('Add at least one comparable so Claude has data to ground the recommendation')
+      return
+    }
+    if (
+      agentNotes.trim() &&
+      !window.confirm(
+        'Replace your existing agent notes with a Claude-generated recommendation?'
+      )
+    ) {
+      return
+    }
+    setGenerateError(null)
+    setGenerating(true)
+    try {
+      const accessToken = session?.access_token
+      if (!accessToken) throw new Error('Not authenticated')
+
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate_cma_recommendation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          subject,
+          comps,
+          listing_type: listingType,
+        }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) {
+        throw new Error(json.error || `Generation failed: ${resp.status}`)
+      }
+      const text: string = json.recommendation || ''
+      if (!text.trim()) throw new Error('Empty recommendation returned')
+      setAgentNotes(text)
+    } catch (e) {
+      setGenerateError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setGenerating(false)
+    }
   }
 
   async function handleSave() {
@@ -439,17 +499,58 @@ export default function NewCMA() {
             </div>
           </section>
 
+          {/* Step 5: agent notes + Generate with Claude (Sprint E) */}
           <section className="mb-10">
-            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-              Step 5 · Agent notes (optional)
+            <div className="flex items-baseline justify-between mb-3 flex-wrap gap-3">
+              <div className="text-2xs uppercase tracking-widest text-ink-500">
+                Step 5 · Agent notes (optional)
+              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || !subject.address || comps.length === 0}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-blue-700 text-2xs uppercase tracking-widest text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  !subject.address
+                    ? 'Subject address is required'
+                    : comps.length === 0
+                    ? 'Add at least one comparable first'
+                    : 'Have Claude draft a recommendation from the comp data'
+                }
+              >
+                {generating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {generating ? 'Claude is drafting…' : 'Generate with Claude'}
+              </button>
             </div>
+            <p className="text-2xs text-ink-500 mb-3 max-w-2xl leading-relaxed">
+              Strategic context, pricing rationale, marketing approach. Shows at the bottom
+              of the CMA. Click <strong className="text-ink-700 font-medium">Generate with Claude</strong> to
+              have a draft written from the comp set above — fully editable before publish.
+            </p>
             <textarea
               value={agentNotes}
               onChange={(e) => setAgentNotes(e.target.value)}
-              rows={4}
-              placeholder="Strategic context, pricing rationale, marketing approach… Shows at the bottom of the CMA."
-              className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream"
+              rows={generating ? 6 : agentNotes ? 12 : 6}
+              placeholder={
+                generating
+                  ? 'Claude is grounding the recommendation in the comp set above…'
+                  : 'Drop your own notes here, or let Claude draft from the comp data.'
+              }
+              disabled={generating}
+              className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream leading-relaxed disabled:bg-ink-50"
             />
+            {generateError && (
+              <p className="text-xs text-red-600 mt-2">{generateError}</p>
+            )}
+            {agentNotes && !generateError && !generating && (
+              <p className="text-2xs text-ink-500 mt-2">
+                {agentNotes.length.toLocaleString()} characters ·{' '}
+                {agentNotes.split(/\s+/).filter(Boolean).length.toLocaleString()} words
+              </p>
+            )}
           </section>
 
           {/* Save bar */}
