@@ -1,0 +1,8 @@
+{ id?,                    // omit to create, provide to update
+  deal_id?,               // required on create
+  party_name?,            // required on create
+  primary_contact_{name,email,phone,id}?,
+  buyer_agent_{name,email,phone,brokerage}?,
+  status?, is_lead_party?, notes?, metadata? }
+
+→ { ok, buyer_party }
