@@ -1,4 +1,4 @@
-// src/portal/WarRoomDropzone.tsx
+// src/pages/portal/WarRoomDropzone.tsx
 //
 // Wraps the war room message thread. Detects drag-over, shows a dashed-border
 // overlay, handles drop: uploads each file to Supabase Storage at
@@ -6,29 +6,30 @@
 // then calls /functions/v1/post_war_room_document so the file lands in the
 // documents table AND a war_room_messages row referencing it.
 
-import { useCallback, useState } from "react";
-import { Upload } from "lucide-react";
-import { supabase } from "@/lib/supabase"; // TODO: adjust import path
+import { useCallback, useState } from 'react'
+import { Upload } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase' // TODO: adjust path
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-const BLOCKED_EXTENSIONS = [".exe", ".sh", ".bat", ".cmd", ".scr", ".js", ".jar"];
+const MAX_FILE_SIZE = 25 * 1024 * 1024 // 25 MB
+const BLOCKED_EXTENSIONS = ['.exe', '.sh', '.bat', '.cmd', '.scr', '.js', '.jar']
 
 interface DropzoneProps {
-  warRoomId: string;
-  clientId: string;
-  onMessage?: (message: unknown) => void;
-  children: React.ReactNode;
+  warRoomId: string
+  clientId: string
+  onMessage?: (message: unknown) => void
+  children: React.ReactNode
 }
 
 interface PendingFile {
-  id: string;
-  name: string;
-  status: "uploading" | "posting" | "done" | "error";
-  error?: string;
+  id: string
+  name: string
+  status: 'uploading' | 'posting' | 'done' | 'error'
+  error?: string
 }
 
 function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9.]+/g, "-").replace(/^-+|-+$/g, "");
+  return s.toLowerCase().replace(/[^a-z0-9.]+/g, '-').replace(/^-+|-+$/g, '')
 }
 
 export default function WarRoomDropzone({
@@ -37,78 +38,76 @@ export default function WarRoomDropzone({
   onMessage,
   children,
 }: DropzoneProps) {
-  const [dragActive, setDragActive] = useState(false);
-  const [pending, setPending] = useState<PendingFile[]>([]);
+  const { session } = useAuth()
+  const [dragActive, setDragActive] = useState(false)
+  const [pending, setPending] = useState<PendingFile[]>([])
 
   const onDragEnter = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setDragActive(true);
-  }, []);
+    e.preventDefault()
+    setDragActive(true)
+  }, [])
 
   const onDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
+    e.preventDefault()
+  }, [])
 
   const onDragLeave = useCallback((e: React.DragEvent) => {
-    if (e.currentTarget === e.target) setDragActive(false);
-  }, []);
+    if (e.currentTarget === e.target) setDragActive(false)
+  }, [])
 
   const onDrop = useCallback(
     async (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragActive(false);
-      const files = Array.from(e.dataTransfer.files);
-      if (files.length === 0) return;
+      e.preventDefault()
+      setDragActive(false)
+      const files = Array.from(e.dataTransfer.files)
+      if (files.length === 0 || !session?.access_token) return
 
       for (const file of files) {
         const id =
-          typeof crypto !== "undefined" && "randomUUID" in crypto
+          typeof crypto !== 'undefined' && 'randomUUID' in crypto
             ? crypto.randomUUID()
-            : `${Date.now()}-${Math.random()}`;
+            : `${Date.now()}-${Math.random()}`
 
-        const lower = file.name.toLowerCase();
+        const lower = file.name.toLowerCase()
         if (BLOCKED_EXTENSIONS.some((ext) => lower.endsWith(ext))) {
           setPending((prev) => [
             ...prev,
-            { id, name: file.name, status: "error", error: "File type not allowed" },
-          ]);
-          continue;
+            { id, name: file.name, status: 'error', error: 'File type not allowed' },
+          ])
+          continue
         }
         if (file.size > MAX_FILE_SIZE) {
           setPending((prev) => [
             ...prev,
-            { id, name: file.name, status: "error", error: "File exceeds 25 MB" },
-          ]);
-          continue;
+            { id, name: file.name, status: 'error', error: 'File exceeds 25 MB' },
+          ])
+          continue
         }
 
-        setPending((prev) => [...prev, { id, name: file.name, status: "uploading" }]);
+        setPending((prev) => [...prev, { id, name: file.name, status: 'uploading' }])
         try {
-          const path = `${clientId}/war-room/${Date.now()}-${slugify(file.name)}`;
+          const path = `${clientId}/war-room/${Date.now()}-${slugify(file.name)}`
           const { error: upErr } = await supabase.storage
-            .from("client-documents")
-            .upload(path, file, { upsert: false, contentType: file.type });
-          if (upErr) throw upErr;
+            .from('client-documents')
+            .upload(path, file, { upsert: false, contentType: file.type })
+          if (upErr) throw upErr
 
-          // 7-day signed URL since the bucket is private
           const { data: signed, error: sErr } = await supabase.storage
-            .from("client-documents")
-            .createSignedUrl(path, 60 * 60 * 24 * 7);
-          if (sErr || !signed?.signedUrl) throw sErr || new Error("Could not sign URL");
+            .from('client-documents')
+            .createSignedUrl(path, 60 * 60 * 24 * 7)
+          if (sErr || !signed?.signedUrl) throw sErr || new Error('Could not sign URL')
 
           setPending((prev) =>
-            prev.map((p) => (p.id === id ? { ...p, status: "posting" } : p)),
-          );
+            prev.map((p) => (p.id === id ? { ...p, status: 'posting' } : p)),
+          )
 
-          const { data: sess } = await supabase.auth.getSession();
-          const token = sess.session?.access_token;
           const resp = await fetch(
             `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/post_war_room_document`,
             {
-              method: "POST",
+              method: 'POST',
               headers: {
-                Authorization: `Bearer ${token}`,
-                "Content-Type": "application/json",
+                Authorization: `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
               },
               body: JSON.stringify({
                 war_room_id: warRoomId,
@@ -118,30 +117,34 @@ export default function WarRoomDropzone({
                 file_size: file.size,
               }),
             },
-          );
-          const json = await resp.json();
-          if (!resp.ok || !json.ok) throw new Error(json.error || "Post failed");
+          )
+          const json = await resp.json()
+          if (!resp.ok || !json.ok) throw new Error(json.error || 'Post failed')
 
-          if (onMessage && json.message) onMessage(json.message);
+          if (onMessage && json.message) onMessage(json.message)
           setPending((prev) =>
-            prev.map((p) => (p.id === id ? { ...p, status: "done" } : p)),
-          );
+            prev.map((p) => (p.id === id ? { ...p, status: 'done' } : p)),
+          )
           setTimeout(() => {
-            setPending((prev) => prev.filter((p) => p.id !== id));
-          }, 1500);
+            setPending((prev) => prev.filter((p) => p.id !== id))
+          }, 1500)
         } catch (err) {
           setPending((prev) =>
             prev.map((p) =>
               p.id === id
-                ? { ...p, status: "error", error: err instanceof Error ? err.message : String(err) }
+                ? {
+                    ...p,
+                    status: 'error',
+                    error: err instanceof Error ? err.message : String(err),
+                  }
                 : p,
             ),
-          );
+          )
         }
       }
     },
-    [warRoomId, clientId, onMessage],
-  );
+    [warRoomId, clientId, onMessage, session?.access_token],
+  )
 
   return (
     <div
@@ -160,7 +163,7 @@ export default function WarRoomDropzone({
           <div className="font-['Playfair_Display',Georgia,serif] text-xl text-[#1a1f2e]">
             Drop to share
           </div>
-          <div className="text-xs text-[#91a1ba] mt-1">
+          <div className="text-xs text-ink-500 mt-1">
             PDF, image, or doc — up to 25 MB
           </div>
         </div>
@@ -173,28 +176,28 @@ export default function WarRoomDropzone({
             <div
               key={p.id}
               className={[
-                "text-xs px-3 py-2 rounded-md flex items-center justify-between border",
-                p.status === "error"
-                  ? "bg-red-50 text-red-700 border-red-200"
-                  : p.status === "done"
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                  : "bg-[#f5f3ee] text-[#1a1f2e] border-[#e8e3d8]",
-              ].join(" ")}
+                'text-xs px-3 py-2 rounded-md flex items-center justify-between border',
+                p.status === 'error'
+                  ? 'bg-red-50 text-red-700 border-red-200'
+                  : p.status === 'done'
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-cream text-[#1a1f2e] border-[#e8e3d8]',
+              ].join(' ')}
             >
               <span className="truncate">{p.name}</span>
               <span className="ml-2 shrink-0">
-                {p.status === "uploading"
-                  ? "Uploading…"
-                  : p.status === "posting"
-                  ? "Posting…"
-                  : p.status === "done"
-                  ? "Sent"
-                  : p.error || "Error"}
+                {p.status === 'uploading'
+                  ? 'Uploading…'
+                  : p.status === 'posting'
+                  ? 'Posting…'
+                  : p.status === 'done'
+                  ? 'Sent'
+                  : p.error || 'Error'}
               </span>
             </div>
           ))}
         </div>
       )}
     </div>
-  );
+  )
 }
