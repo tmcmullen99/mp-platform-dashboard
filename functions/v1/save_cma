@@ -1,0 +1,5 @@
+POST { name, property_address?, list_price?, subject_data, comps_data,
+       cma_html?, agent_notes?, status?: 'draft'|'published',
+       scope: { client_id?, deal_id?, client_external_listing_id? } }   // ≥1 required
+
+→ { ok, cma, url: '/cmas/<slug>' }
