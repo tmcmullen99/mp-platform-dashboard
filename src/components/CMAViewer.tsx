@@ -5,12 +5,14 @@
 // P9.4 Sprint D — Also fetches tenant_commission_settings and passes through.
 // P9.4 Sprint G — Passes cma_type through (sell-side default, buy-side variant).
 // P9.4 Sprint J — Drops the local CMAWithListingType widening; imports CMARow
-//                 from @/lib/cma-types instead (single source of truth for the
-//                 extended row shape).
+//                 from @/lib/cma-types instead.
+// P9.4 Sprint H — Renames the print button text to "Download PDF" (the browser
+//                 print dialog has Save as PDF; this matches user intent).
+// P9.4 Sprint I — Adds an Edit button (agent-only) linking to /cmas/:slug/edit.
 
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Loader2, ChevronLeft, Printer, Trash2 } from 'lucide-react'
+import { Loader2, ChevronLeft, Printer, Trash2, Pencil } from 'lucide-react'
 import { supabase, CMASubject, CMAComp } from '@/lib/supabase'
 import type { CMARow } from '@/lib/cma-types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -31,7 +33,6 @@ type CommissionSettingsRow = {
 }
 
 function rowToSettings(row: CommissionSettingsRow): CommissionSettings {
-  // Postgres numeric returns as string in some drivers; coerce defensively
   return {
     regularListingRate: Number(row.regular_listing_rate),
     mmmListingRate: Number(row.mmm_listing_rate),
@@ -73,8 +74,6 @@ export default function CMAViewer({ embedded = false }: Props) {
       const cmaRow = (cmaData as CMARow) || null
       setCma(cmaRow)
 
-      // Fetch this tenant's commission settings. RLS permits SELECT for
-      // agents/clients on their own tenant's row plus brokerage admins.
       if (cmaRow?.tenant_id) {
         const { data: settingsRow } = await supabase
           .from('tenant_commission_settings')
@@ -158,8 +157,17 @@ export default function CMAViewer({ embedded = false }: Props) {
               className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 flex items-center gap-1.5 px-3 py-2 border border-ink-200"
             >
               <Printer className="w-3 h-3" />
-              Print / PDF
+              Download PDF
             </button>
+            {isAgent && (
+              <Link
+                to={`/cmas/${cma.slug}/edit`}
+                className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 flex items-center gap-1.5 px-3 py-2 border border-ink-200"
+              >
+                <Pencil className="w-3 h-3" />
+                Edit
+              </Link>
+            )}
             {isAgent && (
               <button
                 onClick={handleDelete}
