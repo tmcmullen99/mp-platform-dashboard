@@ -1,0 +1,19 @@
+GET (or POST) → {
+  ok,
+  user: { id, email },
+  client: { id, name, email, phone, client_type, stage, created_at },
+  agent: { id, name, email, phone, photo_url },
+  tenant: { id, display_name, slug },
+  branding: { ...full tenant_branding row },
+  counts: {
+    saved_properties, favorites, deals, cmas,
+    documents: { total, signed, unsigned },
+    net_sheets,
+    tour_requests: { pending, confirmed },
+    war_rooms
+  },
+  recent: {
+    saved_properties[6], deals[5], cmas[5],
+    documents[8], tour_requests[5], war_rooms[5]
+  }
+}
