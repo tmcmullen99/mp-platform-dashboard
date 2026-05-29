@@ -1,13 +1,16 @@
 // P9.1 — Agent-side CMA creation. PDF upload → Claude extraction (extract_cma_pdf
 // Edge Function) → editable review form → save to cmas table linked to a client/deal.
 // P9.4 — Adds listing_type selector (Regular 2.5% vs MMM Campbell double-end 3%).
-// P9.4 Sprint E — Adds "Generate with Claude" button in Step 5 (Agent notes).
-// P9.4 Sprint G — Adds cma_type selector (Sell-side vs Buy-side). Buy-side hides
-//                 the listing_type pills (no seller-side commission to model)
-//                 and the CMA template hides the SellerScenario block.
+// P9.4 Sprint E — "Generate with Claude" button in Step 5 (Agent notes).
+// P9.4 Sprint G — Adds cma_type selector (Sell-side vs Buy-side).
+// P9.4 Sprint I — Edit mode. Same component handles both /cmas/new (create) and
+//                 /cmas/:slug/edit (update). On edit, fetches the CMA by slug,
+//                 populates state, swaps the save bar to "Save as draft" +
+//                 "Publish" buttons, and routes saves through UPDATE keyed on
+//                 the cma id (slug stays stable).
 
 import { useEffect, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
 import {
   Upload,
   Loader2,
@@ -29,7 +32,9 @@ import {
   CMASubject,
   CMAComp,
 } from '@/lib/supabase'
-import type { CMAListingType, CMAType } from '@/lib/cma-types'
+import type { CMAListingType, CMAType, CMARow } from '@/lib/cma-types'
+
+type CMAStatus = 'draft' | 'published' | 'archived'
 
 const EMPTY_SUBJECT: CMASubject = {
   address: '',
@@ -77,6 +82,8 @@ export default function NewCMA() {
   const { currentTenant, session } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
+  const { slug: editSlug } = useParams<{ slug: string }>()
+  const editMode = !!editSlug
   const presetClientId = searchParams.get('client') || ''
 
   const [clients, setClients] = useState<Client[]>([])
@@ -100,6 +107,52 @@ export default function NewCMA() {
   // Sprint E — AI recommendation generation state
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState<string | null>(null)
+
+  // Sprint I — Edit mode state
+  const [cmaId, setCmaId] = useState<string | null>(null)
+  const [currentStatus, setCurrentStatus] = useState<CMAStatus>('draft')
+  const [loadingCma, setLoadingCma] = useState<boolean>(editMode)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Sprint I — Load the CMA when in edit mode
+  useEffect(() => {
+    if (!editMode || !editSlug) return
+    let cancelled = false
+    async function load() {
+      const { data, error } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('slug', editSlug as string)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) {
+        setLoadError(error.message)
+        setLoadingCma(false)
+        return
+      }
+      if (!data) {
+        setLoadError('CMA not found.')
+        setLoadingCma(false)
+        return
+      }
+      const cma = data as CMARow
+      setCmaId(cma.id)
+      setCurrentStatus(((cma.status as CMAStatus) || 'draft'))
+      setSubject(((cma.subject_data as CMASubject) || EMPTY_SUBJECT))
+      setComps(((cma.comps_data as CMAComp[]) || []))
+      setAgentNotes(cma.agent_notes || '')
+      setListingType((cma.listing_type as CMAListingType) || 'regular')
+      setCmaType((cma.cma_type as CMAType) || 'sell')
+      setSelectedClientId(cma.client_id || '')
+      setSelectedDealId(cma.deal_id || '')
+      setHasData(true)
+      setLoadingCma(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [editMode, editSlug])
 
   // Load clients for this tenant
   useEffect(() => {
@@ -251,7 +304,8 @@ export default function NewCMA() {
     }
   }
 
-  async function handleSave() {
+  // Sprint I — save now takes a status arg. UPDATE in edit mode, INSERT otherwise.
+  async function handleSave(saveStatus: CMAStatus) {
     if (!currentTenant) return
     if (!subject.address) {
       alert('Subject address is required.')
@@ -259,18 +313,9 @@ export default function NewCMA() {
     }
     setSaving(true)
     try {
-      const baseSlug = (subject.address || 'cma')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/^-|-$/g, '')
-        .slice(0, 60)
-      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`
-
-      const payload = {
-        tenant_id: currentTenant.id,
+      const commonFields = {
         client_id: selectedClientId || null,
         deal_id: selectedDealId || null,
-        slug,
         name: `${subject.address} — CMA`,
         property_address: subject.address,
         list_price: subject.listPrice ? `$${subject.listPrice.toLocaleString()}` : null,
@@ -278,14 +323,47 @@ export default function NewCMA() {
         comps_data: comps,
         cma_type: cmaType,
         listing_type: listingType,
-        status: 'published' as const,
+        status: saveStatus,
         agent_notes: agentNotes || null,
-        published_at: new Date().toISOString(),
+        // Set published_at on first publish; preserve null otherwise so draft
+        // rows don't carry a misleading publish timestamp.
+        published_at:
+          saveStatus === 'published'
+            ? (editMode && currentStatus === 'published' ? undefined : new Date().toISOString())
+            : null,
+      }
+
+      if (editMode && cmaId) {
+        // Drop `undefined` keys so the existing column value is preserved
+        const updatePayload = Object.fromEntries(
+          Object.entries(commonFields).filter(([_, v]) => v !== undefined)
+        )
+        const { error } = await supabase
+          .from('cmas')
+          .update(updatePayload)
+          .eq('id', cmaId)
+        if (error) throw error
+        navigate(`/cmas/${editSlug}`)
+        return
+      }
+
+      // Insert path — generate a fresh slug
+      const baseSlug = (subject.address || 'cma')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60)
+      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`
+
+      const insertPayload = {
+        ...commonFields,
+        tenant_id: currentTenant.id,
+        slug,
       }
 
       const { data, error } = await supabase
         .from('cmas')
-        .insert(payload)
+        .insert(insertPayload)
         .select('slug')
         .single()
       if (error) throw error
@@ -297,25 +375,65 @@ export default function NewCMA() {
     }
   }
 
+  // Loading / error states for edit mode
+  if (editMode && loadingCma) {
+    return (
+      <div className="p-12 flex items-center gap-2 text-ink-500 text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading CMA…
+      </div>
+    )
+  }
+  if (editMode && loadError) {
+    return (
+      <div className="p-12 max-w-3xl">
+        <p className="text-ink-600 mb-4">{loadError}</p>
+        <Link
+          to="/clients"
+          className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+        >
+          <ChevronLeft className="w-3 h-3" />
+          Back to clients
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="p-12 max-w-5xl">
       <Link
-        to="/clients"
+        to={editMode ? `/cmas/${editSlug}` : '/clients'}
         className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 mb-6"
       >
         <ChevronLeft className="w-3 h-3" />
-        Back to clients
+        {editMode ? 'Back to CMA' : 'Back to clients'}
       </Link>
 
       <div className="border-b border-ink-200 pb-6 mb-8">
-        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">Create CMA</div>
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2 flex items-center gap-2 flex-wrap">
+          {editMode ? `Edit · ${subject.address || 'CMA'}` : 'Create CMA'}
+          {editMode && (
+            <span
+              className={
+                'normal-case tracking-normal px-2 py-0.5 text-2xs ' +
+                (currentStatus === 'published'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : currentStatus === 'archived'
+                  ? 'bg-ink-100 text-ink-600 border border-ink-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200')
+              }
+            >
+              · {currentStatus}
+            </span>
+          )}
+        </div>
         <h1 className="font-display text-4xl text-ink-900 leading-tight">
-          Comparative Market Analysis.
+          {editMode ? 'Update this CMA.' : 'Comparative Market Analysis.'}
         </h1>
         <p className="text-ink-600 mt-3 max-w-2xl">
-          Upload an MLS PDF and Claude will extract the subject property and comparables.
-          You can edit anything before publishing. The CMA gets attached to a client and
-          appears in their portal.
+          {editMode
+            ? 'Adjust subject, comparables, or agent notes. Save as draft to hide from the client portal, or publish to make it visible. The slug stays the same so existing links keep working.'
+            : 'Upload an MLS PDF and Claude will extract the subject property and comparables. You can edit anything before publishing. The CMA gets attached to a client and appears in their portal.'}
         </p>
       </div>
 
@@ -438,8 +556,8 @@ export default function NewCMA() {
         </div>
       </section>
 
-      {/* Step 2: upload */}
-      {!hasData && (
+      {/* Step 2: upload — create mode only. In edit mode the data is already loaded. */}
+      {!editMode && !hasData && (
         <section className="mb-10">
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Step 2 · Source data</div>
           <div className="border-2 border-dashed border-ink-200 p-12 text-center bg-cream">
@@ -492,7 +610,7 @@ export default function NewCMA() {
           <section className="mb-10">
             <div className="flex items-baseline justify-between mb-4">
               <div className="text-2xs uppercase tracking-widest text-ink-500">
-                Step 3 · Review subject property
+                {editMode ? 'Step 1 · Subject property' : 'Step 3 · Review subject property'}
               </div>
               {pdfFile && (
                 <button
@@ -510,7 +628,7 @@ export default function NewCMA() {
           <section className="mb-10">
             <div className="flex items-baseline justify-between mb-4">
               <div className="text-2xs uppercase tracking-widest text-ink-500">
-                Step 4 · Comparables ({comps.length})
+                {editMode ? `Step 2 · Comparables (${comps.length})` : `Step 4 · Comparables (${comps.length})`}
               </div>
               <button
                 onClick={() => setComps([...comps, { ...EMPTY_COMP }])}
@@ -542,11 +660,11 @@ export default function NewCMA() {
             </div>
           </section>
 
-          {/* Step 5: agent notes + Generate with Claude (Sprint E) */}
+          {/* Step N: agent notes + Generate with Claude */}
           <section className="mb-10">
             <div className="flex items-baseline justify-between mb-3 flex-wrap gap-3">
               <div className="text-2xs uppercase tracking-widest text-ink-500">
-                Step 5 · Agent notes (optional)
+                {editMode ? 'Step 3 · Agent notes (optional)' : 'Step 5 · Agent notes (optional)'}
               </div>
               <button
                 onClick={handleGenerate}
@@ -596,8 +714,8 @@ export default function NewCMA() {
             )}
           </section>
 
-          {/* Save bar */}
-          <div className="border-t border-ink-200 pt-6 flex items-center justify-between sticky bottom-0 bg-cream py-4">
+          {/* Save bar — Sprint I: two buttons (Save as draft + Publish) */}
+          <div className="border-t border-ink-200 pt-6 flex items-center justify-between sticky bottom-0 bg-cream py-4 gap-4 flex-wrap">
             <div className="text-2xs uppercase tracking-widest text-ink-500">
               {selectedClientId
                 ? `Will appear in ${clients.find((c) => c.id === selectedClientId)?.name || '…'}'s portal`
@@ -611,18 +729,28 @@ export default function NewCMA() {
                   : 'Sell-side · Regular 2.5%'}
               </span>
             </div>
-            <button
-              onClick={handleSave}
-              disabled={saving || !subject.address}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
-            >
-              {saving ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              Publish CMA
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleSave('draft')}
+                disabled={saving || !subject.address}
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-ink-200 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-400 hover:bg-ink-50 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Save as draft
+              </button>
+              <button
+                onClick={() => handleSave('published')}
+                disabled={saving || !subject.address}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                {editMode && currentStatus === 'published' ? 'Save changes' : 'Publish'}
+              </button>
+            </div>
           </div>
         </>
       )}
@@ -842,7 +970,6 @@ function Field({
   children: React.ReactNode
   colspan?: number
 }) {
-  // Tailwind needs full class names at build time — no template interpolation.
   const cls =
     colspan === 2
       ? 'md:col-span-2'
@@ -889,7 +1016,6 @@ async function fileToBase64(file: File): Promise<string> {
     const reader = new FileReader()
     reader.onload = () => {
       const result = reader.result as string
-      // result is "data:application/pdf;base64,XXX..." — strip prefix
       const base64 = result.split(',')[1]
       resolve(base64)
     }
