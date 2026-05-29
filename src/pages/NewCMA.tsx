@@ -2,10 +2,9 @@
 // Edge Function) → editable review form → save to cmas table linked to a client/deal.
 // P9.4 — Adds listing_type selector (Regular 2.5% vs MMM Campbell double-end 3%).
 // P9.4 Sprint E — Adds "Generate with Claude" button in Step 5 (Agent notes).
-//                 Calls generate_cma_recommendation Edge Function with subject +
-//                 comps + listing_type, fills the textarea with 2-4 paragraphs
-//                 of pricing rationale modeled on the Downtown PDF voice. Fully
-//                 editable before publish.
+// P9.4 Sprint G — Adds cma_type selector (Sell-side vs Buy-side). Buy-side hides
+//                 the listing_type pills (no seller-side commission to model)
+//                 and the CMA template hides the SellerScenario block.
 
 import { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
@@ -30,8 +29,7 @@ import {
   CMASubject,
   CMAComp,
 } from '@/lib/supabase'
-
-type ListingType = 'regular' | 'mmm'
+import type { CMAListingType, CMAType } from '@/lib/cma-types'
 
 const EMPTY_SUBJECT: CMASubject = {
   address: '',
@@ -86,7 +84,8 @@ export default function NewCMA() {
   const [selectedClientId, setSelectedClientId] = useState<string>(presetClientId)
   const [selectedDealId, setSelectedDealId] = useState<string>('')
 
-  const [listingType, setListingType] = useState<ListingType>('regular')
+  const [cmaType, setCmaType] = useState<CMAType>('sell')
+  const [listingType, setListingType] = useState<CMAListingType>('regular')
 
   const [subject, setSubject] = useState<CMASubject>(EMPTY_SUBJECT)
   const [comps, setComps] = useState<CMAComp[]>([])
@@ -235,6 +234,7 @@ export default function NewCMA() {
           subject,
           comps,
           listing_type: listingType,
+          cma_type: cmaType,
         }),
       })
       const json = await resp.json()
@@ -276,6 +276,7 @@ export default function NewCMA() {
         list_price: subject.listPrice ? `$${subject.listPrice.toLocaleString()}` : null,
         subject_data: subject,
         comps_data: comps,
+        cma_type: cmaType,
         listing_type: listingType,
         status: 'published' as const,
         agent_notes: agentNotes || null,
@@ -318,45 +319,87 @@ export default function NewCMA() {
         </p>
       </div>
 
-      {/* Listing type — drives the seller scenario commission rate */}
-      <section className="mb-10">
+      {/* CMA type — Sprint G */}
+      <section className="mb-8">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
-          Listing type
+          CMA type
         </div>
         <div className="inline-flex border border-ink-200 bg-cream rounded-sm overflow-hidden">
           <button
             type="button"
-            onClick={() => setListingType('regular')}
-            aria-pressed={listingType === 'regular'}
+            onClick={() => setCmaType('sell')}
+            aria-pressed={cmaType === 'sell'}
             className={
               'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors ' +
-              (listingType === 'regular'
+              (cmaType === 'sell'
                 ? 'bg-ink-900 text-cream'
                 : 'bg-cream text-ink-700 hover:bg-ink-100')
             }
           >
-            Regular listing · 2.5%
+            Sell-side · listing CMA
           </button>
           <button
             type="button"
-            onClick={() => setListingType('mmm')}
-            aria-pressed={listingType === 'mmm'}
+            onClick={() => setCmaType('buy')}
+            aria-pressed={cmaType === 'buy'}
             className={
               'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors border-l border-ink-200 ' +
-              (listingType === 'mmm'
+              (cmaType === 'buy'
                 ? 'bg-ink-900 text-cream'
                 : 'bg-cream text-ink-700 hover:bg-ink-100')
             }
           >
-            MMM · Campbell double-end · 3%
+            Buy-side · offer analysis
           </button>
         </div>
         <p className="text-2xs text-ink-500 mt-2 max-w-xl leading-relaxed">
-          {listingType === 'regular'
-            ? 'Standard McMullen listing: 2.5% all-in listing fee. The CMA seller scenario will model net proceeds at 2.5% vs traditional 5%.'
-            : 'Make-Me-Move deal on the Campbell Market: 3% total fee (double-end, McMullen represents both sides). The CMA seller scenario will model net proceeds at 3% vs traditional 5%.'}
+          {cmaType === 'sell'
+            ? 'Standard listing CMA prepared for the seller. Renders the SellerScenario net-proceeds block and the MMM buyer cost calculator.'
+            : 'Buyer-side offer analysis. Prepared for a buyer considering an offer on a listed property. Hides seller commission math; keeps the buyer cost calculator and comp positioning.'}
         </p>
       </section>
+
+      {/* Listing type — only relevant for sell-side */}
+      {cmaType === 'sell' && (
+        <section className="mb-10">
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+            Listing type
+          </div>
+          <div className="inline-flex border border-ink-200 bg-cream rounded-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setListingType('regular')}
+              aria-pressed={listingType === 'regular'}
+              className={
+                'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors ' +
+                (listingType === 'regular'
+                  ? 'bg-ink-900 text-cream'
+                  : 'bg-cream text-ink-700 hover:bg-ink-100')
+              }
+            >
+              Regular listing · 2.5%
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingType('mmm')}
+              aria-pressed={listingType === 'mmm'}
+              className={
+                'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors border-l border-ink-200 ' +
+                (listingType === 'mmm'
+                  ? 'bg-ink-900 text-cream'
+                  : 'bg-cream text-ink-700 hover:bg-ink-100')
+              }
+            >
+              MMM · Campbell double-end · 3%
+            </button>
+          </div>
+          <p className="text-2xs text-ink-500 mt-2 max-w-xl leading-relaxed">
+            {listingType === 'regular'
+              ? 'Standard McMullen listing: 2.5% all-in listing fee. The seller scenario models net proceeds at 2.5% vs traditional 5%.'
+              : 'Make-Me-Move deal on the Campbell Market: 3% total fee (double-end, McMullen represents both sides). The seller scenario models 3% vs traditional 5%.'}
+          </p>
+        </section>
+      )}
 
       {/* Step 1: link to client / deal */}
       <section className="mb-10">
@@ -561,7 +604,11 @@ export default function NewCMA() {
                 : 'Not attached to a client'}
               {' · '}
               <span className="text-ink-700">
-                {listingType === 'mmm' ? 'MMM 3%' : 'Regular 2.5%'}
+                {cmaType === 'buy'
+                  ? 'Buy-side'
+                  : listingType === 'mmm'
+                  ? 'Sell-side · MMM 3%'
+                  : 'Sell-side · Regular 2.5%'}
               </span>
             </div>
             <button
