@@ -4,9 +4,13 @@
 // P9.4 Sprint A — SellerScenario block driven by listing_type (2.5% regular vs
 //                 3% MMM Campbell double-end) vs traditional 5%, with SF transfer
 //                 tax + escrow + title/recording rolled into net proceeds.
-// P9.4 Sprint B — SellerScenario becomes interactive: sale-price slider (85%–115%
-//                 of listPrice) drives live recalc of all rows + savings callout.
-//                 Slider hides on print so PDFs snapshot the modeled scenario.
+// P9.4 Sprint B — SellerScenario becomes interactive: sale-price slider drives
+//                 live recalc of all rows + savings callout. Slider hides on
+//                 print so PDFs snapshot the modeled scenario.
+// P9.4 Sprint C — MMMBuyerCalculator added: parallel interactive block models
+//                 buyer cost at any asking price (20% down + P&I + HOA + tax +
+//                 total monthly + buyer income needed @ 28% DTI). HOA + rate
+//                 editable, both hide on print.
 
 import { useEffect, useState } from 'react'
 import type { CMASubject, CMAComp } from '@/lib/supabase'
@@ -27,9 +31,34 @@ type Props = {
   preparedAt?: string | null
 }
 
+// Shared slider styling — used by both SellerScenario (Sprint B) and
+// MMMBuyerCalculator (Sprint C). Tailwind arbitrary selectors target the
+// WebKit and Moz range thumbs; the slider + bound labels hide on print.
+const SLIDER_THUMB_CLASSES = [
+  'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
+  '[&::-webkit-slider-thumb]:appearance-none',
+  '[&::-webkit-slider-thumb]:w-5',
+  '[&::-webkit-slider-thumb]:h-5',
+  '[&::-webkit-slider-thumb]:rounded-full',
+  '[&::-webkit-slider-thumb]:bg-blue-700',
+  '[&::-webkit-slider-thumb]:border-2',
+  '[&::-webkit-slider-thumb]:border-cream',
+  '[&::-webkit-slider-thumb]:shadow-md',
+  '[&::-webkit-slider-thumb]:cursor-grab',
+  '[&::-webkit-slider-thumb]:active:cursor-grabbing',
+  '[&::-moz-range-thumb]:w-5',
+  '[&::-moz-range-thumb]:h-5',
+  '[&::-moz-range-thumb]:rounded-full',
+  '[&::-moz-range-thumb]:bg-blue-700',
+  '[&::-moz-range-thumb]:border-2',
+  '[&::-moz-range-thumb]:border-cream',
+  '[&::-moz-range-thumb]:cursor-grab',
+  'print:hidden',
+].join(' ')
+
 function fmtMoney(n: number | null | undefined, fallback = '—'): string {
   if (n == null || isNaN(n)) return fallback
-  return '$' + Number(n).toLocaleString()
+  return '$' + Math.round(Number(n)).toLocaleString()
 }
 
 function fmtMoneyShort(n: number): string {
@@ -78,7 +107,7 @@ export default function CMATemplate({
     : null
   const subjectPpsf = subject.listPrice && subject.sqft ? Math.round(subject.listPrice / subject.sqft) : null
 
-  // Seller scenario gating — only renders when we have a list price to model
+  // Scenario gating — only renders when we have a list price to model
   const showScenario = subject.listPrice != null && subject.listPrice > 0
   const effectiveListingType: ListingType = listingType === 'mmm' ? 'mmm' : 'regular'
 
@@ -181,6 +210,14 @@ export default function CMATemplate({
         </section>
       )}
 
+      {/* ============ MMM BUYER CALCULATOR (P9.4 Sprint C) ============ */}
+      {showScenario && (
+        <MMMBuyerCalculator
+          listPrice={subject.listPrice as number}
+          defaultHoa={subject.hoaMonthly}
+        />
+      )}
+
       {/* ============ SELLER SCENARIO (P9.4 Sprints A + B) ============ */}
       {showScenario && (
         <SellerScenario
@@ -212,6 +249,192 @@ export default function CMATemplate({
         </footer>
       )}
     </article>
+  )
+}
+
+// ============================================================
+// MMMBuyerCalculator — P9.4 Sprint C
+// Buyer-side cost model. Drag asking price (85%–115% of listPrice) to see
+// 20% down + P&I @ editable rate + editable HOA + monthly tax @ 1.18%/12 +
+// total monthly + buyer household income needed at 28% DTI.
+// HOA defaults from subject.hoaMonthly; rate defaults to 6.875%/30yr.
+// Both adjustment inputs hide on print so PDFs snapshot the modeled values.
+// ============================================================
+function MMMBuyerCalculator({
+  listPrice,
+  defaultHoa,
+}: {
+  listPrice: number
+  defaultHoa?: number | null
+}) {
+  const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
+  const maxPrice = Math.round((listPrice * 1.15) / 1000) * 1000
+
+  const [askingPrice, setAskingPrice] = useState<number>(listPrice)
+  const [hoa, setHoa] = useState<number>(defaultHoa ?? 0)
+  const [ratePct, setRatePct] = useState<number>(6.875)
+
+  // Reset slider + HOA if user navigates to a different CMA
+  useEffect(() => {
+    setAskingPrice(listPrice)
+  }, [listPrice])
+  useEffect(() => {
+    setHoa(defaultHoa ?? 0)
+  }, [defaultHoa])
+
+  // Math
+  const down = askingPrice * 0.20
+  const loan = askingPrice - down
+  const monthlyRate = ratePct / 100 / 12
+  const n = 360
+  const pi =
+    monthlyRate > 0
+      ? (loan * monthlyRate * Math.pow(1 + monthlyRate, n)) /
+        (Math.pow(1 + monthlyRate, n) - 1)
+      : loan / n
+  const tax = (askingPrice * 0.0118) / 12
+  const totalMonthly = pi + (hoa || 0) + tax
+  const income = (totalMonthly * 12) / 0.28
+
+  return (
+    <section className="border-b border-ink-200 pb-12 mb-12">
+      <div className="text-2xs uppercase tracking-widest text-blue-700 mb-3">
+        What a buyer would pay
+      </div>
+      <h2 className="font-display text-3xl text-ink-900 mb-3">
+        Make-Me-Move math.
+      </h2>
+      <p className="text-sm text-ink-600 max-w-2xl mb-8 leading-relaxed">
+        Drag the slider to see the all-in monthly cost a buyer would face at any asking price
+        — and the household income they'd need to qualify. This is what creates the bidding
+        floor. Standard assumptions: 20% down, fixed-rate 30-year mortgage, SF property tax
+        at 1.18% of value, household debt-to-income at 28%.
+      </p>
+
+      {/* Slider block */}
+      <div className="border border-ink-200 bg-cream px-6 py-6 mb-6">
+        <div className="flex items-baseline justify-between mb-4 flex-wrap gap-3">
+          <div>
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+              If you asked…
+            </div>
+            <div className="font-display text-4xl text-ink-900 leading-none">
+              {fmtMoney(askingPrice)}
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">
+              Buyer income needed
+            </div>
+            <div className="font-display text-2xl text-blue-700 leading-none">
+              {fmtMoney(income)}
+            </div>
+          </div>
+        </div>
+        <input
+          type="range"
+          min={minPrice}
+          max={maxPrice}
+          step={1000}
+          value={askingPrice}
+          onChange={(e) => setAskingPrice(Number(e.target.value))}
+          className={SLIDER_THUMB_CLASSES}
+          aria-label="Asking price"
+        />
+        <div className="flex justify-between text-2xs uppercase tracking-widest text-ink-500 mt-2 print:hidden">
+          <span>{fmtMoneyShort(minPrice)}</span>
+          <span>Recommended ask · {fmtMoneyShort(listPrice)}</span>
+          <span>{fmtMoneyShort(maxPrice)}</span>
+        </div>
+      </div>
+
+      {/* Stat grid */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <BuyerStat label="Down (20%)" value={fmtMoney(down)} />
+        <BuyerStat
+          label={`P&I @ ${ratePct}%/30yr`}
+          value={fmtMoney(pi)}
+          suffix="/mo"
+        />
+        <BuyerStat label="HOA · monthly" value={fmtMoney(hoa)} suffix="/mo" />
+        <BuyerStat label="Tax · monthly" value={fmtMoney(tax)} suffix="/mo" />
+      </div>
+
+      {/* Total monthly highlight */}
+      <div className="mt-4 border border-ink-200 border-l-2 border-l-blue-700 bg-cream px-6 py-4 flex items-baseline justify-between flex-wrap gap-3">
+        <span className="text-2xs uppercase tracking-widest text-blue-700 font-semibold">
+          Total monthly · all-in
+        </span>
+        <span className="font-display text-3xl text-ink-900 leading-none">
+          {fmtMoney(totalMonthly)}
+          <span className="text-base text-ink-500 font-body ml-1">/mo</span>
+        </span>
+      </div>
+
+      {/* Income callout */}
+      <div className="mt-4 text-sm text-ink-700 italic leading-relaxed">
+        Buyer household income needed at 28% DTI:{' '}
+        <span className="font-display not-italic text-lg text-blue-700 font-semibold">
+          {fmtMoney(income)}
+        </span>{' '}
+        annually. At {fmtMoney(askingPrice)} this is the income threshold for a qualified
+        buyer — below this, the bidding floor weakens.
+      </div>
+
+      {/* Adjustments — hidden on print, so PDF snapshots reflect the modeled values */}
+      <div className="mt-6 pt-4 border-t border-dashed border-ink-200 flex flex-wrap items-center gap-x-6 gap-y-3 print:hidden">
+        <span className="text-2xs uppercase tracking-widest text-ink-500">Adjust to match your unit</span>
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <span className="text-2xs uppercase tracking-widest text-ink-500">HOA</span>
+          <input
+            type="number"
+            value={hoa || 0}
+            step={25}
+            min={0}
+            onChange={(e) => setHoa(Number(e.target.value) || 0)}
+            className="border border-ink-200 px-3 py-1 text-sm bg-cream w-24"
+            aria-label="HOA monthly"
+          />
+          <span className="text-2xs text-ink-500">$/mo</span>
+        </label>
+        <label className="flex items-center gap-2 text-sm text-ink-700">
+          <span className="text-2xs uppercase tracking-widest text-ink-500">Rate</span>
+          <input
+            type="number"
+            value={ratePct}
+            step={0.125}
+            min={0}
+            max={20}
+            onChange={(e) => setRatePct(Number(e.target.value) || 0)}
+            className="border border-ink-200 px-3 py-1 text-sm bg-cream w-20"
+            aria-label="Mortgage rate percent"
+          />
+          <span className="text-2xs text-ink-500">% / 30yr</span>
+        </label>
+      </div>
+    </section>
+  )
+}
+
+function BuyerStat({
+  label,
+  value,
+  suffix,
+}: {
+  label: string
+  value: string
+  suffix?: string
+}) {
+  return (
+    <div className="border border-ink-200 bg-cream px-4 py-3">
+      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1 leading-tight">
+        {label}
+      </div>
+      <div className="font-display text-xl text-ink-900 leading-tight">
+        {value}
+        {suffix && <span className="text-sm text-ink-500 font-body ml-0.5">{suffix}</span>}
+      </div>
+    </div>
   )
 }
 
@@ -266,30 +489,7 @@ function SellerScenario({
   // Indicator of where current slider position sits vs the recommended ask
   const deltaVsList = salePrice - listPrice
   const deltaPct = (deltaVsList / listPrice) * 100
-  const atList = Math.abs(deltaVsList) < 500 // within $500 = at list
-
-  // Slider track classes — Tailwind arbitrary selectors style the WebKit & Moz thumbs
-  const sliderClasses = [
-    'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
-    '[&::-webkit-slider-thumb]:appearance-none',
-    '[&::-webkit-slider-thumb]:w-5',
-    '[&::-webkit-slider-thumb]:h-5',
-    '[&::-webkit-slider-thumb]:rounded-full',
-    '[&::-webkit-slider-thumb]:bg-blue-700',
-    '[&::-webkit-slider-thumb]:border-2',
-    '[&::-webkit-slider-thumb]:border-cream',
-    '[&::-webkit-slider-thumb]:shadow-md',
-    '[&::-webkit-slider-thumb]:cursor-grab',
-    '[&::-webkit-slider-thumb]:active:cursor-grabbing',
-    '[&::-moz-range-thumb]:w-5',
-    '[&::-moz-range-thumb]:h-5',
-    '[&::-moz-range-thumb]:rounded-full',
-    '[&::-moz-range-thumb]:bg-blue-700',
-    '[&::-moz-range-thumb]:border-2',
-    '[&::-moz-range-thumb]:border-cream',
-    '[&::-moz-range-thumb]:cursor-grab',
-    'print:hidden',
-  ].join(' ')
+  const atList = Math.abs(deltaVsList) < 500
 
   return (
     <section className="border-b border-ink-200 pb-12 mb-12">
@@ -349,7 +549,7 @@ function SellerScenario({
           step={1000}
           value={salePrice}
           onChange={(e) => setSalePrice(Number(e.target.value))}
-          className={sliderClasses}
+          className={SLIDER_THUMB_CLASSES}
           aria-label="Sale price"
         />
         <div className="flex justify-between text-2xs uppercase tracking-widest text-ink-500 mt-2 print:hidden">
