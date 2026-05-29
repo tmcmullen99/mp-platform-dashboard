@@ -1,0 +1,4 @@
+{ id, name?, property_address?, list_price?, subject_data?,
+  comps_data?, cma_html?, agent_notes?, status?: 'draft'|'published' }
+
+→ { ok, cma }
