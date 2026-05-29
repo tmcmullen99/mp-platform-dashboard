@@ -65,6 +65,11 @@ function AuthGate() {
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/clients/*" element={<Clients />} />
         <Route path="/cmas/new" element={<NewCMA />} />
+        {/* P9.4 Sprint I — edit existing CMA. Reuses NewCMA in edit mode
+            via the :slug URL param. Declared BEFORE /cmas/:slug so a future
+            reader sees the more-specific route first (react-router v6 still
+            picks best-match regardless of declaration order). */}
+        <Route path="/cmas/:slug/edit" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
         <Route
           path="/prospecting"
@@ -127,8 +132,6 @@ function AuthGate() {
             />
           }
         />
-        {/* Commission settings — P9.4 Sprint D. More-specific route declared BEFORE
-            the /settings placeholder so it matches first. */}
         <Route path="/settings/commission" element={<CommissionSettings />} />
         <Route
           path="/settings"
