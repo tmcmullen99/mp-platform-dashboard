@@ -5,12 +5,13 @@
 //                 3% MMM Campbell double-end) vs traditional 5%, with SF transfer
 //                 tax + escrow + title/recording rolled into net proceeds.
 // P9.4 Sprint B — SellerScenario becomes interactive: sale-price slider drives
-//                 live recalc of all rows + savings callout. Slider hides on
-//                 print so PDFs snapshot the modeled scenario.
-// P9.4 Sprint C — MMMBuyerCalculator added: parallel interactive block models
-//                 buyer cost at any asking price (20% down + P&I + HOA + tax +
-//                 total monthly + buyer income needed @ 28% DTI). HOA + rate
-//                 editable, both hide on print.
+//                 live recalc; slider hides on print so PDFs snapshot the scenario.
+// P9.4 Sprint C — MMMBuyerCalculator added: 20% down + P&I + HOA + tax + total
+//                 monthly + buyer income needed @ 28% DTI. HOA + rate editable.
+// P9.4 Sprint D — All rate/fee constants moved from hardcoded values to a
+//                 commissionSettings prop sourced from tenant_commission_settings
+//                 in the DB. CMAViewer fetches per-tenant; falls back to
+//                 DEFAULT_COMMISSION_SETTINGS (McMullen rate card) if absent.
 
 import { useEffect, useState } from 'react'
 import type { CMASubject, CMAComp } from '@/lib/supabase'
@@ -18,10 +19,37 @@ import { MapPin, Home, Bath, Maximize2, Calendar, TrendingUp } from 'lucide-reac
 
 type ListingType = 'regular' | 'mmm'
 
+// Per-tenant rate card. Stored in tenant_commission_settings; CMAViewer reads it
+// and passes it down. Falls back to DEFAULT_COMMISSION_SETTINGS if absent.
+export type CommissionSettings = {
+  regularListingRate: number          // decimal, e.g. 0.025 = 2.5%
+  mmmListingRate: number              // decimal, e.g. 0.03  = 3%
+  traditionalComparisonRate: number   // decimal, e.g. 0.05  = 5%
+  escrowFeeDiscounted: number         // dollars, McMullen side
+  escrowFeeStandard: number           // dollars, traditional side
+  transferTaxRate: number             // decimal, e.g. 0.0075 = 0.75%
+  titleRecordingMisc: number          // dollars, same both sides
+  propertyTaxRate: number             // decimal annual, e.g. 0.0118 = 1.18%
+  defaultMortgageRatePct: number      // percent, e.g. 6.875 (NOT decimal)
+}
+
+export const DEFAULT_COMMISSION_SETTINGS: CommissionSettings = {
+  regularListingRate: 0.025,
+  mmmListingRate: 0.03,
+  traditionalComparisonRate: 0.05,
+  escrowFeeDiscounted: 1200,
+  escrowFeeStandard: 1800,
+  transferTaxRate: 0.0075,
+  titleRecordingMisc: 2800,
+  propertyTaxRate: 0.0118,
+  defaultMortgageRatePct: 6.875,
+}
+
 type Props = {
   subject: CMASubject
   comps: CMAComp[]
   listingType?: ListingType | null
+  commissionSettings?: CommissionSettings | null
   agentName?: string | null
   agentPhone?: string | null
   agentEmail?: string | null
@@ -31,9 +59,9 @@ type Props = {
   preparedAt?: string | null
 }
 
-// Shared slider styling — used by both SellerScenario (Sprint B) and
-// MMMBuyerCalculator (Sprint C). Tailwind arbitrary selectors target the
-// WebKit and Moz range thumbs; the slider + bound labels hide on print.
+// Shared slider styling — used by both SellerScenario and MMMBuyerCalculator.
+// Tailwind arbitrary selectors target the WebKit and Moz range thumbs; the
+// slider + bound labels hide on print.
 const SLIDER_THUMB_CLASSES = [
   'w-full h-1.5 rounded-full bg-ink-200 appearance-none cursor-pointer outline-none',
   '[&::-webkit-slider-thumb]:appearance-none',
@@ -62,7 +90,6 @@ function fmtMoney(n: number | null | undefined, fallback = '—'): string {
 }
 
 function fmtMoneyShort(n: number): string {
-  // Compact bound labels ($1.23M, $987K)
   if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M'
   if (n >= 1_000) return '$' + Math.round(n / 1_000) + 'K'
   return '$' + n.toLocaleString()
@@ -84,10 +111,16 @@ function fmtPpsf(price: number | null, sqft: number | null): string {
   return '$' + Math.round(price / sqft).toLocaleString() + '/sqft'
 }
 
+function fmtRatePct(decimal: number): string {
+  // 0.025 -> "2.5%", 0.0075 -> "0.75%". Strip trailing .0.
+  return (decimal * 100).toFixed(2).replace(/\.?0+$/, '') + '%'
+}
+
 export default function CMATemplate({
   subject,
   comps,
   listingType,
+  commissionSettings,
   agentName,
   agentPhone,
   agentEmail,
@@ -96,6 +129,8 @@ export default function CMATemplate({
   preparedFor,
   preparedAt,
 }: Props) {
+  const settings = commissionSettings ?? DEFAULT_COMMISSION_SETTINGS
+
   // Stats roll-up
   const soldPrices = comps.map((c) => c.soldPrice).filter((p): p is number => !!p)
   const ppsfs = comps
@@ -215,6 +250,7 @@ export default function CMATemplate({
         <MMMBuyerCalculator
           listPrice={subject.listPrice as number}
           defaultHoa={subject.hoaMonthly}
+          settings={settings}
         />
       )}
 
@@ -223,6 +259,7 @@ export default function CMATemplate({
         <SellerScenario
           listPrice={subject.listPrice as number}
           listingType={effectiveListingType}
+          settings={settings}
         />
       )}
 
@@ -253,34 +290,39 @@ export default function CMATemplate({
 }
 
 // ============================================================
-// MMMBuyerCalculator — P9.4 Sprint C
+// MMMBuyerCalculator — P9.4 Sprint C + D
 // Buyer-side cost model. Drag asking price (85%–115% of listPrice) to see
-// 20% down + P&I @ editable rate + editable HOA + monthly tax @ 1.18%/12 +
-// total monthly + buyer household income needed at 28% DTI.
-// HOA defaults from subject.hoaMonthly; rate defaults to 6.875%/30yr.
-// Both adjustment inputs hide on print so PDFs snapshot the modeled values.
+// 20% down + P&I @ editable rate + editable HOA + monthly tax + total monthly +
+// buyer household income needed at 28% DTI. Property tax rate and default
+// mortgage rate come from tenant commission settings.
 // ============================================================
 function MMMBuyerCalculator({
   listPrice,
   defaultHoa,
+  settings,
 }: {
   listPrice: number
   defaultHoa?: number | null
+  settings: CommissionSettings
 }) {
   const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
   const maxPrice = Math.round((listPrice * 1.15) / 1000) * 1000
 
   const [askingPrice, setAskingPrice] = useState<number>(listPrice)
   const [hoa, setHoa] = useState<number>(defaultHoa ?? 0)
-  const [ratePct, setRatePct] = useState<number>(6.875)
+  const [ratePct, setRatePct] = useState<number>(settings.defaultMortgageRatePct)
 
-  // Reset slider + HOA if user navigates to a different CMA
+  // Reset when navigating to a different CMA, or when the tenant's default
+  // mortgage rate changes (settings hot-reload).
   useEffect(() => {
     setAskingPrice(listPrice)
   }, [listPrice])
   useEffect(() => {
     setHoa(defaultHoa ?? 0)
   }, [defaultHoa])
+  useEffect(() => {
+    setRatePct(settings.defaultMortgageRatePct)
+  }, [settings.defaultMortgageRatePct])
 
   // Math
   const down = askingPrice * 0.20
@@ -292,9 +334,11 @@ function MMMBuyerCalculator({
       ? (loan * monthlyRate * Math.pow(1 + monthlyRate, n)) /
         (Math.pow(1 + monthlyRate, n) - 1)
       : loan / n
-  const tax = (askingPrice * 0.0118) / 12
+  const tax = (askingPrice * settings.propertyTaxRate) / 12
   const totalMonthly = pi + (hoa || 0) + tax
   const income = (totalMonthly * 12) / 0.28
+
+  const propertyTaxLabel = fmtRatePct(settings.propertyTaxRate)
 
   return (
     <section className="border-b border-ink-200 pb-12 mb-12">
@@ -305,10 +349,10 @@ function MMMBuyerCalculator({
         Make-Me-Move math.
       </h2>
       <p className="text-sm text-ink-600 max-w-2xl mb-8 leading-relaxed">
-        Drag the slider to see the all-in monthly cost a buyer would face at any asking price
-        — and the household income they'd need to qualify. This is what creates the bidding
-        floor. Standard assumptions: 20% down, fixed-rate 30-year mortgage, SF property tax
-        at 1.18% of value, household debt-to-income at 28%.
+        Drag the slider to see the all-in monthly cost a buyer would face at any
+        asking price — and the household income they'd need to qualify. This is
+        what creates the bidding floor. Standard assumptions: 20% down, fixed-rate
+        30-year mortgage, property tax at {propertyTaxLabel}, household debt-to-income at 28%.
       </p>
 
       {/* Slider block */}
@@ -377,8 +421,8 @@ function MMMBuyerCalculator({
         <span className="font-display not-italic text-lg text-blue-700 font-semibold">
           {fmtMoney(income)}
         </span>{' '}
-        annually. At {fmtMoney(askingPrice)} this is the income threshold for a qualified
-        buyer — below this, the bidding floor weakens.
+        annually. At {fmtMoney(askingPrice)} this is the income threshold for a
+        qualified buyer — below this, the bidding floor weakens.
       </div>
 
       {/* Adjustments — hidden on print, so PDF snapshots reflect the modeled values */}
@@ -439,20 +483,19 @@ function BuyerStat({
 }
 
 // ============================================================
-// SellerScenario — P9.4 Sprints A + B
-// Side-by-side net proceeds at the modeled sale price.
-// McMullen rate: 2.5% (regular) or 3% (MMM double-end). Traditional: 5%.
-// SF transfer tax assumed at the $1M–$5M tier (0.75%); escrow $1,200 discounted
-// vs $1,800 average; title/recording/misc $2,800 on both sides.
-// Sprint B: interactive sale-price slider (85%–115% of listPrice, $1k steps)
-// drives live recalc; slider hides on print so PDFs snapshot the modeled value.
+// SellerScenario — P9.4 Sprints A + B + D
+// Side-by-side net proceeds at the modeled sale price. McMullen rate
+// (regular vs MMM), traditional rate, escrow fees, transfer tax rate, and
+// title/recording all sourced from tenant commission settings.
 // ============================================================
 function SellerScenario({
   listPrice,
   listingType,
+  settings,
 }: {
   listPrice: number
   listingType: ListingType
+  settings: CommissionSettings
 }) {
   // Slider bounds — 85% to 115% of the recommended ask, rounded to nearest $1,000
   const minPrice = Math.round((listPrice * 0.85) / 1000) * 1000
@@ -465,13 +508,13 @@ function SellerScenario({
     setSalePrice(listPrice)
   }, [listPrice])
 
-  // Math — recomputed on every render (cheap)
-  const mcRate = listingType === 'mmm' ? 0.03 : 0.025
-  const tdRate = 0.05
-  const transferTaxRate = 0.0075
-  const titleEtc = 2800
-  const mcEscrow = 1200
-  const tdEscrow = 1800
+  // Math — recomputed on every render (cheap), all rates from tenant settings
+  const mcRate = listingType === 'mmm' ? settings.mmmListingRate : settings.regularListingRate
+  const tdRate = settings.traditionalComparisonRate
+  const transferTaxRate = settings.transferTaxRate
+  const titleEtc = settings.titleRecordingMisc
+  const mcEscrow = settings.escrowFeeDiscounted
+  const tdEscrow = settings.escrowFeeStandard
 
   const transferTax = Math.round(salePrice * transferTaxRate)
   const mcCommission = Math.round(salePrice * mcRate)
@@ -480,7 +523,9 @@ function SellerScenario({
   const tdNet = salePrice - tdCommission - tdEscrow - transferTax - titleEtc
   const savings = mcNet - tdNet
 
-  const mcRateLabel = (mcRate * 100).toFixed(1).replace(/\.0$/, '') + '%'
+  const mcRateLabel = fmtRatePct(mcRate)
+  const tdRateLabel = fmtRatePct(tdRate)
+  const transferTaxLabel = fmtRatePct(transferTaxRate)
   const mcStamp =
     listingType === 'mmm'
       ? `With McMullen · MMM · ${mcRateLabel} fee`
@@ -501,9 +546,9 @@ function SellerScenario({
       </h2>
       <p className="text-sm text-ink-600 max-w-2xl mb-8 leading-relaxed">
         Drag the slider to model any sale price between {fmtMoneyShort(minPrice)} and {fmtMoneyShort(maxPrice)}.
-        The comparison runs side-by-side: McMullen at {mcRateLabel} vs traditional at 5%, with escrow,
-        SF transfer tax (0.75% tier), and standard closing costs included on both sides. Excludes
-        mortgage payoff and capital gains.
+        The comparison runs side-by-side: McMullen at {mcRateLabel} vs traditional at {tdRateLabel}, with escrow,
+        transfer tax ({transferTaxLabel}), and standard closing costs included on both sides.
+        Excludes mortgage payoff and capital gains.
       </p>
 
       {/* Slider block */}
@@ -575,7 +620,7 @@ function SellerScenario({
               value={'−' + fmtMoney(mcCommission)}
             />
             <ScenarioRow label="Escrow (discounted)" value={'−' + fmtMoney(mcEscrow)} />
-            <ScenarioRow label="SF transfer tax" value={'−' + fmtMoney(transferTax)} />
+            <ScenarioRow label="Transfer tax" value={'−' + fmtMoney(transferTax)} />
             <ScenarioRow label="Title, recording, misc." value={'−' + fmtMoney(titleEtc)} />
           </dl>
           <div className="border-t border-ink-200 mt-4 pt-4 flex items-baseline justify-between">
@@ -589,16 +634,16 @@ function SellerScenario({
         {/* Traditional column */}
         <div className="border border-ink-200 p-6 bg-cream">
           <div className="text-2xs uppercase tracking-widest text-ink-500 font-semibold mb-2">
-            Traditional sale · 5% fee
+            Traditional sale · {tdRateLabel} fee
           </div>
           <div className="font-display text-lg text-ink-900 mb-5">
             Net proceeds, before mortgage
           </div>
           <dl className="text-sm space-y-2.5">
             <ScenarioRow label="Sale price" value={fmtMoney(salePrice)} />
-            <ScenarioRow label="Total commission (5%)" value={'−' + fmtMoney(tdCommission)} />
-            <ScenarioRow label="Escrow (avg SF)" value={'−' + fmtMoney(tdEscrow)} />
-            <ScenarioRow label="SF transfer tax" value={'−' + fmtMoney(transferTax)} />
+            <ScenarioRow label={`Total commission (${tdRateLabel})`} value={'−' + fmtMoney(tdCommission)} />
+            <ScenarioRow label="Escrow (avg)" value={'−' + fmtMoney(tdEscrow)} />
+            <ScenarioRow label="Transfer tax" value={'−' + fmtMoney(transferTax)} />
             <ScenarioRow label="Title, recording, misc." value={'−' + fmtMoney(titleEtc)} />
           </dl>
           <div className="border-t border-ink-200 mt-4 pt-4 flex items-baseline justify-between">
@@ -616,7 +661,7 @@ function SellerScenario({
           {fmtMoney(savings)}
         </div>
         <div className="text-sm text-ink-700 italic mt-2 max-w-xl mx-auto">
-          more in your pocket vs a traditional 5% sale, at the same {fmtMoney(salePrice)} closing price
+          more in your pocket vs a traditional {tdRateLabel} sale, at the same {fmtMoney(salePrice)} closing price
         </div>
       </div>
     </section>
