@@ -1,25 +1,20 @@
 // P9.1 — Fetches a single CMA row by slug and renders it via CMATemplate.
 // Used by both the agent dashboard (/cmas/:slug) and the client portal (/portal/cmas/:slug).
 // RLS handles access control — agents see CMAs in their tenant; clients see only theirs.
-// P9.4 Sprint A — Widens the CMA row locally to include listing_type and passes
-//                 it to CMATemplate so the SellerScenario block knows the McMullen rate.
-// P9.4 Sprint D — Also fetches tenant_commission_settings for the CMA's tenant and
-//                 passes the resolved commissionSettings to CMATemplate. Falls back
-//                 to null (template will use DEFAULT_COMMISSION_SETTINGS) if absent.
+// P9.4 Sprint A — Passes listing_type to CMATemplate.
+// P9.4 Sprint D — Also fetches tenant_commission_settings and passes through.
+// P9.4 Sprint G — Passes cma_type through (sell-side default, buy-side variant).
+// P9.4 Sprint J — Drops the local CMAWithListingType widening; imports CMARow
+//                 from @/lib/cma-types instead (single source of truth for the
+//                 extended row shape).
 
 import { useEffect, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Loader2, ChevronLeft, Printer, Trash2 } from 'lucide-react'
-import { supabase, CMA, CMASubject, CMAComp } from '@/lib/supabase'
+import { supabase, CMASubject, CMAComp } from '@/lib/supabase'
+import type { CMARow } from '@/lib/cma-types'
 import { useAuth } from '@/contexts/AuthContext'
 import CMATemplate, { CommissionSettings } from '@/components/CMATemplate'
-
-// Local widening so we can read cma.listing_type + cma.tenant_id without
-// modifying the CMA type in lib/supabase.ts. listing_type column is NOT NULL
-// DEFAULT 'regular', but typed as optional/nullable defensively.
-type CMAWithListingType = CMA & {
-  listing_type?: 'regular' | 'mmm' | null
-}
 
 // Row shape returned by SELECT * from tenant_commission_settings (snake_case)
 type CommissionSettingsRow = {
@@ -59,7 +54,7 @@ export default function CMAViewer({ embedded = false }: Props) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { currentBranding, isAgent } = useAuth()
-  const [cma, setCma] = useState<CMAWithListingType | null>(null)
+  const [cma, setCma] = useState<CMARow | null>(null)
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -75,12 +70,11 @@ export default function CMAViewer({ embedded = false }: Props) {
         .maybeSingle()
       if (cancelled) return
       if (e) setError(e.message)
-      const cmaRow = (cmaData as CMAWithListingType) || null
+      const cmaRow = (cmaData as CMARow) || null
       setCma(cmaRow)
 
-      // Once we have the CMA, fetch this tenant's commission settings. RLS
-      // permits SELECT for agents/clients on their own tenant's row plus
-      // brokerage admins.
+      // Fetch this tenant's commission settings. RLS permits SELECT for
+      // agents/clients on their own tenant's row plus brokerage admins.
       if (cmaRow?.tenant_id) {
         const { data: settingsRow } = await supabase
           .from('tenant_commission_settings')
@@ -140,6 +134,7 @@ export default function CMAViewer({ embedded = false }: Props) {
   }) as CMASubject
   const comps = (cma.comps_data || []) as CMAComp[]
   const listingType = cma.listing_type ?? 'regular'
+  const cmaType = cma.cma_type ?? 'sell'
 
   async function handleDelete() {
     if (!cma) return
@@ -181,6 +176,7 @@ export default function CMAViewer({ embedded = false }: Props) {
         subject={subject}
         comps={comps}
         listingType={listingType}
+        cmaType={cmaType}
         commissionSettings={settings}
         agentName={currentBranding?.agent_name}
         agentPhone={currentBranding?.agent_phone}
