@@ -1965,7 +1965,7 @@ function ScheduleTourCard({
           <div className="flex items-start justify-between gap-3 mb-2">
             <div className="min-w-0">
               {tour.property_url ? (
-                
+                <a
                   href={tour.property_url}
                   target="_blank"
                   rel="noreferrer"
