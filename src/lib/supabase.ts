@@ -264,8 +264,16 @@ export const CAMPAIGN_STATUSES: CampaignStatus[] = [
 // P8.1 — Client Portal types
 // ===========================================================================
 
-export type ClientType = 'buyer' | 'seller' | 'investor' | 'referral'
+// Reconciled to the DB CHECK constraint on clients.client_type, which is
+// ('buyer','seller','both'). The previous union ('buyer'|'seller'|'investor'|
+// 'referral') never matched the database and would have failed an insert. The
+// portal routes on this field, so it must be the source of truth.
+export type ClientType = 'buyer' | 'seller' | 'both'
 export type ClientStage = 'lead' | 'qualified' | 'active' | 'on_hold' | 'closed' | 'lost'
+
+// One-way calendar push preference, set during client onboarding. The provider
+// only tailors the download copy; the .ics we generate is identical regardless.
+export type CalendarProvider = 'google' | 'apple' | 'outlook' | 'other'
 
 export type Client = {
   id: string
@@ -281,6 +289,8 @@ export type Client = {
   source_lead_id: string | null
   notes: string | null
   metadata: Record<string, unknown> | null
+  calendar_provider: CalendarProvider | null
+  calendar_prefs: Record<string, unknown> | null
   created_at: string
   updated_at: string
 }
@@ -312,6 +322,14 @@ export type Deal = {
   close_date: string | null
   notes: string | null
   metadata: Record<string, unknown> | null
+  // Mortgage fields (added in the mortgage migration). Promoted from the local
+  // DealWithMortgage patch in Portal.tsx so the canonical type carries them.
+  mortgage_balance: number | null
+  mortgage_rate: number | null
+  mortgage_lender: string | null
+  // Listing workflow status — separate from deal.stage; drives the seller
+  // milestone timeline. DB CHECK: draft|soft_launch|active|pending|sold|expired|withdrawn
+  listing_status: string | null
   created_at: string
   updated_at: string
 }
@@ -418,7 +436,7 @@ export const SERVICE_PACKAGES: { value: ServicePackage; label: string; blurb: st
 ]
 
 export const CLIENT_STAGES: ClientStage[] = ['lead', 'qualified', 'active', 'on_hold', 'closed', 'lost']
-export const CLIENT_TYPES: ClientType[] = ['buyer', 'seller', 'investor', 'referral']
+export const CLIENT_TYPES: ClientType[] = ['buyer', 'seller', 'both']
 export const DEAL_STAGES: DealStage[] = ['exploring', 'active', 'offer', 'accepted', 'escrow', 'closed', 'lost']
 
 // ===========================================================================
@@ -519,6 +537,13 @@ export type CMA = {
   agent_notes: string | null
   created_by: string | null
   published_at: string | null
+  // Newer columns present in the DB (added after the original type was written).
+  // cma_type: 'sell'|'buy'; client_external_listing_id links a buy-side CMA to
+  // a specific interested property (gates the offer-strategy flow).
+  cma_type: 'sell' | 'buy' | null
+  listing_type: string | null
+  client_external_listing_id: string | null
+  market_id: string | null
   created_at: string
   updated_at: string
 }
