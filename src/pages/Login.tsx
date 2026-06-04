@@ -1,255 +1,389 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
-import { supabase } from '@/lib/supabase'
+// src/components/FirstLoginTour.tsx
+//
+// First-login guided tour for client portal members. Renders a dimmed
+// spotlight overlay with a cutout around each target element plus a tooltip
+// card. Shows once per member: triggers when isClient && memberOnboardedAt is
+// null, and calls markOnboarded() (which hits the mark_member_onboarded RPC)
+// on finish or skip.
+//
+// Anchoring is decoupled from portal internals: each step (except the centered
+// welcome) targets an element by data-tour="<key>". Add these attributes to the
+// real portal elements:
+//   data-tour="listing"    -> the listing / property card
+//   data-tour="tools"      -> the tools / nav area (sidebar or toolbar)
+//   data-tour="documents"  -> the documents section
+// If a target is missing, that step falls back to a centered card.
+
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useAuth } from '@/contexts/AuthContext'
 
-type Stage = 'password' | 'otp_sent'
+type Step = {
+  key: string
+  target: string | null // data-tour value, or null for centered
+  title: string
+  body: string
+}
 
-// Hostname-based branding. clients.mcmullen.properties shows the client-facing
-// brand; agents.mcmullen.properties (and any fallback host like pages.dev or
-// localhost) shows the agent platform brand.
-const IS_CLIENT_HOST =
-  typeof window !== 'undefined' &&
-  window.location.hostname.startsWith('clients.')
+const PAD = 8 // spotlight padding around target
+const CARD_W = 340
+const CARD_GAP = 16 // gap between cutout and tooltip
 
-const BRAND = IS_CLIENT_HOST
-  ? { headline: 'McMullen Properties', subheader: 'Neighborhood-Record Breaking Service' }
-  : { headline: 'The MP Platform', subheader: 'Win Or Go Home' }
+export default function FirstLoginTour() {
+  const { isClient, memberOnboardedAt, memberDisplayName, markOnboarded } = useAuth()
 
-const AGENT_LOGIN_URL = 'https://agents.mcmullen.properties/login'
+  // Stable across renders so effect dependencies don't thrash.
+  const steps: Step[] = useMemo(() => {
+    const first = memberDisplayName ? memberDisplayName.split(' ')[0] : ''
+    return [
+      {
+        key: 'welcome',
+        target: null,
+        title: first ? `Welcome, ${first}.` : 'Welcome.',
+        body: 'This is your private portal — a single place to follow your sale in real time. Here is a quick tour of what you will find.',
+      },
+      {
+        key: 'listing',
+        target: 'listing',
+        title: 'Your listing',
+        body: 'Your property lives here — always current, with its price and status updated the moment anything changes.',
+      },
+      {
+        key: 'tools',
+        target: 'tools',
+        title: 'Everything in one place',
+        body: 'Move between your listing, activity, and documents from here. Whatever you need is one click away.',
+      },
+      {
+        key: 'documents',
+        target: 'documents',
+        title: 'Your documents',
+        body: 'Every document tied to your sale is organized and at hand — nothing to dig for, nothing lost in email.',
+      },
+    ]
+  }, [memberDisplayName])
 
-export default function Login() {
-  const navigate = useNavigate()
-  const { session, loading: authLoading } = useAuth()
-  const [stage, setStage] = useState<Stage>('password')
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPassword, setShowPassword] = useState(false)
-  const [code, setCode] = useState('')
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
+  const [active, setActive] = useState(false)
+  const [i, setI] = useState(0)
+  const [rect, setRect] = useState<DOMRect | null>(null)
+  const scrollingRef = useRef(false)
 
-  // *** Critical: redirect to home whenever the user becomes authenticated.
-  // Without this, signInWithPassword updates the session silently but the
-  // URL stays at /login and the user appears stuck on the login page.
+  // Decide whether to show: client, not yet onboarded.
   useEffect(() => {
-    if (!authLoading && session) {
-      navigate('/', { replace: true })
+    if (isClient && memberOnboardedAt === null) {
+      const t = setTimeout(() => setActive(true), 450)
+      return () => clearTimeout(t)
     }
-  }, [session, authLoading, navigate])
+    setActive(false)
+  }, [isClient, memberOnboardedAt])
 
-  async function signInWithPassword(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
+  const step = steps[i]
+
+  // Measure the current target. Returns null for centered steps or missing
+  // elements, so the card falls back to centered.
+  const measure = useCallback(() => {
+    const target = step?.target
+    if (!target) {
+      setRect(null)
       return
     }
-    // Explicit redirect — don't depend on the useEffect alone
-    if (data?.session) {
-      navigate('/', { replace: true })
-    }
-  }
-
-  async function sendMagicLink() {
-    if (!email) {
-      setError('Enter your email above first.')
+    const el = document.querySelector<HTMLElement>(`[data-tour="${target}"]`)
+    if (!el) {
+      setRect(null)
       return
     }
-    setLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.origin },
+    const r = el.getBoundingClientRect()
+    // Guard against zero/negative/NaN boxes (element not laid out yet).
+    if (!r || !isFinite(r.width) || !isFinite(r.height) || r.width <= 0 || r.height <= 0) {
+      setRect(null)
+      return
+    }
+    setRect(r)
+  }, [step])
+
+  // On step change: scroll target into view, then measure once the scroll
+  // settles. We suppress the scroll listener during the programmatic scroll so
+  // it doesn't fire a storm of measures mid-animation.
+  useLayoutEffect(() => {
+    if (!active) return
+    if (!step?.target) {
+      setRect(null)
+      return
+    }
+    const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
+    if (!el) {
+      setRect(null)
+      return
+    }
+    scrollingRef.current = true
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const t = setTimeout(() => {
+      scrollingRef.current = false
+      measure()
+    }, 420)
+    const raf = requestAnimationFrame(measure)
+    return () => {
+      clearTimeout(t)
+      cancelAnimationFrame(raf)
+      scrollingRef.current = false
+    }
+  }, [active, i, step, measure])
+
+  // Re-measure on resize / scroll, ignoring scroll events during our own
+  // programmatic scroll.
+  useEffect(() => {
+    if (!active) return
+    const onResize = () => measure()
+    const onScroll = () => {
+      if (!scrollingRef.current) measure()
+    }
+    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onScroll, true)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onScroll, true)
+    }
+  }, [active, measure])
+
+  const finish = useCallback(async () => {
+    setActive(false)
+    try {
+      await markOnboarded()
+    } catch {
+      // non-fatal: tour already hidden locally
+    }
+  }, [markOnboarded])
+
+  const next = useCallback(() => {
+    setI((n) => {
+      if (n < steps.length - 1) return n + 1
+      finish()
+      return n
     })
-    setLoading(false)
-    if (error) setError(error.message)
-    else {
-      setStage('otp_sent')
-      setPassword('')
+  }, [steps.length, finish])
+
+  const prev = useCallback(() => setI((n) => Math.max(0, n - 1)), [])
+
+  // Keyboard: Esc skips, arrows navigate.
+  useEffect(() => {
+    if (!active) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') finish()
+      else if (e.key === 'ArrowRight') next()
+      else if (e.key === 'ArrowLeft') prev()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [active, finish, next, prev])
+
+  if (!active || !step) return null
+
+  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
+  const vh = typeof window !== 'undefined' ? window.innerHeight : 768
+
+  // Compute spotlight cutout box (with padding), fully clamped to the viewport.
+  // Every value is guarded so the SVG <rect> can never receive NaN/negative.
+  let hole: { x: number; y: number; w: number; h: number } | null = null
+  if (rect && isFinite(rect.left) && isFinite(rect.top)) {
+    const x = Math.max(0, rect.left - PAD)
+    const y = Math.max(0, rect.top - PAD)
+    const w = Math.max(0, Math.min(vw - x, rect.width + PAD * 2))
+    const h = Math.max(0, Math.min(vh - y, rect.height + PAD * 2))
+    if (w > 0 && h > 0) hole = { x, y, w, h }
+  }
+
+  // Tooltip position: centered if no hole; else below the hole, flipping above
+  // when there isn't room. All numbers clamped.
+  let cardStyle: React.CSSProperties
+  if (!hole) {
+    cardStyle = {
+      left: '50%',
+      top: '50%',
+      transform: 'translate(-50%, -50%)',
+      width: CARD_W,
+    }
+  } else {
+    const below = hole.y + hole.h + CARD_GAP
+    const wantAbove = below + 200 > vh && hole.y > 220
+    let left = hole.x + hole.w / 2 - CARD_W / 2
+    left = Math.max(16, Math.min(left, vw - CARD_W - 16))
+    if (wantAbove) {
+      cardStyle = { left, bottom: Math.max(16, vh - hole.y + CARD_GAP), width: CARD_W }
+    } else {
+      cardStyle = { left, top: Math.min(below, vh - 220), width: CARD_W }
     }
   }
 
-  async function verifyCode(e: FormEvent) {
-    e.preventDefault()
-    const trimmed = code.replace(/\s/g, '')
-    if (trimmed.length !== 6) {
-      setError('Enter the 6-digit code from your email.')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    const { data, error } = await supabase.auth.verifyOtp({
-      email,
-      token: trimmed,
-      type: 'email',
-    })
-    setLoading(false)
-    if (error) {
-      setError(error.message)
-      return
-    }
-    if (data?.session) {
-      navigate('/', { replace: true })
-    }
-  }
+  const overlay = (
+    <div
+      style={{ position: 'fixed', inset: 0, zIndex: 9999 }}
+      aria-live="polite"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Dim layer with spotlight cutout via SVG mask */}
+      <svg
+        width="100%"
+        height="100%"
+        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
+      >
+        <defs>
+          <mask id="mp-tour-mask">
+            <rect x="0" y="0" width="100%" height="100%" fill="white" />
+            {hole && (
+              <rect
+                x={hole.x}
+                y={hole.y}
+                width={hole.w}
+                height={hole.h}
+                rx={12}
+                fill="black"
+              />
+            )}
+          </mask>
+        </defs>
+        <rect
+          x="0"
+          y="0"
+          width="100%"
+          height="100%"
+          fill="rgba(20,24,36,0.78)"
+          mask="url(#mp-tour-mask)"
+        />
+        {hole && (
+          <rect
+            x={hole.x}
+            y={hole.y}
+            width={hole.w}
+            height={hole.h}
+            rx={12}
+            fill="none"
+            stroke="#91a1ba"
+            strokeWidth={2}
+          />
+        )}
+      </svg>
 
-  return (
-    <div className="min-h-screen bg-cream flex items-center justify-center px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-br from-ink-50/60 via-cream to-cream pointer-events-none" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-ink-200/50" />
+      {/* Click-catch layer (dismiss on backdrop click) */}
+      <div style={{ position: 'absolute', inset: 0 }} onClick={finish} />
 
-      <div className="relative w-full max-w-md">
-        <div className="text-center mb-14">
-          <div className="font-display text-4xl text-ink-900 mb-3">{BRAND.headline}</div>
-          <div className="text-2xs uppercase tracking-widest text-ink-500">
-            {BRAND.subheader}
-          </div>
-          <div className="mt-3 mx-auto w-12 h-px bg-ink-300" />
+      {/* Tooltip card */}
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'absolute',
+          ...cardStyle,
+          background: '#ffffff',
+          borderRadius: 8,
+          boxShadow: '0 20px 60px rgba(20,24,36,0.35)',
+          padding: '24px 24px 18px',
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
+        }}
+      >
+        <div
+          style={{
+            fontSize: 10,
+            letterSpacing: 2,
+            textTransform: 'uppercase',
+            color: '#91a1ba',
+            fontWeight: 700,
+            marginBottom: 8,
+          }}
+        >
+          {`Step ${i + 1} of ${steps.length}`}
+        </div>
+        <div
+          style={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontSize: 22,
+            fontWeight: 700,
+            color: '#1a1f2e',
+            lineHeight: 1.2,
+            marginBottom: 8,
+          }}
+        >
+          {step.title}
+        </div>
+        <p style={{ fontSize: 14, lineHeight: 1.6, color: '#353535', margin: '0 0 18px' }}>
+          {step.body}
+        </p>
+
+        {/* Progress dots */}
+        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+          {steps.map((s, idx) => (
+            <span
+              key={s.key}
+              style={{
+                width: idx === i ? 18 : 6,
+                height: 6,
+                borderRadius: 3,
+                background: idx === i ? '#1a1f2e' : '#d4d8e0',
+                transition: 'width .25s',
+              }}
+            />
+          ))}
         </div>
 
-        {stage === 'password' ? (
-          <form
-            onSubmit={signInWithPassword}
-            className="bg-white border border-ink-100 p-10"
-            autoComplete="off"
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            onClick={finish}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#91a1ba',
+              fontSize: 12,
+              letterSpacing: 1,
+              textTransform: 'uppercase',
+              fontWeight: 600,
+              cursor: 'pointer',
+              padding: 0,
+            }}
           >
-            <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-4">
-              Email
-            </label>
-            <input
-              type="email"
-              required
-              autoFocus
-              autoComplete="username"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-              className="w-full border-b border-ink-200 pb-3 text-lg text-ink-900 focus:outline-none focus:border-ink-900 transition-colors bg-transparent placeholder:text-ink-300"
-            />
-
-            <div className="flex items-baseline justify-between mb-4 mt-8">
-              <label className="block text-2xs uppercase tracking-widest text-ink-500">
-                Password
-              </label>
-              <span className="text-2xs uppercase tracking-widest text-ink-400 font-mono">
-                {password.length} {password.length === 1 ? 'char' : 'chars'}
-              </span>
-            </div>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                required
-                autoComplete="new-password"
-                spellCheck={false}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••••"
-                className="w-full border-b border-ink-200 pb-3 pr-10 text-lg text-ink-900 focus:outline-none focus:border-ink-900 transition-colors bg-transparent placeholder:text-ink-300 font-mono"
-              />
+            Skip tour
+          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {i > 0 && (
               <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-0 bottom-3 text-ink-400 hover:text-ink-900 transition-colors"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                tabIndex={-1}
+                onClick={prev}
+                style={{
+                  background: '#f5f3ee',
+                  border: 'none',
+                  color: '#1a1f2e',
+                  fontSize: 12,
+                  letterSpacing: 1,
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  padding: '10px 16px',
+                  borderRadius: 3,
+                }}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" strokeWidth={1.5} /> : <Eye className="w-5 h-5" strokeWidth={1.5} />}
+                Back
               </button>
-            </div>
-
-            {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-            <button
-              type="submit"
-              disabled={loading || !email || !password}
-              className="mt-10 w-full bg-ink-900 text-cream py-4 text-xs uppercase tracking-widest hover:bg-ink-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Signing in…' : 'Sign In'}
-            </button>
-
-            <div className="mt-6 pt-6 border-t border-ink-100 text-center">
-              <button
-                type="button"
-                onClick={sendMagicLink}
-                disabled={loading || !email}
-                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors disabled:opacity-40"
-              >
-                Or send a magic link instead
-              </button>
-            </div>
-
-            {IS_CLIENT_HOST && (
-              <div className="mt-4 text-center">
-                <a
-                  href={AGENT_LOGIN_URL}
-                  className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors"
-                >
-                  Are you an agent? Sign in here →
-                </a>
-              </div>
             )}
-          </form>
-        ) : (
-          <div className="bg-white border border-ink-100 p-10">
-            <div className="text-center mb-8">
-              <div className="font-display text-2xl text-ink-900 mb-3">Check your email</div>
-              <p className="text-ink-600 text-sm leading-relaxed">
-                We sent a sign-in email to{' '}
-                <span className="text-ink-900 font-medium">{email}</span>. Click the magic link{' '}
-                <span className="text-ink-500">or</span> enter the 6-digit code below.
-              </p>
-            </div>
-
-            <form onSubmit={verifyCode}>
-              <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-4 text-center">
-                Verification Code
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]*"
-                maxLength={6}
-                autoFocus
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="123456"
-                className="w-full border border-ink-200 px-4 py-3 text-2xl text-center font-mono tracking-[0.4em] text-ink-900 focus:outline-none focus:border-ink-900 transition-colors bg-transparent placeholder:text-ink-300"
-              />
-              {error && <p className="mt-4 text-sm text-red-600 text-center">{error}</p>}
-              <button
-                type="submit"
-                disabled={loading || code.length !== 6}
-                className="mt-6 w-full bg-ink-900 text-cream py-4 text-xs uppercase tracking-widest hover:bg-ink-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {loading ? 'Verifying…' : 'Verify & Sign In'}
-              </button>
-            </form>
-
             <button
-              onClick={() => {
-                setStage('password')
-                setCode('')
-                setError(null)
+              onClick={next}
+              style={{
+                background: '#1a1f2e',
+                border: 'none',
+                color: '#ffffff',
+                fontSize: 12,
+                letterSpacing: 1,
+                textTransform: 'uppercase',
+                fontWeight: 700,
+                cursor: 'pointer',
+                padding: '10px 20px',
+                borderRadius: 3,
               }}
-              className="mt-8 w-full text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors"
             >
-              ← Back to password sign-in
+              {i < steps.length - 1 ? 'Next' : 'Done'}
             </button>
           </div>
-        )}
-
-        {!IS_CLIENT_HOST && (
-          <div className="mt-10 text-center text-2xs uppercase tracking-widest text-ink-400">
-            Platform v0.16 · P9.10
-          </div>
-        )}
+        </div>
       </div>
     </div>
   )
+
+  return createPortal(overlay, document.body)
 }
