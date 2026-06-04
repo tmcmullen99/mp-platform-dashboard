@@ -1,10 +1,23 @@
 import { FormEvent, useEffect, useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 type Stage = 'password' | 'otp_sent'
+
+// Hostname-based branding. clients.mcmullen.properties shows the client-facing
+// brand; agents.mcmullen.properties (and any fallback host like pages.dev or
+// localhost) shows the agent platform brand.
+const IS_CLIENT_HOST =
+  typeof window !== 'undefined' &&
+  window.location.hostname.startsWith('clients.')
+
+const BRAND = IS_CLIENT_HOST
+  ? { headline: 'McMullen Properties', subheader: 'Neighborhood-Record Breaking Service' }
+  : { headline: 'The MP Platform', subheader: 'Win Or Go Home' }
+
+const AGENT_LOGIN_URL = 'https://agents.mcmullen.properties/login'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -92,9 +105,9 @@ export default function Login() {
 
       <div className="relative w-full max-w-md">
         <div className="text-center mb-14">
-          <div className="font-display text-4xl text-ink-900 mb-3">McMullen Platform</div>
+          <div className="font-display text-4xl text-ink-900 mb-3">{BRAND.headline}</div>
           <div className="text-2xs uppercase tracking-widest text-ink-500">
-            Brokerage Operating System
+            {BRAND.subheader}
           </div>
           <div className="mt-3 mx-auto w-12 h-px bg-ink-300" />
         </div>
@@ -170,14 +183,16 @@ export default function Login() {
               </button>
             </div>
 
-            <div className="mt-4 text-center">
-              <Link
-                to="/signup"
-                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors"
-              >
-                New here? Create your brokerage →
-              </Link>
-            </div>
+            {IS_CLIENT_HOST && (
+              <div className="mt-4 text-center">
+                <a
+                  href={AGENT_LOGIN_URL}
+                  className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 transition-colors"
+                >
+                  Are you an agent? Sign in here →
+                </a>
+              </div>
+            )}
           </form>
         ) : (
           <div className="bg-white border border-ink-100 p-10">
@@ -229,9 +244,11 @@ export default function Login() {
           </div>
         )}
 
-        <div className="mt-10 text-center text-2xs uppercase tracking-widest text-ink-400">
-          Platform v0.16 · P9.10
-        </div>
+        {!IS_CLIENT_HOST && (
+          <div className="mt-10 text-center text-2xs uppercase tracking-widest text-ink-400">
+            Platform v0.16 · P9.10
+          </div>
+        )}
       </div>
     </div>
   )
