@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react'
 import { Session, User } from '@supabase/supabase-js'
-import { supabase, Tenant, TenantBranding, UserProfile, Client } from '@/lib/supabase'
+import { supabase, Tenant, TenantBranding, UserProfile, Client, ClientType, CalendarProvider } from '@/lib/supabase'
 
 type AuthContextValue = {
   session: Session | null
@@ -9,6 +9,11 @@ type AuthContextValue = {
   clientProfile: Client | null
   isAgent: boolean
   isClient: boolean
+  // Portal routing: which experience the client sees. Derived from
+  // clientProfile.client_type. 'both' surfaces a Buyer/Seller switch.
+  clientType: ClientType | null
+  calendarProvider: CalendarProvider | null
+  calendarPrefs: Record<string, unknown> | null
   // Member metadata (from client_members junction). Null for agents or
   // legacy clients resolved via the fallback path.
   memberDisplayName: string | null
@@ -217,6 +222,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clientProfile,
         isAgent: availableTenants.length > 0,
         isClient: !!clientProfile,
+        clientType: clientProfile?.client_type ?? null,
+        calendarProvider: clientProfile?.calendar_provider ?? null,
+        calendarPrefs: clientProfile?.calendar_prefs ?? null,
         memberDisplayName,
         memberRelationship,
         memberIsPrimary,
