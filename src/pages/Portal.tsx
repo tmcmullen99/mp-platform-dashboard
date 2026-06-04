@@ -39,6 +39,7 @@ import ListingEditor from '@/components/ListingEditor'
 import NotificationBell from '@/components/NotificationBell'
 import CMAViewer from '@/components/CMAViewer'
 import SavedPropertiesTab from '@/components/SavedPropertiesTab'
+import FirstLoginTour from '@/components/FirstLoginTour'
 
 type ComingSoonListing = {
   id: string
@@ -125,18 +126,19 @@ function PortalLayout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
         {/* Nav */}
-        <nav className="max-w-5xl mx-auto px-8 flex gap-1">
+        <nav className="max-w-5xl mx-auto px-8 flex gap-1" data-tour="tools">
           <PortalNavLink to="/portal" exact icon={LayoutDashboard} label="Home" />
           <PortalNavLink to="/portal/listing" icon={Home} label="My listing" />
           <PortalNavLink to="/portal/cmas" icon={FileBarChart2} label="CMAs" />
           <PortalNavLink to="/portal/saved" icon={Heart} label="Saved" />
           <PortalNavLink to="/portal/schedule" icon={Calendar} label="Schedule" />
           <PortalNavLink to="/portal/war-room" icon={MessageSquare} label="War room" />
-          <PortalNavLink to="/portal/documents" icon={FileText} label="Documents" />
+          <PortalNavLink to="/portal/documents" icon={FileText} label="Documents" dataTour="documents" />
         </nav>
       </header>
 
       <main className="max-w-5xl mx-auto px-8 py-12">{children}</main>
+      <FirstLoginTour />
     </div>
   )
 }
@@ -146,16 +148,19 @@ function PortalNavLink({
   exact,
   icon: Icon,
   label,
+  dataTour,
 }: {
   to: string
   exact?: boolean
   icon: LucideIcon
   label: string
+  dataTour?: string
 }) {
   return (
     <NavLink
       to={to}
       end={exact}
+      data-tour={dataTour}
       className={({ isActive }) =>
         `flex items-center gap-2 px-4 py-3 text-sm border-b-2 -mb-px transition-colors ${
           isActive
@@ -398,6 +403,7 @@ function PortalHome() {
       {sellDeal && (
         <Link
           to="/portal/listing"
+          data-tour="listing"
           className="block border border-ink-200 hover:border-ink-400 p-6 transition-colors mb-12"
         >
           <Home className="w-5 h-5 text-ink-500 mb-3" strokeWidth={1.5} />
