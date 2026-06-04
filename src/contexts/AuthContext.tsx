@@ -9,6 +9,12 @@ type AuthContextValue = {
   clientProfile: Client | null
   isAgent: boolean
   isClient: boolean
+  // Member metadata (from client_members junction). Null for agents or
+  // legacy clients resolved via the fallback path.
+  memberDisplayName: string | null
+  memberRelationship: string | null
+  memberIsPrimary: boolean
+  memberOnboardedAt: string | null
   currentTenant: Tenant | null
   currentBranding: TenantBranding | null
   availableTenants: Tenant[]
@@ -18,6 +24,7 @@ type AuthContextValue = {
   isOversight: boolean
   actAsTenant: (tenantId: string) => void
   enterOversight: () => void
+  markOnboarded: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -27,6 +34,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [clientProfile, setClientProfile] = useState<Client | null>(null)
+  const [memberDisplayName, setMemberDisplayName] = useState<string | null>(null)
+  const [memberRelationship, setMemberRelationship] = useState<string | null>(null)
+  const [memberIsPrimary, setMemberIsPrimary] = useState(false)
+  const [memberOnboardedAt, setMemberOnboardedAt] = useState<string | null>(null)
   const [availableTenants, setAvailableTenants] = useState<Tenant[]>([])
   const [currentTenant, setCurrentTenant] = useState<Tenant | null>(null)
   const [currentBranding, setCurrentBranding] = useState<TenantBranding | null>(null)
@@ -53,6 +64,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!session?.user) {
       setProfile(null)
       setClientProfile(null)
+      setMemberDisplayName(null)
+      setMemberRelationship(null)
+      setMemberIsPrimary(false)
+      setMemberOnboardedAt(null)
       setAvailableTenants([])
       setCurrentTenant(null)
       setCurrentBranding(null)
@@ -81,15 +96,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select('role, tenants:tenants(*)')
           .eq('user_id', userId)
 
-        // Client membership (if this auth user is linked to a client row)
-        const { data: clientRow } = await supabase
-          .from('clients')
-          .select('*')
+        // Client membership — junction-first, legacy fallback.
+        // Primary path: resolve via client_members (supports multiple logins
+        // per client, e.g. spouses). Captures member metadata for the
+        // first-login tour. Fallback path: legacy clients.auth_user_id, so any
+        // client provisioned before the junction still resolves.
+        let resolvedClient: Client | null = null
+        let memberMeta: {
+          display_name: string | null
+          relationship: string | null
+          is_primary: boolean
+          onboarded_at: string | null
+        } | null = null
+
+        const { data: memberRow } = await supabase
+          .from('client_members')
+          .select('display_name, relationship, is_primary, onboarded_at, clients:clients(*)')
           .eq('auth_user_id', userId)
           .maybeSingle()
 
+        if (memberRow) {
+          const joined = (memberRow as { clients: Client | Client[] | null }).clients
+          resolvedClient = (Array.isArray(joined) ? joined[0] : joined) ?? null
+          memberMeta = {
+            display_name: (memberRow as { display_name: string | null }).display_name ?? null,
+            relationship: (memberRow as { relationship: string | null }).relationship ?? null,
+            is_primary: !!(memberRow as { is_primary: boolean | null }).is_primary,
+            onboarded_at: (memberRow as { onboarded_at: string | null }).onboarded_at ?? null,
+          }
+        } else {
+          // Legacy fallback
+          const { data: legacyRow } = await supabase
+            .from('clients')
+            .select('*')
+            .eq('auth_user_id', userId)
+            .maybeSingle()
+          resolvedClient = (legacyRow as Client | null) ?? null
+        }
+
         if (cancelled) return
-        setClientProfile(clientRow as Client | null)
+        setClientProfile(resolvedClient)
+        setMemberDisplayName(memberMeta?.display_name ?? null)
+        setMemberRelationship(memberMeta?.relationship ?? null)
+        setMemberIsPrimary(memberMeta?.is_primary ?? false)
+        setMemberOnboardedAt(memberMeta?.onboarded_at ?? null)
 
         if (cancelled) return
 
@@ -150,6 +200,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsOversight(true)
   }
 
+  // Marks the current member's first-login tour complete (sets onboarded_at
+  // server-side via RPC) and updates local state so the tour won't re-trigger
+  // this session.
+  async function markOnboarded() {
+    const { error } = await supabase.rpc('mark_member_onboarded')
+    if (!error) setMemberOnboardedAt(new Date().toISOString())
+  }
+
   return (
     <AuthContext.Provider
       value={{
@@ -159,6 +217,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clientProfile,
         isAgent: availableTenants.length > 0,
         isClient: !!clientProfile,
+        memberDisplayName,
+        memberRelationship,
+        memberIsPrimary,
+        memberOnboardedAt,
         currentTenant,
         currentBranding,
         availableTenants,
@@ -168,6 +230,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isOversight,
         actAsTenant,
         enterOversight,
+        markOnboarded,
       }}
     >
       {children}
