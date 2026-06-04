@@ -1,389 +1,191 @@
-// src/components/FirstLoginTour.tsx
+// src/pages/Login.tsx
 //
-// First-login guided tour for client portal members. Renders a dimmed
-// spotlight overlay with a cutout around each target element plus a tooltip
-// card. Shows once per member: triggers when isClient && memberOnboardedAt is
-// null, and calls markOnboarded() (which hits the mark_member_onboarded RPC)
-// on finish or skip.
-//
-// Anchoring is decoupled from portal internals: each step (except the centered
-// welcome) targets an element by data-tour="<key>". Add these attributes to the
-// real portal elements:
-//   data-tour="listing"    -> the listing / property card
-//   data-tour="tools"      -> the tools / nav area (sidebar or toolbar)
-//   data-tour="documents"  -> the documents section
-// If a target is missing, that step falls back to a centered card.
-
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react'
-import { createPortal } from 'react-dom'
+// RESTORED — this file had been overwritten with FirstLoginTour code, which
+// returns null on the /login route, producing a blank page with no console
+// error. Rebuilt from spec: hostname-based client/agent branding, password +
+// magic-link auth, agent-login link on the client view, version footer hidden
+// for clients. The real guided tour lives in src/components/FirstLoginTour.tsx
+// and is unaffected.
+import { FormEvent, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Eye, EyeOff, Loader2, ArrowRight, MailCheck } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
-type Step = {
-  key: string
-  target: string | null // data-tour value, or null for centered
-  title: string
-  body: string
-}
+type Stage = 'password' | 'otp_sent'
 
-const PAD = 8 // spotlight padding around target
-const CARD_W = 340
-const CARD_GAP = 16 // gap between cutout and tooltip
+// Hostname-based branding. clients.mcmullen.properties shows the client-facing
+// brand; agents.mcmullen.properties (and any fallback host like pages.dev or
+// localhost) shows the agent platform brand.
+const IS_CLIENT_HOST =
+  typeof window !== 'undefined' && window.location.hostname.startsWith('clients.')
 
-export default function FirstLoginTour() {
-  const { isClient, memberOnboardedAt, memberDisplayName, markOnboarded } = useAuth()
+const BRAND = IS_CLIENT_HOST
+  ? { name: 'McMullen Properties', tagline: 'Neighborhood-Record Breaking Service' }
+  : { name: 'The MP Platform', tagline: 'Win Or Go Home' }
 
-  // Stable across renders so effect dependencies don't thrash.
-  const steps: Step[] = useMemo(() => {
-    const first = memberDisplayName ? memberDisplayName.split(' ')[0] : ''
-    return [
-      {
-        key: 'welcome',
-        target: null,
-        title: first ? `Welcome, ${first}.` : 'Welcome.',
-        body: 'This is your private portal — a single place to follow your sale in real time. Here is a quick tour of what you will find.',
-      },
-      {
-        key: 'listing',
-        target: 'listing',
-        title: 'Your listing',
-        body: 'Your property lives here — always current, with its price and status updated the moment anything changes.',
-      },
-      {
-        key: 'tools',
-        target: 'tools',
-        title: 'Everything in one place',
-        body: 'Move between your listing, activity, and documents from here. Whatever you need is one click away.',
-      },
-      {
-        key: 'documents',
-        target: 'documents',
-        title: 'Your documents',
-        body: 'Every document tied to your sale is organized and at hand — nothing to dig for, nothing lost in email.',
-      },
-    ]
-  }, [memberDisplayName])
+const APP_VERSION = 'PLATFORM V0.17'
 
-  const [active, setActive] = useState(false)
-  const [i, setI] = useState(0)
-  const [rect, setRect] = useState<DOMRect | null>(null)
-  const scrollingRef = useRef(false)
+export default function Login() {
+  const navigate = useNavigate()
+  const { session } = useAuth()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [stage, setStage] = useState<Stage>('password')
+  const [loading, setLoading] = useState(false)
+  const [sendingLink, setSendingLink] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
-  // Decide whether to show: client, not yet onboarded.
+  // Once a session exists, leave the login screen. AuthContext resolves the
+  // role; App's AuthGate then routes to portal (client) or dashboard (agent).
   useEffect(() => {
-    if (isClient && memberOnboardedAt === null) {
-      const t = setTimeout(() => setActive(true), 450)
-      return () => clearTimeout(t)
-    }
-    setActive(false)
-  }, [isClient, memberOnboardedAt])
+    if (session) navigate('/', { replace: true })
+  }, [session, navigate])
 
-  const step = steps[i]
-
-  // Measure the current target. Returns null for centered steps or missing
-  // elements, so the card falls back to centered.
-  const measure = useCallback(() => {
-    const target = step?.target
-    if (!target) {
-      setRect(null)
-      return
-    }
-    const el = document.querySelector<HTMLElement>(`[data-tour="${target}"]`)
-    if (!el) {
-      setRect(null)
-      return
-    }
-    const r = el.getBoundingClientRect()
-    // Guard against zero/negative/NaN boxes (element not laid out yet).
-    if (!r || !isFinite(r.width) || !isFinite(r.height) || r.width <= 0 || r.height <= 0) {
-      setRect(null)
-      return
-    }
-    setRect(r)
-  }, [step])
-
-  // On step change: scroll target into view, then measure once the scroll
-  // settles. We suppress the scroll listener during the programmatic scroll so
-  // it doesn't fire a storm of measures mid-animation.
-  useLayoutEffect(() => {
-    if (!active) return
-    if (!step?.target) {
-      setRect(null)
-      return
-    }
-    const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
-    if (!el) {
-      setRect(null)
-      return
-    }
-    scrollingRef.current = true
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    const t = setTimeout(() => {
-      scrollingRef.current = false
-      measure()
-    }, 420)
-    const raf = requestAnimationFrame(measure)
-    return () => {
-      clearTimeout(t)
-      cancelAnimationFrame(raf)
-      scrollingRef.current = false
-    }
-  }, [active, i, step, measure])
-
-  // Re-measure on resize / scroll, ignoring scroll events during our own
-  // programmatic scroll.
-  useEffect(() => {
-    if (!active) return
-    const onResize = () => measure()
-    const onScroll = () => {
-      if (!scrollingRef.current) measure()
-    }
-    window.addEventListener('resize', onResize)
-    window.addEventListener('scroll', onScroll, true)
-    return () => {
-      window.removeEventListener('resize', onResize)
-      window.removeEventListener('scroll', onScroll, true)
-    }
-  }, [active, measure])
-
-  const finish = useCallback(async () => {
-    setActive(false)
+  async function handlePasswordLogin(e: FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
     try {
-      await markOnboarded()
-    } catch {
-      // non-fatal: tour already hidden locally
-    }
-  }, [markOnboarded])
-
-  const next = useCallback(() => {
-    setI((n) => {
-      if (n < steps.length - 1) return n + 1
-      finish()
-      return n
-    })
-  }, [steps.length, finish])
-
-  const prev = useCallback(() => setI((n) => Math.max(0, n - 1)), [])
-
-  // Keyboard: Esc skips, arrows navigate.
-  useEffect(() => {
-    if (!active) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') finish()
-      else if (e.key === 'ArrowRight') next()
-      else if (e.key === 'ArrowLeft') prev()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [active, finish, next, prev])
-
-  if (!active || !step) return null
-
-  const vw = typeof window !== 'undefined' ? window.innerWidth : 1024
-  const vh = typeof window !== 'undefined' ? window.innerHeight : 768
-
-  // Compute spotlight cutout box (with padding), fully clamped to the viewport.
-  // Every value is guarded so the SVG <rect> can never receive NaN/negative.
-  let hole: { x: number; y: number; w: number; h: number } | null = null
-  if (rect && isFinite(rect.left) && isFinite(rect.top)) {
-    const x = Math.max(0, rect.left - PAD)
-    const y = Math.max(0, rect.top - PAD)
-    const w = Math.max(0, Math.min(vw - x, rect.width + PAD * 2))
-    const h = Math.max(0, Math.min(vh - y, rect.height + PAD * 2))
-    if (w > 0 && h > 0) hole = { x, y, w, h }
-  }
-
-  // Tooltip position: centered if no hole; else below the hole, flipping above
-  // when there isn't room. All numbers clamped.
-  let cardStyle: React.CSSProperties
-  if (!hole) {
-    cardStyle = {
-      left: '50%',
-      top: '50%',
-      transform: 'translate(-50%, -50%)',
-      width: CARD_W,
-    }
-  } else {
-    const below = hole.y + hole.h + CARD_GAP
-    const wantAbove = below + 200 > vh && hole.y > 220
-    let left = hole.x + hole.w / 2 - CARD_W / 2
-    left = Math.max(16, Math.min(left, vw - CARD_W - 16))
-    if (wantAbove) {
-      cardStyle = { left, bottom: Math.max(16, vh - hole.y + CARD_GAP), width: CARD_W }
-    } else {
-      cardStyle = { left, top: Math.min(below, vh - 220), width: CARD_W }
+      const { error: signInErr } = await supabase.auth.signInWithPassword({
+        email: email.trim().toLowerCase(),
+        password,
+      })
+      if (signInErr) throw signInErr
+      // Session change triggers the effect above; explicit nudge as backup.
+      setTimeout(() => navigate('/', { replace: true }), 300)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Sign in failed.')
+      setLoading(false)
     }
   }
 
-  const overlay = (
-    <div
-      style={{ position: 'fixed', inset: 0, zIndex: 9999 }}
-      aria-live="polite"
-      role="dialog"
-      aria-modal="true"
-    >
-      {/* Dim layer with spotlight cutout via SVG mask */}
-      <svg
-        width="100%"
-        height="100%"
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-      >
-        <defs>
-          <mask id="mp-tour-mask">
-            <rect x="0" y="0" width="100%" height="100%" fill="white" />
-            {hole && (
-              <rect
-                x={hole.x}
-                y={hole.y}
-                width={hole.w}
-                height={hole.h}
-                rx={12}
-                fill="black"
-              />
-            )}
-          </mask>
-        </defs>
-        <rect
-          x="0"
-          y="0"
-          width="100%"
-          height="100%"
-          fill="rgba(20,24,36,0.78)"
-          mask="url(#mp-tour-mask)"
-        />
-        {hole && (
-          <rect
-            x={hole.x}
-            y={hole.y}
-            width={hole.w}
-            height={hole.h}
-            rx={12}
-            fill="none"
-            stroke="#91a1ba"
-            strokeWidth={2}
-          />
-        )}
-      </svg>
+  async function handleMagicLink() {
+    if (!email.trim()) {
+      setError('Enter your email first, then request a magic link.')
+      return
+    }
+    setError(null)
+    setSendingLink(true)
+    try {
+      const { error: otpErr } = await supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: { emailRedirectTo: window.location.origin },
+      })
+      if (otpErr) throw otpErr
+      setStage('otp_sent')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send magic link.')
+    } finally {
+      setSendingLink(false)
+    }
+  }
 
-      {/* Click-catch layer (dismiss on backdrop click) */}
-      <div style={{ position: 'absolute', inset: 0 }} onClick={finish} />
+  return (
+    <div className="min-h-screen bg-cream flex items-center justify-center px-6 py-12 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-ink-50/60 via-cream to-cream pointer-events-none" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-ink-200/50" />
 
-      {/* Tooltip card */}
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: 'absolute',
-          ...cardStyle,
-          background: '#ffffff',
-          borderRadius: 8,
-          boxShadow: '0 20px 60px rgba(20,24,36,0.35)',
-          padding: '24px 24px 18px',
-          fontFamily:
-            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif",
-        }}
-      >
-        <div
-          style={{
-            fontSize: 10,
-            letterSpacing: 2,
-            textTransform: 'uppercase',
-            color: '#91a1ba',
-            fontWeight: 700,
-            marginBottom: 8,
-          }}
-        >
-          {`Step ${i + 1} of ${steps.length}`}
-        </div>
-        <div
-          style={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontSize: 22,
-            fontWeight: 700,
-            color: '#1a1f2e',
-            lineHeight: 1.2,
-            marginBottom: 8,
-          }}
-        >
-          {step.title}
-        </div>
-        <p style={{ fontSize: 14, lineHeight: 1.6, color: '#353535', margin: '0 0 18px' }}>
-          {step.body}
-        </p>
-
-        {/* Progress dots */}
-        <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-          {steps.map((s, idx) => (
-            <span
-              key={s.key}
-              style={{
-                width: idx === i ? 18 : 6,
-                height: 6,
-                borderRadius: 3,
-                background: idx === i ? '#1a1f2e' : '#d4d8e0',
-                transition: 'width .25s',
-              }}
-            />
-          ))}
+      <div className="relative w-full max-w-md">
+        {/* Brand */}
+        <div className="text-center mb-10">
+          <h1 className="font-display text-3xl text-ink-900 leading-tight">{BRAND.name}</h1>
+          <p className="text-2xs uppercase tracking-widest text-slate mt-2">{BRAND.tagline}</p>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <button
-            onClick={finish}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: '#91a1ba',
-              fontSize: 12,
-              letterSpacing: 1,
-              textTransform: 'uppercase',
-              fontWeight: 600,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            Skip tour
-          </button>
-          <div style={{ display: 'flex', gap: 8 }}>
-            {i > 0 && (
-              <button
-                onClick={prev}
-                style={{
-                  background: '#f5f3ee',
-                  border: 'none',
-                  color: '#1a1f2e',
-                  fontSize: 12,
-                  letterSpacing: 1,
-                  textTransform: 'uppercase',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  padding: '10px 16px',
-                  borderRadius: 3,
-                }}
-              >
-                Back
-              </button>
-            )}
+        {stage === 'otp_sent' ? (
+          <div className="bg-white border border-ink-200 p-8 text-center">
+            <MailCheck className="w-10 h-10 text-ink-900 mx-auto mb-4" strokeWidth={1.5} />
+            <h2 className="font-display text-xl text-ink-900 mb-2">Check your email</h2>
+            <p className="text-sm text-ink-600 leading-relaxed mb-6">
+              We sent a secure sign-in link to <span className="text-ink-900">{email}</span>. Open it
+              on this device to continue.
+            </p>
             <button
-              onClick={next}
-              style={{
-                background: '#1a1f2e',
-                border: 'none',
-                color: '#ffffff',
-                fontSize: 12,
-                letterSpacing: 1,
-                textTransform: 'uppercase',
-                fontWeight: 700,
-                cursor: 'pointer',
-                padding: '10px 20px',
-                borderRadius: 3,
-              }}
+              onClick={() => setStage('password')}
+              className="text-2xs uppercase tracking-widest text-slate hover:text-ink-900"
             >
-              {i < steps.length - 1 ? 'Next' : 'Done'}
+              &larr; Back to sign in
             </button>
           </div>
+        ) : (
+          <form onSubmit={handlePasswordLogin} className="bg-white border border-ink-200 p-8 space-y-5">
+            <div>
+              <label className="block text-2xs uppercase tracking-widest text-slate mb-2">Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoFocus
+                autoComplete="email"
+                placeholder="you@email.com"
+                className="w-full px-3 py-2.5 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+              />
+            </div>
+
+            <div>
+              <label className="block text-2xs uppercase tracking-widest text-slate mb-2">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  autoComplete="current-password"
+                  placeholder="********"
+                  className="w-full px-3 py-2.5 pr-10 border border-ink-200 text-sm bg-white focus:outline-none focus:border-ink-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-900"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            {error && <div className="bg-red-50 text-red-700 text-xs px-3 py-2">{error}</div>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-ink-900 text-cream text-sm hover:bg-ink-700 disabled:opacity-50 transition-colors"
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRight className="w-4 h-4" strokeWidth={1.5} />}
+              Sign in
+            </button>
+
+            <div className="text-center pt-1">
+              <button
+                type="button"
+                onClick={handleMagicLink}
+                disabled={sendingLink}
+                className="text-2xs uppercase tracking-widest text-slate hover:text-ink-900 disabled:opacity-50"
+              >
+                {sendingLink ? 'Sending...' : 'Email me a magic link instead'}
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* Footer: client view links to agent login; agent view shows version */}
+        <div className="text-center mt-6">
+          {IS_CLIENT_HOST ? (
+            <a
+              href="https://agents.mcmullen.properties/login"
+              className="text-2xs uppercase tracking-widest text-slate hover:text-ink-900"
+            >
+              For agents &rarr;
+            </a>
+          ) : (
+            <span className="text-2xs uppercase tracking-widest text-ink-300">{APP_VERSION}</span>
+          )}
         </div>
       </div>
     </div>
   )
-
-  return createPortal(overlay, document.body)
 }
