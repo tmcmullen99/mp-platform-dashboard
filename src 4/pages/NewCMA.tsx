@@ -1,0 +1,1025 @@
+// P9.1 — Agent-side CMA creation. PDF upload → Claude extraction (extract_cma_pdf
+// Edge Function) → editable review form → save to cmas table linked to a client/deal.
+// P9.4 — Adds listing_type selector (Regular 2.5% vs MMM Campbell double-end 3%).
+// P9.4 Sprint E — "Generate with Claude" button in Step 5 (Agent notes).
+// P9.4 Sprint G — Adds cma_type selector (Sell-side vs Buy-side).
+// P9.4 Sprint I — Edit mode. Same component handles both /cmas/new (create) and
+//                 /cmas/:slug/edit (update). On edit, fetches the CMA by slug,
+//                 populates state, swaps the save bar to "Save as draft" +
+//                 "Publish" buttons, and routes saves through UPDATE keyed on
+//                 the cma id (slug stays stable).
+
+import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom'
+import {
+  Upload,
+  Loader2,
+  Save,
+  X,
+  Plus,
+  Trash2,
+  FileText,
+  ChevronLeft,
+  Sparkles,
+} from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useAuth } from '@/contexts/AuthContext'
+import {
+  supabase,
+  SUPABASE_URL,
+  Client,
+  Deal,
+  CMASubject,
+  CMAComp,
+} from '@/lib/supabase'
+import type { CMAListingType, CMAType, CMARow } from '@/lib/cma-types'
+
+type CMAStatus = 'draft' | 'published' | 'archived'
+
+const EMPTY_SUBJECT: CMASubject = {
+  address: '',
+  city: '',
+  state: '',
+  zip: '',
+  listPrice: null,
+  mls: '',
+  beds: null,
+  bathsFull: null,
+  bathsPartial: null,
+  sqft: null,
+  lotSqft: null,
+  yearBuilt: null,
+  propertyType: '',
+  garage: '',
+  parking: '',
+  cooling: '',
+  heating: '',
+  hoaMonthly: null,
+  listDate: '',
+  daysOnMarket: null,
+  remarks: '',
+}
+
+const EMPTY_COMP: CMAComp = {
+  address: '',
+  city: '',
+  listPrice: null,
+  soldPrice: null,
+  beds: null,
+  bathsFull: null,
+  bathsPartial: null,
+  sqft: null,
+  lotSqft: null,
+  pricePerSqft: null,
+  percentOverList: null,
+  daysOnMarket: null,
+  soldDate: '',
+  soldDateIso: '',
+  mls: '',
+}
+
+export default function NewCMA() {
+  const { currentTenant, session } = useAuth()
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { slug: editSlug } = useParams<{ slug: string }>()
+  const editMode = !!editSlug
+  const presetClientId = searchParams.get('client') || ''
+
+  const [clients, setClients] = useState<Client[]>([])
+  const [deals, setDeals] = useState<Deal[]>([])
+  const [selectedClientId, setSelectedClientId] = useState<string>(presetClientId)
+  const [selectedDealId, setSelectedDealId] = useState<string>('')
+
+  const [cmaType, setCmaType] = useState<CMAType>('sell')
+  const [listingType, setListingType] = useState<CMAListingType>('regular')
+
+  const [subject, setSubject] = useState<CMASubject>(EMPTY_SUBJECT)
+  const [comps, setComps] = useState<CMAComp[]>([])
+  const [agentNotes, setAgentNotes] = useState('')
+
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [extracting, setExtracting] = useState(false)
+  const [extractError, setExtractError] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [hasData, setHasData] = useState(false)
+
+  // Sprint E — AI recommendation generation state
+  const [generating, setGenerating] = useState(false)
+  const [generateError, setGenerateError] = useState<string | null>(null)
+
+  // Sprint I — Edit mode state
+  const [cmaId, setCmaId] = useState<string | null>(null)
+  const [currentStatus, setCurrentStatus] = useState<CMAStatus>('draft')
+  const [loadingCma, setLoadingCma] = useState<boolean>(editMode)
+  const [loadError, setLoadError] = useState<string | null>(null)
+
+  // Sprint I — Load the CMA when in edit mode
+  useEffect(() => {
+    if (!editMode || !editSlug) return
+    let cancelled = false
+    async function load() {
+      const { data, error } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('slug', editSlug as string)
+        .maybeSingle()
+      if (cancelled) return
+      if (error) {
+        setLoadError(error.message)
+        setLoadingCma(false)
+        return
+      }
+      if (!data) {
+        setLoadError('CMA not found.')
+        setLoadingCma(false)
+        return
+      }
+      const cma = data as CMARow
+      setCmaId(cma.id)
+      setCurrentStatus(((cma.status as CMAStatus) || 'draft'))
+      setSubject(((cma.subject_data as CMASubject) || EMPTY_SUBJECT))
+      setComps(((cma.comps_data as CMAComp[]) || []))
+      setAgentNotes(cma.agent_notes || '')
+      setListingType((cma.listing_type as CMAListingType) || 'regular')
+      setCmaType((cma.cma_type as CMAType) || 'sell')
+      setSelectedClientId(cma.client_id || '')
+      setSelectedDealId(cma.deal_id || '')
+      setHasData(true)
+      setLoadingCma(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [editMode, editSlug])
+
+  // Load clients for this tenant
+  useEffect(() => {
+    if (!currentTenant) return
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('tenant_id', currentTenant!.id)
+        .order('name')
+      if (!cancelled) setClients((data as Client[]) || [])
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [currentTenant])
+
+  // Load deals when client picked
+  useEffect(() => {
+    if (!selectedClientId) {
+      setDeals([])
+      setSelectedDealId('')
+      return
+    }
+    let cancelled = false
+    async function load() {
+      const { data } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('client_id', selectedClientId)
+        .order('created_at', { ascending: false })
+      if (!cancelled) {
+        const list = (data as Deal[]) || []
+        setDeals(list)
+        if (list.length > 0 && !selectedDealId) setSelectedDealId(list[0].id)
+      }
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClientId])
+
+  async function handleExtract(file: File) {
+    setExtractError(null)
+    setExtracting(true)
+    try {
+      const base64 = await fileToBase64(file)
+      const accessToken = session?.access_token
+      if (!accessToken) throw new Error('Not authenticated')
+
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/extract_cma_pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ pdf_base64: base64 }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) {
+        throw new Error(json.error || `Extraction failed: ${resp.status}`)
+      }
+
+      const extracted = json.extracted || {}
+      const newSubject = { ...EMPTY_SUBJECT, ...(extracted.subject || {}) }
+      const newComps = ((extracted.comps || []) as CMAComp[]).map((c) => ({
+        ...EMPTY_COMP,
+        ...c,
+      }))
+      setSubject(newSubject)
+      setComps(newComps)
+      setHasData(true)
+    } catch (e) {
+      setExtractError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  function handlePdfPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0]
+    if (!f) return
+    if (f.type !== 'application/pdf') {
+      setExtractError('That is not a PDF — please pick an MLS export PDF.')
+      return
+    }
+    setPdfFile(f)
+    handleExtract(f)
+  }
+
+  function startFromScratch() {
+    setSubject({ ...EMPTY_SUBJECT })
+    setComps([])
+    setHasData(true)
+  }
+
+  // Sprint E — Generate the agent-notes paragraphs with Claude
+  async function handleGenerate() {
+    if (!subject.address) {
+      setGenerateError('Subject address is required before generating')
+      return
+    }
+    if (comps.length === 0) {
+      setGenerateError('Add at least one comparable so Claude has data to ground the recommendation')
+      return
+    }
+    if (
+      agentNotes.trim() &&
+      !window.confirm(
+        'Replace your existing agent notes with a Claude-generated recommendation?'
+      )
+    ) {
+      return
+    }
+    setGenerateError(null)
+    setGenerating(true)
+    try {
+      const accessToken = session?.access_token
+      if (!accessToken) throw new Error('Not authenticated')
+
+      const resp = await fetch(`${SUPABASE_URL}/functions/v1/generate_cma_recommendation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          subject,
+          comps,
+          listing_type: listingType,
+          cma_type: cmaType,
+        }),
+      })
+      const json = await resp.json()
+      if (!resp.ok || json.error) {
+        throw new Error(json.error || `Generation failed: ${resp.status}`)
+      }
+      const text: string = json.recommendation || ''
+      if (!text.trim()) throw new Error('Empty recommendation returned')
+      setAgentNotes(text)
+    } catch (e) {
+      setGenerateError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setGenerating(false)
+    }
+  }
+
+  // Sprint I — save now takes a status arg. UPDATE in edit mode, INSERT otherwise.
+  async function handleSave(saveStatus: CMAStatus) {
+    if (!currentTenant) return
+    if (!subject.address) {
+      alert('Subject address is required.')
+      return
+    }
+    setSaving(true)
+    try {
+      const commonFields = {
+        client_id: selectedClientId || null,
+        deal_id: selectedDealId || null,
+        name: `${subject.address} — CMA`,
+        property_address: subject.address,
+        list_price: subject.listPrice ? `$${subject.listPrice.toLocaleString()}` : null,
+        subject_data: subject,
+        comps_data: comps,
+        cma_type: cmaType,
+        listing_type: listingType,
+        status: saveStatus,
+        agent_notes: agentNotes || null,
+        // Set published_at on first publish; preserve null otherwise so draft
+        // rows don't carry a misleading publish timestamp.
+        published_at:
+          saveStatus === 'published'
+            ? (editMode && currentStatus === 'published' ? undefined : new Date().toISOString())
+            : null,
+      }
+
+      if (editMode && cmaId) {
+        // Drop `undefined` keys so the existing column value is preserved
+        const updatePayload = Object.fromEntries(
+          Object.entries(commonFields).filter(([_, v]) => v !== undefined)
+        )
+        const { error } = await supabase
+          .from('cmas')
+          .update(updatePayload)
+          .eq('id', cmaId)
+        if (error) throw error
+        navigate(`/cmas/${editSlug}`)
+        return
+      }
+
+      // Insert path — generate a fresh slug
+      const baseSlug = (subject.address || 'cma')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '')
+        .slice(0, 60)
+      const slug = `${baseSlug}-${Math.random().toString(36).slice(2, 7)}`
+
+      const insertPayload = {
+        ...commonFields,
+        tenant_id: currentTenant.id,
+        slug,
+      }
+
+      const { data, error } = await supabase
+        .from('cmas')
+        .insert(insertPayload)
+        .select('slug')
+        .single()
+      if (error) throw error
+      navigate(`/cmas/${data.slug}`)
+    } catch (e) {
+      alert('Save failed: ' + (e instanceof Error ? e.message : String(e)))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // Loading / error states for edit mode
+  if (editMode && loadingCma) {
+    return (
+      <div className="p-12 flex items-center gap-2 text-ink-500 text-sm">
+        <Loader2 className="w-4 h-4 animate-spin" />
+        Loading CMA…
+      </div>
+    )
+  }
+  if (editMode && loadError) {
+    return (
+      <div className="p-12 max-w-3xl">
+        <p className="text-ink-600 mb-4">{loadError}</p>
+        <Link
+          to="/clients"
+          className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900"
+        >
+          <ChevronLeft className="w-3 h-3" />
+          Back to clients
+        </Link>
+      </div>
+    )
+  }
+
+  return (
+    <div className="p-12 max-w-5xl">
+      <Link
+        to={editMode ? `/cmas/${editSlug}` : '/clients'}
+        className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 mb-6"
+      >
+        <ChevronLeft className="w-3 h-3" />
+        {editMode ? 'Back to CMA' : 'Back to clients'}
+      </Link>
+
+      <div className="border-b border-ink-200 pb-6 mb-8">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2 flex items-center gap-2 flex-wrap">
+          {editMode ? `Edit · ${subject.address || 'CMA'}` : 'Create CMA'}
+          {editMode && (
+            <span
+              className={
+                'normal-case tracking-normal px-2 py-0.5 text-2xs ' +
+                (currentStatus === 'published'
+                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                  : currentStatus === 'archived'
+                  ? 'bg-ink-100 text-ink-600 border border-ink-200'
+                  : 'bg-amber-50 text-amber-700 border border-amber-200')
+              }
+            >
+              · {currentStatus}
+            </span>
+          )}
+        </div>
+        <h1 className="font-display text-4xl text-ink-900 leading-tight">
+          {editMode ? 'Update this CMA.' : 'Comparative Market Analysis.'}
+        </h1>
+        <p className="text-ink-600 mt-3 max-w-2xl">
+          {editMode
+            ? 'Adjust subject, comparables, or agent notes. Save as draft to hide from the client portal, or publish to make it visible. The slug stays the same so existing links keep working.'
+            : 'Upload an MLS PDF and Claude will extract the subject property and comparables. You can edit anything before publishing. The CMA gets attached to a client and appears in their portal.'}
+        </p>
+      </div>
+
+      {/* CMA type — Sprint G */}
+      <section className="mb-8">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+          CMA type
+        </div>
+        <div className="inline-flex border border-ink-200 bg-cream rounded-sm overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setCmaType('sell')}
+            aria-pressed={cmaType === 'sell'}
+            className={
+              'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors ' +
+              (cmaType === 'sell'
+                ? 'bg-ink-900 text-cream'
+                : 'bg-cream text-ink-700 hover:bg-ink-100')
+            }
+          >
+            Sell-side · listing CMA
+          </button>
+          <button
+            type="button"
+            onClick={() => setCmaType('buy')}
+            aria-pressed={cmaType === 'buy'}
+            className={
+              'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors border-l border-ink-200 ' +
+              (cmaType === 'buy'
+                ? 'bg-ink-900 text-cream'
+                : 'bg-cream text-ink-700 hover:bg-ink-100')
+            }
+          >
+            Buy-side · offer analysis
+          </button>
+        </div>
+        <p className="text-2xs text-ink-500 mt-2 max-w-xl leading-relaxed">
+          {cmaType === 'sell'
+            ? 'Standard listing CMA prepared for the seller. Renders the SellerScenario net-proceeds block and the MMM buyer cost calculator.'
+            : 'Buyer-side offer analysis. Prepared for a buyer considering an offer on a listed property. Hides seller commission math; keeps the buyer cost calculator and comp positioning.'}
+        </p>
+      </section>
+
+      {/* Listing type — only relevant for sell-side */}
+      {cmaType === 'sell' && (
+        <section className="mb-10">
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
+            Listing type
+          </div>
+          <div className="inline-flex border border-ink-200 bg-cream rounded-sm overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setListingType('regular')}
+              aria-pressed={listingType === 'regular'}
+              className={
+                'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors ' +
+                (listingType === 'regular'
+                  ? 'bg-ink-900 text-cream'
+                  : 'bg-cream text-ink-700 hover:bg-ink-100')
+              }
+            >
+              Regular listing · 2.5%
+            </button>
+            <button
+              type="button"
+              onClick={() => setListingType('mmm')}
+              aria-pressed={listingType === 'mmm'}
+              className={
+                'px-5 py-2.5 text-2xs uppercase tracking-widest transition-colors border-l border-ink-200 ' +
+                (listingType === 'mmm'
+                  ? 'bg-ink-900 text-cream'
+                  : 'bg-cream text-ink-700 hover:bg-ink-100')
+              }
+            >
+              MMM · Campbell double-end · 3%
+            </button>
+          </div>
+          <p className="text-2xs text-ink-500 mt-2 max-w-xl leading-relaxed">
+            {listingType === 'regular'
+              ? 'Standard McMullen listing: 2.5% all-in listing fee. The seller scenario models net proceeds at 2.5% vs traditional 5%.'
+              : 'Make-Me-Move deal on the Campbell Market: 3% total fee (double-end, McMullen represents both sides). The seller scenario models 3% vs traditional 5%.'}
+          </p>
+        </section>
+      )}
+
+      {/* Step 1: link to client / deal */}
+      <section className="mb-10">
+        <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Step 1 · Attach to</div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <Field label="Client">
+            <select
+              value={selectedClientId}
+              onChange={(e) => setSelectedClientId(e.target.value)}
+              className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+            >
+              <option value="">— Unattached —</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+          {deals.length > 0 && (
+            <Field label="Deal (optional)">
+              <select
+                value={selectedDealId}
+                onChange={(e) => setSelectedDealId(e.target.value)}
+                className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+              >
+                <option value="">— None —</option>
+                {deals.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.title || d.deal_type}
+                  </option>
+                ))}
+              </select>
+            </Field>
+          )}
+        </div>
+      </section>
+
+      {/* Step 2: upload — create mode only. In edit mode the data is already loaded. */}
+      {!editMode && !hasData && (
+        <section className="mb-10">
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Step 2 · Source data</div>
+          <div className="border-2 border-dashed border-ink-200 p-12 text-center bg-cream">
+            {extracting ? (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-6 h-6 animate-spin text-ink-600" />
+                <p className="text-sm text-ink-600">
+                  Claude is reading the PDF and extracting subject + comparables…
+                </p>
+                <p className="text-2xs text-ink-500">Usually takes 10–25 seconds.</p>
+              </div>
+            ) : (
+              <>
+                <Upload className="w-8 h-8 text-ink-400 mx-auto mb-4" strokeWidth={1.5} />
+                <h3 className="font-display text-xl text-ink-900 mb-2">Upload an MLS PDF</h3>
+                <p className="text-sm text-ink-600 max-w-md mx-auto mb-6">
+                  Drag in a CMA export from your MLS — Realist, MLSListings, BAREIS, etc.
+                  Or start with a blank form.
+                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <label className="cursor-pointer inline-flex items-center gap-2 px-4 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700">
+                    <FileText className="w-3.5 h-3.5" />
+                    Choose PDF
+                    <input
+                      type="file"
+                      accept="application/pdf"
+                      onChange={handlePdfPick}
+                      className="hidden"
+                    />
+                  </label>
+                  <button
+                    onClick={startFromScratch}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 border border-ink-200 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-400"
+                  >
+                    Start blank
+                  </button>
+                </div>
+                {extractError && (
+                  <p className="text-xs text-red-600 mt-6 max-w-md mx-auto">{extractError}</p>
+                )}
+              </>
+            )}
+          </div>
+        </section>
+      )}
+
+      {/* Step 3: review */}
+      {hasData && (
+        <>
+          <section className="mb-10">
+            <div className="flex items-baseline justify-between mb-4">
+              <div className="text-2xs uppercase tracking-widest text-ink-500">
+                {editMode ? 'Step 1 · Subject property' : 'Step 3 · Review subject property'}
+              </div>
+              {pdfFile && (
+                <button
+                  onClick={() => handleExtract(pdfFile)}
+                  disabled={extracting}
+                  className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 disabled:opacity-50"
+                >
+                  Re-extract
+                </button>
+              )}
+            </div>
+            <SubjectForm subject={subject} setSubject={setSubject} />
+          </section>
+
+          <section className="mb-10">
+            <div className="flex items-baseline justify-between mb-4">
+              <div className="text-2xs uppercase tracking-widest text-ink-500">
+                {editMode ? `Step 2 · Comparables (${comps.length})` : `Step 4 · Comparables (${comps.length})`}
+              </div>
+              <button
+                onClick={() => setComps([...comps, { ...EMPTY_COMP }])}
+                className="text-2xs uppercase tracking-widest text-ink-500 hover:text-ink-900 flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" />
+                Add comp
+              </button>
+            </div>
+            <div className="space-y-4">
+              {comps.map((c, i) => (
+                <CompForm
+                  key={i}
+                  comp={c}
+                  index={i}
+                  onChange={(updated) => {
+                    const copy = [...comps]
+                    copy[i] = updated
+                    setComps(copy)
+                  }}
+                  onRemove={() => setComps(comps.filter((_, idx) => idx !== i))}
+                />
+              ))}
+              {comps.length === 0 && (
+                <p className="text-sm text-ink-500 italic">
+                  No comparables yet. Add at least one to give the CMA market context.
+                </p>
+              )}
+            </div>
+          </section>
+
+          {/* Step N: agent notes + Generate with Claude */}
+          <section className="mb-10">
+            <div className="flex items-baseline justify-between mb-3 flex-wrap gap-3">
+              <div className="text-2xs uppercase tracking-widest text-ink-500">
+                {editMode ? 'Step 3 · Agent notes (optional)' : 'Step 5 · Agent notes (optional)'}
+              </div>
+              <button
+                onClick={handleGenerate}
+                disabled={generating || !subject.address || comps.length === 0}
+                className="inline-flex items-center gap-2 px-3 py-2 border border-blue-700 text-2xs uppercase tracking-widest text-blue-700 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                title={
+                  !subject.address
+                    ? 'Subject address is required'
+                    : comps.length === 0
+                    ? 'Add at least one comparable first'
+                    : 'Have Claude draft a recommendation from the comp data'
+                }
+              >
+                {generating ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {generating ? 'Claude is drafting…' : 'Generate with Claude'}
+              </button>
+            </div>
+            <p className="text-2xs text-ink-500 mb-3 max-w-2xl leading-relaxed">
+              Strategic context, pricing rationale, marketing approach. Shows at the bottom
+              of the CMA. Click <strong className="text-ink-700 font-medium">Generate with Claude</strong> to
+              have a draft written from the comp set above — fully editable before publish.
+            </p>
+            <textarea
+              value={agentNotes}
+              onChange={(e) => setAgentNotes(e.target.value)}
+              rows={generating ? 6 : agentNotes ? 12 : 6}
+              placeholder={
+                generating
+                  ? 'Claude is grounding the recommendation in the comp set above…'
+                  : 'Drop your own notes here, or let Claude draft from the comp data.'
+              }
+              disabled={generating}
+              className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream leading-relaxed disabled:bg-ink-50"
+            />
+            {generateError && (
+              <p className="text-xs text-red-600 mt-2">{generateError}</p>
+            )}
+            {agentNotes && !generateError && !generating && (
+              <p className="text-2xs text-ink-500 mt-2">
+                {agentNotes.length.toLocaleString()} characters ·{' '}
+                {agentNotes.split(/\s+/).filter(Boolean).length.toLocaleString()} words
+              </p>
+            )}
+          </section>
+
+          {/* Save bar — Sprint I: two buttons (Save as draft + Publish) */}
+          <div className="border-t border-ink-200 pt-6 flex items-center justify-between sticky bottom-0 bg-cream py-4 gap-4 flex-wrap">
+            <div className="text-2xs uppercase tracking-widest text-ink-500">
+              {selectedClientId
+                ? `Will appear in ${clients.find((c) => c.id === selectedClientId)?.name || '…'}'s portal`
+                : 'Not attached to a client'}
+              {' · '}
+              <span className="text-ink-700">
+                {cmaType === 'buy'
+                  ? 'Buy-side'
+                  : listingType === 'mmm'
+                  ? 'Sell-side · MMM 3%'
+                  : 'Sell-side · Regular 2.5%'}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => handleSave('draft')}
+                disabled={saving || !subject.address}
+                className="inline-flex items-center gap-2 px-4 py-2.5 border border-ink-200 text-2xs uppercase tracking-widest text-ink-700 hover:border-ink-400 hover:bg-ink-50 disabled:opacity-50"
+              >
+                {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                Save as draft
+              </button>
+              <button
+                onClick={() => handleSave('published')}
+                disabled={saving || !subject.address}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50"
+              >
+                {saving ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                {editMode && currentStatus === 'published' ? 'Save changes' : 'Publish'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ============================================================
+// Subject form
+// ============================================================
+function SubjectForm({
+  subject,
+  setSubject,
+}: {
+  subject: CMASubject
+  setSubject: (s: CMASubject) => void
+}) {
+  const upd = <K extends keyof CMASubject>(key: K, value: CMASubject[K]) =>
+    setSubject({ ...subject, [key]: value })
+
+  return (
+    <div className="border border-ink-200 p-6 bg-cream">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Field label="Address" colspan={3}>
+          <input
+            value={subject.address}
+            onChange={(e) => upd('address', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+            placeholder="123 Main St"
+          />
+        </Field>
+        <Field label="City">
+          <input
+            value={subject.city}
+            onChange={(e) => upd('city', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="State">
+          <input
+            value={subject.state}
+            onChange={(e) => upd('state', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Zip">
+          <input
+            value={subject.zip}
+            onChange={(e) => upd('zip', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="List price">
+          <NumberInput value={subject.listPrice} onChange={(v) => upd('listPrice', v)} />
+        </Field>
+        <Field label="MLS#">
+          <input
+            value={subject.mls}
+            onChange={(e) => upd('mls', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Year built">
+          <NumberInput value={subject.yearBuilt} onChange={(v) => upd('yearBuilt', v)} />
+        </Field>
+        <Field label="Beds">
+          <NumberInput value={subject.beds} onChange={(v) => upd('beds', v)} />
+        </Field>
+        <Field label="Baths full">
+          <NumberInput value={subject.bathsFull} onChange={(v) => upd('bathsFull', v)} />
+        </Field>
+        <Field label="Baths partial">
+          <NumberInput value={subject.bathsPartial} onChange={(v) => upd('bathsPartial', v)} />
+        </Field>
+        <Field label="Sqft">
+          <NumberInput value={subject.sqft} onChange={(v) => upd('sqft', v)} />
+        </Field>
+        <Field label="Lot sqft">
+          <NumberInput value={subject.lotSqft} onChange={(v) => upd('lotSqft', v)} />
+        </Field>
+        <Field label="Property type">
+          <input
+            value={subject.propertyType}
+            onChange={(e) => upd('propertyType', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Days on market">
+          <NumberInput value={subject.daysOnMarket} onChange={(v) => upd('daysOnMarket', v)} />
+        </Field>
+        <Field label="HOA monthly">
+          <NumberInput value={subject.hoaMonthly} onChange={(v) => upd('hoaMonthly', v)} />
+        </Field>
+        <Field label="Remarks" colspan={3}>
+          <textarea
+            value={subject.remarks}
+            onChange={(e) => upd('remarks', e.target.value)}
+            rows={3}
+            className="w-full border border-ink-200 px-3 py-2 text-sm bg-cream"
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// Comp form (per row)
+// ============================================================
+function CompForm({
+  comp,
+  index,
+  onChange,
+  onRemove,
+}: {
+  comp: CMAComp
+  index: number
+  onChange: (c: CMAComp) => void
+  onRemove: () => void
+}) {
+  const upd = <K extends keyof CMAComp>(key: K, value: CMAComp[K]) =>
+    onChange({ ...comp, [key]: value })
+
+  return (
+    <div className="border border-ink-200 p-5 bg-cream">
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-2xs uppercase tracking-widest text-ink-500">Comp #{index + 1}</div>
+        <button
+          onClick={onRemove}
+          className="text-2xs text-red-600 hover:text-red-700 flex items-center gap-1"
+        >
+          <Trash2 className="w-3 h-3" />
+          Remove
+        </button>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field label="Address" colspan={4}>
+          <input
+            value={comp.address}
+            onChange={(e) => upd('address', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="City">
+          <input
+            value={comp.city}
+            onChange={(e) => upd('city', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Sold price">
+          <NumberInput value={comp.soldPrice} onChange={(v) => upd('soldPrice', v)} />
+        </Field>
+        <Field label="List price">
+          <NumberInput value={comp.listPrice} onChange={(v) => upd('listPrice', v)} />
+        </Field>
+        <Field label="Sqft">
+          <NumberInput value={comp.sqft} onChange={(v) => upd('sqft', v)} />
+        </Field>
+        <Field label="Beds">
+          <NumberInput value={comp.beds} onChange={(v) => upd('beds', v)} />
+        </Field>
+        <Field label="Baths full">
+          <NumberInput value={comp.bathsFull} onChange={(v) => upd('bathsFull', v)} />
+        </Field>
+        <Field label="Baths partial">
+          <NumberInput value={comp.bathsPartial} onChange={(v) => upd('bathsPartial', v)} />
+        </Field>
+        <Field label="DOM">
+          <NumberInput value={comp.daysOnMarket} onChange={(v) => upd('daysOnMarket', v)} />
+        </Field>
+        <Field label="Sold date">
+          <input
+            value={comp.soldDate}
+            onChange={(e) => upd('soldDate', e.target.value)}
+            placeholder="Jan 15, 2026"
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="MLS#">
+          <input
+            value={comp.mls}
+            onChange={(e) => upd('mls', e.target.value)}
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Photo URL (optional)" colspan={2}>
+          <input
+            value={comp.photoUrl || ''}
+            onChange={(e) => upd('photoUrl', e.target.value || undefined)}
+            placeholder="https://..."
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+        <Field label="Listing URL (optional)" colspan={2}>
+          <input
+            value={comp.listingUrl || ''}
+            onChange={(e) => upd('listingUrl', e.target.value || undefined)}
+            placeholder="https://www.zillow.com/..."
+            className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+          />
+        </Field>
+      </div>
+    </div>
+  )
+}
+
+// ============================================================
+// Small atoms
+// ============================================================
+function Field({
+  label,
+  children,
+  colspan,
+}: {
+  label: string
+  children: React.ReactNode
+  colspan?: number
+}) {
+  const cls =
+    colspan === 2
+      ? 'md:col-span-2'
+      : colspan === 3
+      ? 'md:col-span-3'
+      : colspan === 4
+      ? 'md:col-span-4'
+      : ''
+  return (
+    <div className={cls}>
+      <label className="block text-2xs uppercase tracking-widest text-ink-500 mb-1.5">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
+}
+
+function NumberInput({
+  value,
+  onChange,
+}: {
+  value: number | null
+  onChange: (v: number | null) => void
+}) {
+  return (
+    <input
+      type="number"
+      value={value ?? ''}
+      onChange={(e) => {
+        const v = e.target.value
+        onChange(v === '' ? null : Number(v))
+      }}
+      className="border border-ink-200 px-3 py-2 text-sm bg-cream w-full"
+    />
+  )
+}
+
+// ============================================================
+// PDF → base64
+// ============================================================
+async function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const result = reader.result as string
+      const base64 = result.split(',')[1]
+      resolve(base64)
+    }
+    reader.onerror = () => reject(new Error('Failed to read PDF file'))
+    reader.readAsDataURL(file)
+  })
+}
