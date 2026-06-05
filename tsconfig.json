@@ -17,9 +17,19 @@
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./*"]
     }
   },
-  "include": ["src"],
+  "include": [
+    "*.tsx",
+    "*.ts",
+    "components/**/*",
+    "pages/**/*",
+    "portal/**/*",
+    "lib/**/*",
+    "contexts/**/*",
+    "site/**/*"
+  ],
+  "exclude": ["node_modules", "dist", "functions", "public", "supabase"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }
