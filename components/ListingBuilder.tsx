@@ -43,6 +43,7 @@ import {
 } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import ListingPhotos from './ListingPhotos'
+import { ListingDetailsCard, ScheduleEventsCard } from './ListingDetailsCard'
 import NetSheetModal, { NetSheet, formatCurrency } from './NetSheetModal'
 import PublishStatusModal, {
   ListingStatus,
@@ -270,6 +271,7 @@ export default function ListingBuilder({
               state={descState}
               onChanged={refresh}
             />
+            <ListingDetailsCard deal={deal} mode={mode} onChanged={refresh} />
             <DocumentCard
               deal={deal}
               mode={mode}
@@ -292,6 +294,7 @@ export default function ListingBuilder({
               icon={FileText}
               onChanged={refresh}
             />
+            <ScheduleEventsCard deal={deal} mode={mode} onChanged={refresh} />
             <NetSheetCard
               deal={deal}
               mode={mode}
@@ -1398,17 +1401,35 @@ function ApprovalsSection({
       return
     }
 
-    if (decision === 'approved' && edit.listing_id) {
-      const changes = edit.field_changes as Record<string, string>
-      const applicable: Record<string, string> = {}
+    if (decision === 'approved') {
+      const changes = edit.field_changes as Record<string, unknown>
+      // Two destinations:
+      //   • keys namespaced "properties.<col>"  → the canonical properties row
+      //     (routed by deal.property_id, since that's the authoritative link).
+      //   • bare keys (e.g. description_html)     → legacy coming_soon_listings,
+      //     keyed by edit.listing_id, preserving the original behavior.
+      // Keys beginning with "_" are metadata (e.g. _preferred_showing_times)
+      // and are never written to a table.
+      const propsPatch: Record<string, unknown> = {}
+      const legacyPatch: Record<string, unknown> = {}
       for (const k of Object.keys(changes)) {
         if (k.startsWith('_')) continue
-        applicable[k] = changes[k]
+        if (k.startsWith('properties.')) {
+          propsPatch[k.slice('properties.'.length)] = changes[k]
+        } else {
+          legacyPatch[k] = changes[k]
+        }
       }
-      if (Object.keys(applicable).length > 0) {
+      if (Object.keys(propsPatch).length > 0 && deal.property_id) {
+        await supabase
+          .from('properties')
+          .update({ ...propsPatch, updated_at: new Date().toISOString() })
+          .eq('id', deal.property_id)
+      }
+      if (Object.keys(legacyPatch).length > 0 && edit.listing_id) {
         await supabase
           .from('coming_soon_listings')
-          .update(applicable)
+          .update(legacyPatch)
           .eq('id', edit.listing_id)
       }
     }
@@ -1459,7 +1480,7 @@ function EditRow({
 }) {
   const [note, setNote] = useState('')
   const [expanded, setExpanded] = useState(edit.status === 'pending')
-  const changes = edit.field_changes as Record<string, string>
+  const changes = edit.field_changes as Record<string, unknown>
   const fieldKeys = Object.keys(changes)
 
   const statusColors: Record<string, string> = {
@@ -1505,7 +1526,7 @@ function EditRow({
                 {humanizeField(key)}
               </div>
               <div className="text-sm text-ink-700 bg-ink-50 p-3 whitespace-pre-wrap">
-                {stripHtml(changes[key])}
+                {stripHtml(changes[key] == null ? '' : String(changes[key]))}
               </div>
             </div>
           ))}
@@ -1579,10 +1600,21 @@ function truncate(s: string, n: number): string {
 }
 
 function humanizeField(key: string): string {
+  // Strip the destination namespace ("properties.") before labeling.
+  const bare = key.startsWith('properties.') ? key.slice('properties.'.length) : key
   const map: Record<string, string> = {
     description_html: 'What makes the home special',
     features_html: 'Features & highlights',
+    amenities_html: 'Amenities',
     _preferred_showing_times: 'Preferred showing times',
+    name: 'Listing name',
+    pin_code: 'APN / PIN',
+    bedrooms: 'Bedrooms',
+    bathrooms: 'Bathrooms',
+    area_sqft: 'Square footage',
+    built_year: 'Year built',
+    parking_description: 'Parking',
+    monthly_hoa_fee: 'Monthly HOA',
   }
-  return map[key] || key.replace(/_/g, ' ')
+  return map[bare] || bare.replace(/_/g, ' ')
 }
