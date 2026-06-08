@@ -190,15 +190,15 @@ export default function SellerListing() {
         <ListingEditor deal={deal} />
       </section>
 
-      {/* War room — folded in as the listing-prep dialogue */}
+      {/* Listing Chat — the listing-prep dialogue with the agent */}
       <section data-tour="documents">
-        <SectionLabel>Listing prep · talk to your agent</SectionLabel>
+        <SectionLabel>Listing Chat · talk to your agent</SectionLabel>
         {warRoom ? (
           <WarRoomThread warRoom={warRoom} viewerType="client" />
         ) : (
           <Panel>
             <p className="text-sm text-ink-600">
-              Your agent will open the prep conversation here shortly. This is where you'll discuss
+              Your agent will open the chat here shortly. This is where you'll discuss
               photos, staging, pricing, and timing — all in one thread tied to your listing.
             </p>
           </Panel>
