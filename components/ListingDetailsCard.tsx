@@ -284,6 +284,10 @@ function DetailsEditor({
   const [hoa, setHoa] = useState(prop.monthly_hoa_fee || '')
   const [description, setDescription] = useState(stripHtml(prop.description_html || ''))
   const [amenities, setAmenities] = useState(stripHtml(prop.amenities_html || ''))
+  // Launch-strategy link lives on deals.metadata.strategy_url (agent-owned).
+  const [strategyUrl, setStrategyUrl] = useState<string>(
+    (deal.metadata?.strategy_url as string) || '',
+  )
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -313,17 +317,35 @@ function DetailsEditor({
       if (stripHtml(prop.description_html || '') === description.trim()) delete next['description_html']
       if (stripHtml(prop.amenities_html || '') === amenities.trim()) delete next['amenities_html']
 
-      if (Object.keys(next).length === 0) {
+      // Strategy URL is agent-owned and persists to deals.metadata, separate
+      // from the properties change set.
+      const currentStrategy = (deal.metadata?.strategy_url as string) || ''
+      const strategyChanged = mode === 'agent' && strategyUrl.trim() !== currentStrategy
+
+      if (Object.keys(next).length === 0 && !strategyChanged) {
         onDone()
         return
       }
 
       if (mode === 'agent') {
-        const { error: updErr } = await supabase
-          .from('properties')
-          .update({ ...next, updated_at: new Date().toISOString() })
-          .eq('id', prop.id)
-        if (updErr) throw updErr
+        if (Object.keys(next).length > 0) {
+          const { error: updErr } = await supabase
+            .from('properties')
+            .update({ ...next, updated_at: new Date().toISOString() })
+            .eq('id', prop.id)
+          if (updErr) throw updErr
+        }
+        if (strategyChanged) {
+          const nextMeta = {
+            ...(deal.metadata || {}),
+            strategy_url: strategyUrl.trim() || null,
+          }
+          const { error: dErr } = await supabase
+            .from('deals')
+            .update({ metadata: nextMeta, updated_at: new Date().toISOString() })
+            .eq('id', deal.id)
+          if (dErr) throw dErr
+        }
       } else {
         // Client path — propose. Namespace keys so the approver routes them to
         // the properties table (vs. the legacy coming_soon_listings keys).
@@ -401,6 +423,16 @@ function DetailsEditor({
             className={inputCls}
           />
         </Field>
+        {mode === 'agent' && (
+          <Field label="Launch strategy link (client-visible on CMAs & Strategy)" colspan={4}>
+            <input
+              value={strategyUrl}
+              onChange={(e) => setStrategyUrl(e.target.value)}
+              placeholder="https://mcmullen.webflow.io/5c-launch-strategy"
+              className={inputCls}
+            />
+          </Field>
+        )}
       </div>
       {error && <p className="text-sm text-red-700">{error}</p>}
       <div className="flex items-center justify-end gap-3">
