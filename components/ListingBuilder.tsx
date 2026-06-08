@@ -1094,13 +1094,15 @@ function PublishStatusCard({
                 {showHistory ? 'Hide history' : `History (${history.length})`}
               </button>
             )}
-            <button
-              onClick={() => setOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
-            >
-              <SendIcon className="w-3 h-3" strokeWidth={2} />
-              Update status
-            </button>
+            {mode === 'agent' && (
+              <button
+                onClick={() => setOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700"
+              >
+                <SendIcon className="w-3 h-3" strokeWidth={2} />
+                Update status
+              </button>
+            )}
           </div>
         </div>
 
