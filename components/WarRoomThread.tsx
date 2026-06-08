@@ -260,7 +260,9 @@ export default function WarRoomThread({
       <div className="px-5 py-3 border-b border-ink-200 flex items-center justify-between">
         <div>
           <div className="text-sm font-medium text-ink-900">{warRoom.name}</div>
-          <div className="text-2xs uppercase tracking-widest text-ink-500 mt-0.5">War room</div>
+          <div className="text-2xs uppercase tracking-widest text-ink-500 mt-0.5">
+            {viewerType === 'client' ? 'Listing chat' : 'War room'}
+          </div>
         </div>
         <div className="text-2xs text-ink-500">
           {messages.length} {messages.length === 1 ? 'message' : 'messages'}
