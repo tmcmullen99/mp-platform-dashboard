@@ -8,29 +8,44 @@ import { useEffect, useState } from 'react'
 import { Loader2, FileBarChart2, ArrowUpRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { supabase, CMA } from '@/lib/supabase'
-import { PageHeader, ImageCard, Badge, EmptyState } from '@/portal/shared/ui'
+import { supabase, CMA, Deal } from '@/lib/supabase'
+import { PageHeader, ImageCard, Badge, EmptyState, Panel } from '@/portal/shared/ui'
 import { fmtDateLong } from '@/portal/shared/format'
 
 export default function SellerCMAs() {
   const { clientProfile } = useAuth()
   const [cmas, setCmas] = useState<CMA[]>([])
+  const [strategyUrl, setStrategyUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     if (!clientProfile) return
     let cancelled = false
-    supabase
-      .from('cmas')
-      .select('*')
-      .eq('client_id', clientProfile.id)
-      .eq('status', 'published')
-      .order('published_at', { ascending: false, nullsFirst: false })
-      .then(({ data }) => {
-        if (cancelled) return
-        setCmas((data as CMA[]) || [])
-        setLoading(false)
-      })
+    const cid = clientProfile.id
+    ;(async () => {
+      // Launch-strategy link lives on the sell-side deal (metadata.strategy_url),
+      // set by the agent in the listing configurator.
+      const { data: deals } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('client_id', cid)
+        .eq('deal_type', 'sell')
+        .order('created_at', { ascending: false })
+      const sellDeal = ((deals || [])[0] as Deal) || null
+      const url = (sellDeal?.metadata?.strategy_url as string) || null
+
+      const { data } = await supabase
+        .from('cmas')
+        .select('*')
+        .eq('client_id', cid)
+        .eq('status', 'published')
+        .order('published_at', { ascending: false, nullsFirst: false })
+
+      if (cancelled) return
+      setStrategyUrl(url)
+      setCmas((data as CMA[]) || [])
+      setLoading(false)
+    })()
     return () => {
       cancelled = true
     }
@@ -44,6 +59,33 @@ export default function SellerCMAs() {
         Side-by-side pricing analyses and launch strategies your agent has built — recent sales,
         market context, and the rationale behind your number. Open any card for the full breakdown.
       </PageHeader>
+
+      {strategyUrl && (
+        <a
+          href={strategyUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="block mb-8 group"
+        >
+          <Panel className="flex items-center justify-between gap-4 hover:border-ink-900 transition-colors">
+            <div className="min-w-0">
+              <div className="text-2xs uppercase tracking-widest text-slate mb-1.5">
+                Launch strategy
+              </div>
+              <h2 className="font-display text-xl text-ink-900 leading-tight">
+                Your full launch strategy
+              </h2>
+              <p className="text-sm text-ink-600 mt-1">
+                The complete pricing and go-to-market plan for your listing.
+              </p>
+            </div>
+            <span className="inline-flex items-center gap-1 text-2xs uppercase tracking-widest text-ink-700 group-hover:text-ink-900 shrink-0">
+              Open
+              <ArrowUpRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+            </span>
+          </Panel>
+        </a>
+      )}
 
       {cmas.length === 0 ? (
         <EmptyState
