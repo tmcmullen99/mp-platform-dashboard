@@ -574,6 +574,12 @@ export type ExternalListingClientStatus =
   | 'rejected'
 export type ExternalListingFetchStatus = 'pending' | 'success' | 'failed' | 'manual'
 
+// P10 — a saved external listing is now dual-purpose. On the buyer side it's a
+// property the buyer is interested in ('buyer_interest'); on the seller side
+// it's a comparable sale used to anchor pricing ('seller_comp'). Same table,
+// same fetch pipeline, filtered by listing_role.
+export type ExternalListingRole = 'buyer_interest' | 'seller_comp'
+
 export type ExternalListing = {
   id: string
   tenant_id: string
@@ -605,6 +611,10 @@ export type ExternalListing = {
   fetch_status: ExternalListingFetchStatus
   fetch_error: string | null
   fetched_at: string | null
+  // P10 — see ExternalListingRole. Defaults to 'buyer_interest' at the DB level.
+  listing_role: ExternalListingRole
+  // Manual ordering within a role (nullable; falls back to created_at sort).
+  sort_order: number | null
   created_at: string
   updated_at: string
 }
