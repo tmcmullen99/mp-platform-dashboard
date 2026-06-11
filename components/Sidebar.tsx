@@ -13,6 +13,7 @@ import {
   FileBarChart2,
   Percent,
   LucideIcon,
+  Inbox,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -21,6 +22,7 @@ type NavItem = { to: string; label: string; Icon: LucideIcon }
 const navItems: NavItem[] = [
   { to: '/', label: 'Today', Icon: Sun },
   { to: '/crm', label: 'CRM', Icon: Users },
+  { to: '/inquiries', label: 'Inquiries', Icon: Inbox },
   { to: '/clients', label: 'Clients', Icon: Briefcase },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
