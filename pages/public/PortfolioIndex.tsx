@@ -103,8 +103,9 @@ export default function PortfolioIndex() {
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
             <Link to="/listings" className="text-[#0D1B2A]">Portfolio</Link>
-            <a href="https://mcmullen.properties/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</a>
-            <a href="https://mcmullen.properties/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</a>
+            <Link to="/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</Link>
+            <Link to="/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</Link>
+            <Link to="/services" className="hover:text-[#0D1B2A] transition-colors">Services</Link>
           </nav>
           <a href="tel:+14156919272" className="text-sm font-medium text-[#0D1B2A] hover:opacity-70">
             (415) 691-9272
