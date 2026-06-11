@@ -18,6 +18,8 @@ import TenantHome from '@/pages/public/TenantHome'
 import PortfolioIndex from '@/pages/public/PortfolioIndex'
 import PropertyDetail from '@/pages/public/PropertyDetail'
 import CorePage from '@/pages/public/CorePage'
+import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
+import MakeMeMove from '@/pages/MakeMeMove'
 import {
   Search,
   Send,
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="/services" element={<CorePage slug="services" />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
+          {/* Public Make-Me-Move marketplace (anon via mmm_public_read RLS) */}
+          <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
@@ -120,6 +124,7 @@ function AuthGate() {
             picks best-match regardless of declaration order). */}
         <Route path="/cmas/:slug/edit" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
+        <Route path="/make-me-move" element={<MakeMeMove />} />
         <Route
           path="/prospecting"
           element={
