@@ -22,6 +22,7 @@ import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
 import MakeMeMove from '@/pages/MakeMeMove'
 import SiteEditor from '@/pages/SiteEditor'
 import ListingsAdmin from '@/pages/ListingsAdmin'
+import Inquiries from '@/pages/Inquiries'
 import {
   Search,
   Send,
@@ -118,6 +119,7 @@ function AuthGate() {
         <Route path="/" element={<Today />} />
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
+        <Route path="/inquiries" element={<Inquiries />} />
         <Route path="/clients/*" element={<Clients />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         {/* P9.4 Sprint I — edit existing CMA. Reuses NewCMA in edit mode
