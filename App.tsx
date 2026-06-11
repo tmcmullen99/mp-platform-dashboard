@@ -17,6 +17,7 @@ import McMullenHome from '@/pages/public/McMullenHome'
 import TenantHome from '@/pages/public/TenantHome'
 import PortfolioIndex from '@/pages/public/PortfolioIndex'
 import PropertyDetail from '@/pages/public/PropertyDetail'
+import CorePage from '@/pages/public/CorePage'
 import {
   Search,
   Send,
@@ -39,6 +40,10 @@ export default function App() {
           <Route path="/home" element={<McMullenHome />} />
           <Route path="/listings" element={<PortfolioIndex />} />
           <Route path="/listings/:slug" element={<PropertyDetail />} />
+          <Route path="/about" element={<CorePage slug="about" />} />
+          <Route path="/buy" element={<CorePage slug="buy" />} />
+          <Route path="/sell" element={<CorePage slug="sell" />} />
+          <Route path="/services" element={<CorePage slug="services" />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
 
