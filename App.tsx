@@ -21,6 +21,7 @@ import CorePage from '@/pages/public/CorePage'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
 import MakeMeMove from '@/pages/MakeMeMove'
 import SiteEditor from '@/pages/SiteEditor'
+import ListingsAdmin from '@/pages/ListingsAdmin'
 import {
   Search,
   Send,
@@ -164,6 +165,7 @@ function AuthGate() {
           }
         />
         <Route path="/site" element={<SiteEditor />} />
+        <Route path="/site/listings" element={<ListingsAdmin />} />
         <Route
           path="/analytics"
           element={
