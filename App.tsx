@@ -12,6 +12,11 @@ import Portal from '@/pages/Portal'
 import NewCMA from '@/pages/NewCMA'
 import CommissionSettings from '@/pages/CommissionSettings'
 import CMAViewer from '@/components/CMAViewer'
+// Public website surface (no auth) — served before the AuthGate.
+import McMullenHome from '@/pages/public/McMullenHome'
+import TenantHome from '@/pages/public/TenantHome'
+import ListingsIndex from '@/pages/public/ListingsIndex'
+import PublicListingDetail from '@/pages/public/PublicListingDetail'
 import {
   Search,
   Send,
@@ -27,11 +32,50 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+          {/* ---- Public website (no auth) ---- */}
+          {/* Root: public McMullen homepage for guests; authenticated
+              users are bounced into their app by RootResolver. */}
+          <Route path="/" element={<RootResolver />} />
+          <Route path="/home" element={<McMullenHome />} />
+          <Route path="/listings" element={<ListingsIndex />} />
+          <Route path="/listings/:listingId" element={<PublicListingDetail />} />
+          <Route path="/t/:tenantSlug" element={<TenantHome />} />
+          <Route path="/t/:tenantSlug/listings/:listingId" element={<PublicListingDetail />} />
+
+          {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
           <Route path="*" element={<AuthGate />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+  )
+}
+
+/* Root path: unauthenticated visitors see the public homepage; signed-in
+   agents/clients are sent into their workspace (dashboard or portal). */
+function RootResolver() {
+  const { session, loading, isClient, isAgent } = useAuth()
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-2xs uppercase tracking-widest text-ink-500">Loading…</div>
+      </div>
+    )
+  }
+  if (!session) return <McMullenHome />
+  if (isClient && !isAgent) return <Navigate to="/portal" replace />
+  return <AuthedRoot />
+}
+
+/* Agent dashboard home, mounted at "/" for authenticated agents.
+   Mirrors the AuthGate agent shell (Layout + Today). */
+function AuthedRoot() {
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route path="/" element={<Today />} />
+      </Route>
+    </Routes>
   )
 }
 
