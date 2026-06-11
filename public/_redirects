@@ -1,1 +1,82 @@
+# McMullen Properties — domain cutover redirect map (mcmullen.properties → Cloudflare Pages)
+# Rules are evaluated top-down; first match wins. SPA catch-all MUST stay last.
+
+# ---- canonical host: www → apex ----
+https://www.mcmullen.properties/* https://mcmullen.properties/:splat 301
+
+# ---- migrated surfaces: permanent native mappings ----
+/portfolio              /listings                                  301
+/homes/:slug            /listings/:slug                            301
+/1515-union-st-5c       /listings/union-house-residence-5c         301
+/1515-union-st-5c-coming-soon /listings/union-house-residence-5c   301
+
+# ---- not yet migrated: temporary fallbacks to Webflow staging mirror ----
+# (302 so search engines keep mcmullen.properties as canonical; flip each to a
+#  native route as it gets rebuilt, then delete its line.)
+
+# business tools & service pages
+/disclosure-review      https://mcmullen.webflow.io/disclosure-review      302
+/investor-hub           https://mcmullen.webflow.io/investor-hub           302
+/home-improvement       https://mcmullen.webflow.io/home-improvement       302
+/haus-of-stone          https://mcmullen.webflow.io/haus-of-stone          302
+/flips                  https://mcmullen.webflow.io/flips                  302
+/exchange-properties    https://mcmullen.webflow.io/exchange-properties    302
+/exchange-properties-multi-family https://mcmullen.webflow.io/exchange-properties-multi-family 302
+/exchange-properties-retail      https://mcmullen.webflow.io/exchange-properties-retail       302
+/exchange-properties-industrial  https://mcmullen.webflow.io/exchange-properties-industrial   302
+/equity-form            https://mcmullen.webflow.io/equity-form            302
+/property-value-review  https://mcmullen.webflow.io/property-value-review  302
+/probate-property-sales-in-bay-area https://mcmullen.webflow.io/probate-property-sales-in-bay-area 302
+/cma-generator          https://mcmullen.webflow.io/cma-generator          302
+/cma-tool-landing-page  https://mcmullen.webflow.io/cma-tool-landing-page  302
+/pool-estimator         https://mcmullen.webflow.io/pool-estimator         302
+/ai-consulting          https://mcmullen.webflow.io/ai-consulting          302
+/buyer-inquiry          https://mcmullen.webflow.io/buyer-inquiry          302
+/campbell               https://mcmullen.webflow.io/campbell               302
+/map-search             https://mcmullen.webflow.io/map-search             302
+/news                   https://mcmullen.webflow.io/news                   302
+/contact                https://mcmullen.webflow.io/contact                302
+/buildings              https://mcmullen.webflow.io/buildings              302
+/neighborhoods          https://mcmullen.webflow.io/neighborhoods          302
+/expired                https://mcmullen.webflow.io/expired                302
+/sf-condo-expired       https://mcmullen.webflow.io/sf-condo-expired       302
+/confirmation           https://mcmullen.webflow.io/confirmation           302
+
+# client deliverables (proposals, CMAs, one-off property pages)
+/542-joost              https://mcmullen.webflow.io/542-joost              302
+/5c-launch-strategy     https://mcmullen.webflow.io/5c-launch-strategy     302
+/259-staples-cma        https://mcmullen.webflow.io/259-staples-cma        302
+/1827-kirkham           https://mcmullen.webflow.io/1827-kirkham           302
+/1955-18th-ave-cma      https://mcmullen.webflow.io/1955-18th-ave-cma      302
+/31a-cortland           https://mcmullen.webflow.io/31a-cortland           302
+/31a-cortland-cma       https://mcmullen.webflow.io/31a-cortland-cma       302
+/97-banks-cma           https://mcmullen.webflow.io/97-banks-cma           302
+/27769-edgerton-design  https://mcmullen.webflow.io/27769-edgerton-design  302
+/1728-whitham-proposal  https://mcmullen.webflow.io/1728-whitham-proposal  302
+/39622-benavente-proposal https://mcmullen.webflow.io/39622-benavente-proposal 302
+/21-n-second-st-campbell https://mcmullen.webflow.io/21-n-second-st-campbell 302
+/inez-comps             https://mcmullen.webflow.io/inez-comps             302
+/el-sombroso-proposal   https://mcmullen.webflow.io/el-sombroso-proposal   302
+/clover-ave-proposal    https://mcmullen.webflow.io/clover-ave-proposal    302
+/benavente-porposal     https://mcmullen.webflow.io/benavente-porposal     302
+/southerland-proposal   https://mcmullen.webflow.io/southerland-proposal   302
+/prospect-ave-los-gatos https://mcmullen.webflow.io/prospect-ave-los-gatos 302
+/springpath-lane        https://mcmullen.webflow.io/springpath-lane        302
+
+# CMS collections not yet migrated (splats)
+/blog/*                 https://mcmullen.webflow.io/blog/:splat                 302
+/building/*             https://mcmullen.webflow.io/building/:splat             302
+/cm-buildings/*         https://mcmullen.webflow.io/cm-buildings/:splat         302
+/neighborhoods/*        https://mcmullen.webflow.io/neighborhoods/:splat        302
+/cma/*                  https://mcmullen.webflow.io/cma/:splat                  302
+/properties/*           https://mcmullen.webflow.io/properties/:splat           302
+/tag/*                  https://mcmullen.webflow.io/tag/:splat                  302
+/testimonial/*          https://mcmullen.webflow.io/testimonial/:splat          302
+/agent-info/*           https://mcmullen.webflow.io/agent-info/:splat           302
+/team-and-partners/*    https://mcmullen.webflow.io/team-and-partners/:splat    302
+/status/*               https://mcmullen.webflow.io/status/:splat               302
+/architecture-style/*   https://mcmullen.webflow.io/architecture-style/:splat   302
+/property-type/*        https://mcmullen.webflow.io/property-type/:splat        302
+
+# ---- SPA catch-all (must remain last) ----
 /*    /index.html   200
