@@ -221,9 +221,9 @@ export default function McMullenHome() {
           </a>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
             <a href="/listings" className="hover:text-[#0D1B2A] transition-colors">Portfolio</a>
-            <a href={c.services[0]?.href || '#'} className="hover:text-[#0D1B2A] transition-colors">Buy</a>
-            <a href={c.services[1]?.href || '#'} className="hover:text-[#0D1B2A] transition-colors">Sell</a>
-            <a href={c.services[2]?.href || '#'} className="hover:text-[#0D1B2A] transition-colors">Disclosure Review</a>
+            <a href="/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</a>
+            <a href="/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</a>
+            <a href="/services" className="hover:text-[#0D1B2A] transition-colors">Services</a>
           </nav>
           <a
             href={c.agent.phone_href}
@@ -541,8 +541,8 @@ export default function McMullenHome() {
                   Explore
                 </div>
                 <ul className="space-y-2 text-sm">
-                  <li><a href={c.services[0]?.href} className="hover:opacity-70 transition-opacity">Buy</a></li>
-                  <li><a href={c.services[1]?.href} className="hover:opacity-70 transition-opacity">Sell</a></li>
+                  <li><a href="/buy" className="hover:opacity-70 transition-opacity">Buy</a></li>
+                  <li><a href="/sell" className="hover:opacity-70 transition-opacity">Sell</a></li>
                   <li><a href="/listings" className="hover:opacity-70 transition-opacity">Portfolio</a></li>
                 </ul>
               </div>
