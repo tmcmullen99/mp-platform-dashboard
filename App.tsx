@@ -15,8 +15,8 @@ import CMAViewer from '@/components/CMAViewer'
 // Public website surface (no auth) — served before the AuthGate.
 import McMullenHome from '@/pages/public/McMullenHome'
 import TenantHome from '@/pages/public/TenantHome'
-import ListingsIndex from '@/pages/public/ListingsIndex'
-import PublicListingDetail from '@/pages/public/PublicListingDetail'
+import PortfolioIndex from '@/pages/public/PortfolioIndex'
+import PropertyDetail from '@/pages/public/PropertyDetail'
 import {
   Search,
   Send,
@@ -37,10 +37,10 @@ export default function App() {
               users are bounced into their app by RootResolver. */}
           <Route path="/" element={<RootResolver />} />
           <Route path="/home" element={<McMullenHome />} />
-          <Route path="/listings" element={<ListingsIndex />} />
-          <Route path="/listings/:listingId" element={<PublicListingDetail />} />
+          <Route path="/listings" element={<PortfolioIndex />} />
+          <Route path="/listings/:slug" element={<PropertyDetail />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
-          <Route path="/t/:tenantSlug/listings/:listingId" element={<PublicListingDetail />} />
+          <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
