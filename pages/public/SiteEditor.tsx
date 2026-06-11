@@ -12,6 +12,7 @@
 // page row is seeded, the editor handles it automatically.
 
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import {
@@ -475,6 +476,12 @@ export default function SiteEditor() {
             {p.label}
           </button>
         ))}
+        <Link
+          to="/site/listings"
+          className="px-4 py-2.5 text-sm border-b-2 -mb-px border-transparent text-ink-500 hover:text-ink-800"
+        >
+          Listings
+        </Link>
       </div>
 
       {/* toolbar */}
