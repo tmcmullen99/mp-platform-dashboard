@@ -20,6 +20,7 @@ import PropertyDetail from '@/pages/public/PropertyDetail'
 import CorePage from '@/pages/public/CorePage'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
 import MakeMeMove from '@/pages/MakeMeMove'
+import SiteEditor from '@/pages/SiteEditor'
 import {
   Search,
   Send,
@@ -162,18 +163,7 @@ function AuthGate() {
             />
           }
         />
-        <Route
-          path="/site"
-          element={
-            <Placeholder
-              title="Site Editor"
-              description="Faceless component chassis: a generic 30-page real-estate site that every tenant gets, configured via tenant_branding plus a component-tree editor. Edit by click or by chat. Publishes to the public Cloudflare Pages site."
-              Icon={Globe}
-              phase="P4"
-              replaces="Webflow / Squarespace"
-            />
-          }
-        />
+        <Route path="/site" element={<SiteEditor />} />
         <Route
           path="/analytics"
           element={
