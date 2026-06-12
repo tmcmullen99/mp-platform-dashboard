@@ -61,6 +61,23 @@ export default function WarRoomThread({
   useEffect(() => {
     let cancelled = false
 
+    // Viewing the thread marks the other party's messages as read. The
+    // war_room_recount trigger keeps war_rooms.unread_* in sync, and
+    // Today.tsx's unread indicator (read_by_agent=false) clears as a result.
+    const readColumn = viewerType === 'agent' ? 'read_by_agent' : 'read_by_client'
+
+    function markThreadRead() {
+      supabase
+        .from('war_room_messages')
+        .update({ [readColumn]: true })
+        .eq('war_room_id', warRoom.id)
+        .neq('sender_type', viewerType)
+        .eq(readColumn, false)
+        .then(({ error }) => {
+          if (error) console.error('mark-read failed:', error.message)
+        })
+    }
+
     async function load() {
       setLoading(true)
       const { data } = await supabase
@@ -72,6 +89,7 @@ export default function WarRoomThread({
       if (cancelled) return
       setMessages((data as WarRoomMessage[]) || [])
       setLoading(false)
+      markThreadRead()
     }
 
     load()
@@ -92,6 +110,10 @@ export default function WarRoomThread({
             if (prev.find((m) => m.id === incoming.id)) return prev
             return [...prev, incoming]
           })
+          // Thread is open — incoming messages from the other party are
+          // read on arrival.
+          const incoming = payload.new as WarRoomMessage
+          if (incoming.sender_type !== viewerType) markThreadRead()
         },
       )
       .subscribe()
@@ -100,7 +122,7 @@ export default function WarRoomThread({
       cancelled = true
       supabase.removeChannel(channel)
     }
-  }, [warRoom.id])
+  }, [warRoom.id, viewerType])
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
