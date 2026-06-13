@@ -6,16 +6,25 @@
 //
 // Account gates (woven in, not blocking): "Save this comparison" and "Add
 // disclosure review" both route to /join. The tool itself never requires login.
+//
+// Sprint C — condition intelligence. On mount we pull the tenant's PUBLISHED
+// property analyses (analyses_public, token-bound). When a pasted listing's
+// address matches a published analysis, the row shows a condition score, the
+// agent's one-line verdict, and the repair-budget range — the "rank by
+// condition, not photos" promise made good. Listings with no analysis just
+// show a dash in the condition column.
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 import {
-  Plus, X, Loader2, ArrowUpDown, Star, Trash2, FileSearch, Save, Home as HomeIcon,
+  Plus, Loader2, ArrowUpDown, Star, Trash2, FileSearch, Save, Home as HomeIcon,
+  ShieldCheck, Wrench, ChevronDown, ChevronUp,
 } from 'lucide-react'
 
 const SITE_TOKEN = 'sEeAYucGGAUrHO0LIcfQSj1iBGx79tP8'
 const FETCH_URL = `${EDGE_FUNCTIONS_BASE_URL}/fetch_listing_public?token=${SITE_TOKEN}`
+const ANALYSES_URL = `${EDGE_FUNCTIONS_BASE_URL}/analyses_public?token=${SITE_TOKEN}`
 
 type Listing = {
   localId: string
@@ -42,7 +51,19 @@ type Listing = {
   photoUrl: string | null
 }
 
-type SortKey = 'price' | 'sqft' | 'ppsf' | 'bedrooms' | 'bathrooms' | 'yearBuilt' | 'hoaMonthly'
+// Published analysis summary (buyer-safe fields from analyses_public).
+type Analysis = {
+  address: string | null
+  condition_score: number | null
+  condition_verdict: string | null
+  repair_budget_low: number | null
+  repair_budget_high: number | null
+  agent_condition_note: string | null
+  cma_slug: string | null
+  cma_published: boolean
+}
+
+type SortKey = 'price' | 'sqft' | 'ppsf' | 'bedrooms' | 'bathrooms' | 'yearBuilt' | 'hoaMonthly' | 'condition'
 
 const uid = () => Math.random().toString(36).slice(2, 9)
 const ppsf = (l: Listing) => (l.price && l.sqft ? Math.round(l.price / l.sqft) : null)
@@ -50,19 +71,57 @@ const money = (n: number | null) =>
   n == null ? '—' : n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
 const num = (n: number | null) => (n == null ? '—' : n.toLocaleString('en-US'))
 
+// Normalize a street address for matching: lowercase, drop the city/state/zip
+// after the first comma, strip common street-suffix punctuation, collapse
+// whitespace. We only compare the street line.
+function normAddr(s: string | null | undefined): string {
+  if (!s) return ''
+  return String(s)
+    .toLowerCase()
+    .replace(/,.*$/, '')
+    .replace(/[^a-z0-9 ]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
 export default function Compare() {
   const [input, setInput] = useState('')
   const [listings, setListings] = useState<Listing[]>([])
   const [sortKey, setSortKey] = useState<SortKey | null>(null)
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc')
   const [adding, setAdding] = useState(false)
+  const [analyses, setAnalyses] = useState<Analysis[]>([])
+  const [expanded, setExpanded] = useState<string | null>(null)
+
+  // Pull the tenant's published condition analyses once.
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const res = await fetch(ANALYSES_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+        const body = await res.json().catch(() => ({}))
+        if (!cancelled && body?.ok && Array.isArray(body.analyses)) setAnalyses(body.analyses as Analysis[])
+      } catch { /* the tool works without analyses */ }
+    })()
+    return () => { cancelled = true }
+  }, [])
+
+  // Map normalized address → analysis for O(1) lookup per row.
+  const analysisByAddr = useMemo(() => {
+    const m = new Map<string, Analysis>()
+    for (const a of analyses) {
+      const k = normAddr(a.address)
+      if (k) m.set(k, a)
+    }
+    return m
+  }, [analyses])
+
+  const analysisFor = (l: Listing): Analysis | null => analysisByAddr.get(normAddr(l.address)) || null
 
   async function addListing() {
     const url = input.trim()
     if (!url) return
     if (!/^https?:\/\//.test(url)) {
-      // allow pasting an address too — wrap as a search-style note; still try fetch if it looks like a URL
-      // For non-URL text we can't auto-populate, so create a manual-entry row.
       const id = uid()
       setListings((ls) => [...ls, blankListing(id, url, 'ready')])
       setInput('')
@@ -122,6 +181,7 @@ export default function Compare() {
 
   function remove(id: string) {
     setListings((ls) => ls.filter((l) => l.localId !== id))
+    setExpanded((x) => (x === id ? null : x))
   }
   function toggleFav(id: string) {
     setListings((ls) => ls.map((l) => (l.localId === id ? { ...l, favorite: !l.favorite } : l)))
@@ -136,7 +196,10 @@ export default function Compare() {
 
   const sorted = useMemo(() => {
     if (!sortKey) return listings
-    const val = (l: Listing): number | null => (sortKey === 'ppsf' ? ppsf(l) : (l[sortKey] as number | null))
+    const val = (l: Listing): number | null =>
+      sortKey === 'ppsf' ? ppsf(l)
+        : sortKey === 'condition' ? (analysisByAddr.get(normAddr(l.address))?.condition_score ?? null)
+          : (l[sortKey] as number | null)
     return [...listings].sort((a, b) => {
       const av = val(a), bv = val(b)
       if (av == null && bv == null) return 0
@@ -144,10 +207,11 @@ export default function Compare() {
       if (bv == null) return -1
       return sortDir === 'asc' ? av - bv : bv - av
     })
-  }, [listings, sortKey, sortDir])
+  }, [listings, sortKey, sortDir, analysisByAddr])
 
   const ready = listings.filter((l) => l.status === 'ready')
   const hasData = listings.length > 0
+  const anyMatched = ready.some((l) => analysisFor(l))
 
   return (
     <div className="mp-public min-h-screen bg-[#FAFAF7] text-[#0D1B2A]">
@@ -166,8 +230,9 @@ export default function Compare() {
         </h1>
         <p className="text-[#273C46] mt-4 max-w-2xl leading-relaxed">
           Paste a Zillow or Redfin link and we pull the details automatically. Add as many as you
-          like, sort by any number, and star your favorites. Works for buyers weighing options — and
-          for sellers comping their own home against the neighbors.
+          like, sort by any number, and star your favorites. Where Tim has already reviewed a home&rsquo;s
+          disclosures, you&rsquo;ll also see a condition score and repair estimate — the analysis buyers
+          usually only get at offer time.
         </p>
 
         {/* input */}
@@ -194,83 +259,110 @@ export default function Compare() {
           <>
             {/* comparison table */}
             <div className="mt-10 overflow-x-auto -mx-6 px-6">
-              <table className="w-full border-separate border-spacing-0 min-w-[680px]">
+              <table className="w-full border-separate border-spacing-0 min-w-[760px]">
                 <thead>
                   <tr>
                     <Th className="text-left w-[180px]">Property</Th>
                     <SortableTh label="Price" k="price" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="$/sqft" k="ppsf" {...{ sortKey, sortDir, sortBy }} />
+                    <SortableTh label="Condition" k="condition" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="Beds" k="bedrooms" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="Baths" k="bathrooms" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="Sqft" k="sqft" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="Year" k="yearBuilt" {...{ sortKey, sortDir, sortBy }} />
                     <SortableTh label="HOA/mo" k="hoaMonthly" {...{ sortKey, sortDir, sortBy }} />
-                    <Th className="text-left">Parking</Th>
-                    <Th className="text-left">Outdoor</Th>
                     <Th className="w-[80px]"> </Th>
                   </tr>
                 </thead>
                 <tbody>
-                  {sorted.map((l) => (
-                    <tr key={l.localId} className={l.favorite ? 'bg-[#0D1B2A]/[0.03]' : ''}>
-                      <Td className="text-left">
-                        <div className="flex items-start gap-3">
-                          {l.photoUrl ? (
-                            <img src={l.photoUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0 bg-black/5" />
-                          ) : (
-                            <div className="w-14 h-14 rounded-lg bg-black/5 grid place-items-center shrink-0">
-                              <HomeIcon className="w-5 h-5 text-[#273C46]/40" />
+                  {sorted.map((l) => {
+                    const a = analysisFor(l)
+                    const isOpen = expanded === l.localId
+                    return (
+                      <FragmentRow key={l.localId}>
+                        <tr className={l.favorite ? 'bg-[#0D1B2A]/[0.03]' : ''}>
+                          <Td className="text-left">
+                            <div className="flex items-start gap-3">
+                              {l.photoUrl ? (
+                                <img src={l.photoUrl} alt="" className="w-14 h-14 rounded-lg object-cover shrink-0 bg-black/5" />
+                              ) : (
+                                <div className="w-14 h-14 rounded-lg bg-black/5 grid place-items-center shrink-0">
+                                  <HomeIcon className="w-5 h-5 text-[#273C46]/40" />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                {l.status === 'loading' ? (
+                                  <span className="inline-flex items-center gap-1.5 text-sm text-[#273C46]">
+                                    <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reading…
+                                  </span>
+                                ) : l.status === 'error' ? (
+                                  <span className="text-sm text-red-700">{l.error}</span>
+                                ) : (
+                                  <>
+                                    <a href={l.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline block truncate">
+                                      {l.address || 'Listing'}
+                                    </a>
+                                    <span className="text-xs text-[#273C46]/70">
+                                      {[l.city, l.state].filter(Boolean).join(', ')}
+                                      {l.propertyType ? ` · ${l.propertyType}` : ''}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          <div className="min-w-0">
-                            {l.status === 'loading' ? (
-                              <span className="inline-flex items-center gap-1.5 text-sm text-[#273C46]">
-                                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Reading…
-                              </span>
-                            ) : l.status === 'error' ? (
-                              <span className="text-sm text-red-700">{l.error}</span>
+                          </Td>
+                          <Td className="font-medium">{money(l.price)}</Td>
+                          <Td>{ppsf(l) == null ? '—' : `$${num(ppsf(l))}`}</Td>
+                          <Td>
+                            {a?.condition_score != null ? (
+                              <button
+                                onClick={() => setExpanded(isOpen ? null : l.localId)}
+                                className="inline-flex items-center gap-1.5"
+                                title="See the condition read"
+                              >
+                                <ScoreBadge score={a.condition_score} />
+                                {isOpen ? <ChevronUp className="w-3 h-3 text-[#273C46]/50" /> : <ChevronDown className="w-3 h-3 text-[#273C46]/50" />}
+                              </button>
                             ) : (
-                              <>
-                                <a href={l.url} target="_blank" rel="noopener noreferrer" className="text-sm font-medium hover:underline block truncate">
-                                  {l.address || 'Listing'}
-                                </a>
-                                <span className="text-xs text-[#273C46]/70">
-                                  {[l.city, l.state].filter(Boolean).join(', ')}
-                                  {l.propertyType ? ` · ${l.propertyType}` : ''}
-                                </span>
-                              </>
+                              <span className="text-xs text-[#273C46]/40">—</span>
                             )}
-                          </div>
-                        </div>
-                      </Td>
-                      <Td className="font-medium">{money(l.price)}</Td>
-                      <Td>{ppsf(l) == null ? '—' : `$${num(ppsf(l))}`}</Td>
-                      <Td>{num(l.bedrooms)}</Td>
-                      <Td>{num(l.bathrooms)}</Td>
-                      <Td>{num(l.sqft)}</Td>
-                      <Td>{l.yearBuilt ?? '—'}</Td>
-                      <Td>{money(l.hoaMonthly)}</Td>
-                      <Td className="text-left text-sm">
-                        {l.parkingType ? `${l.parkingType}${l.parkingSpaces ? ` (${l.parkingSpaces})` : ''}` : '—'}
-                      </Td>
-                      <Td className="text-left text-sm">
-                        {l.outdoorFeatures?.length ? l.outdoorFeatures.join(', ') : '—'}
-                      </Td>
-                      <Td>
-                        <div className="flex items-center gap-1.5 justify-center">
-                          <button onClick={() => toggleFav(l.localId)} title="Favorite" className={l.favorite ? 'text-[#0D1B2A]' : 'text-[#273C46]/40 hover:text-[#273C46]'}>
-                            <Star className="w-4 h-4" fill={l.favorite ? 'currentColor' : 'none'} />
-                          </button>
-                          <button onClick={() => remove(l.localId)} title="Remove" className="text-[#273C46]/40 hover:text-red-600">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </Td>
-                    </tr>
-                  ))}
+                          </Td>
+                          <Td>{num(l.bedrooms)}</Td>
+                          <Td>{num(l.bathrooms)}</Td>
+                          <Td>{num(l.sqft)}</Td>
+                          <Td>{l.yearBuilt ?? '—'}</Td>
+                          <Td>{money(l.hoaMonthly)}</Td>
+                          <Td>
+                            <div className="flex items-center gap-1.5 justify-center">
+                              <button onClick={() => toggleFav(l.localId)} title="Favorite" className={l.favorite ? 'text-[#0D1B2A]' : 'text-[#273C46]/40 hover:text-[#273C46]'}>
+                                <Star className="w-4 h-4" fill={l.favorite ? 'currentColor' : 'none'} />
+                              </button>
+                              <button onClick={() => remove(l.localId)} title="Remove" className="text-[#273C46]/40 hover:text-red-600">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </Td>
+                        </tr>
+                        {isOpen && a && (
+                          <tr>
+                            <td colSpan={10} className="border-b border-black/[0.06] bg-[#0D1B2A]/[0.02] px-3 pb-5 pt-1">
+                              <ConditionCard a={a} />
+                            </td>
+                          </tr>
+                        )}
+                      </FragmentRow>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>
+
+            {anyMatched && (
+              <p className="mt-4 text-xs text-[#273C46]/70 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Condition scores reflect Tim&rsquo;s review of each home&rsquo;s actual seller disclosures. Tap a score to see the read.
+              </p>
+            )}
 
             {/* account prompts */}
             {ready.length >= 1 ? (
@@ -296,7 +388,71 @@ export default function Compare() {
   )
 }
 
+/* ----------------------------- condition UI ----------------------------- */
+
+function scoreColor(score: number): string {
+  if (score >= 75) return '#1f7a4d'
+  if (score >= 55) return '#273C46'
+  if (score >= 35) return '#9a6b00'
+  return '#b42318'
+}
+
+function ScoreBadge({ score }: { score: number }) {
+  return (
+    <span
+      className="inline-flex items-center justify-center rounded-full text-xs font-semibold text-white w-10 h-7"
+      style={{ backgroundColor: scoreColor(score) }}
+    >
+      {score}
+    </span>
+  )
+}
+
+function ConditionCard({ a }: { a: Analysis }) {
+  const fmt = (n: number | null) =>
+    n == null ? null : n.toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 })
+  const lo = fmt(a.repair_budget_low)
+  const hi = fmt(a.repair_budget_high)
+  return (
+    <div className="rounded-[16px] border border-black/[0.08] bg-white p-5 max-w-3xl">
+      <div className="flex items-start gap-4">
+        <div className="shrink-0 text-center">
+          <ScoreBadge score={a.condition_score ?? 0} />
+          <div className="mt-1.5 text-[10px] uppercase tracking-widest text-[#273C46]/60">Condition</div>
+        </div>
+        <div className="min-w-0 flex-1">
+          {a.condition_verdict && (
+            <p className="text-sm text-[#0D1B2A] leading-relaxed">{a.condition_verdict}</p>
+          )}
+          {a.agent_condition_note && (
+            <p className="text-sm text-[#273C46] mt-2 leading-relaxed italic">&ldquo;{a.agent_condition_note}&rdquo;</p>
+          )}
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3">
+            {(lo || hi) && (
+              <span className="inline-flex items-center gap-1.5 text-sm text-[#273C46]">
+                <Wrench className="w-3.5 h-3.5" />
+                Estimated repairs: <strong className="text-[#0D1B2A]">{lo || '—'}{hi ? `–${hi}` : ''}</strong>
+              </span>
+            )}
+            {a.cma_published && a.cma_slug && (
+              <Link to={`/cmas/${a.cma_slug}`} className="text-sm font-medium text-[#0D1B2A] underline">
+                See the full market analysis
+              </Link>
+            )}
+          </div>
+          <p className="text-[11px] text-[#273C46]/55 mt-3">
+            Planning estimate from the seller&rsquo;s disclosure package — not a contractor bid.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 /* -------------------------------- helpers -------------------------------- */
+function FragmentRow({ children }: { children: React.ReactNode }) {
+  return <>{children}</>
+}
 function blankListing(localId: string, url: string, status: Listing['status']): Listing {
   return {
     localId, url, status, favorite: false,
