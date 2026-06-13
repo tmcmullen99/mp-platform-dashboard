@@ -68,6 +68,7 @@ export default function Analyze() {
   const [manualAddress, setManualAddress] = useState('')
 
   const [busy, setBusy] = useState<null | 'disclosure' | 'cma'>(null)
+  const [busyPhase, setBusyPhase] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
   const [loadingAnalyses, setLoadingAnalyses] = useState(true)
 
@@ -167,6 +168,14 @@ export default function Analyze() {
   }
 
   // Shared upload handler for both drop zones.
+  //
+  // SF disclosure packages run 80 MB+ / 500+ pages because they embed hundreds
+  // of raster report images. The analysis only needs the TEXT (a few hundred KB),
+  // and decoding the whole binary server-side blows the Edge Function's memory /
+  // compute ceiling. So we extract the text layer HERE, in the browser (the
+  // agent's machine has the headroom; pdf.js does it in a few seconds), upload it
+  // as a `.txt` sidecar next to the raw PDF, and the Edge Function analyzes the
+  // text. The agent still just drops one big file.
   async function handleUpload(kind: 'disclosure' | 'cma', file: File) {
     setError(null)
     if (!tenantId) { setError('No active tenant.'); return }
@@ -176,31 +185,52 @@ export default function Analyze() {
       return
     }
     setBusy(kind)
+    setBusyPhase('Reading PDF…')
     try {
       const row = await ensureAnalysisRow()
-      const path = `${tenantId}/${row.id}/${kind}.pdf`
+      const pdfPath = `${tenantId}/${row.id}/${kind}.pdf`
+      const txtPath = `${tenantId}/${row.id}/${kind}.txt`
 
-      // Upload to the private disclosures bucket (RLS: foldername[1] = tenant).
-      const { error: upErr } = await supabase.storage
+      // 1. Extract the text layer in-browser.
+      const text = await extractPdfText(file, (done, total) =>
+        setBusyPhase(`Reading PDF… page ${done} of ${total}`))
+      if (text.trim().length < 200) {
+        throw new Error(
+          'This PDF has no readable text layer (likely scanned images). Re-export a text PDF from Disclosures.io / the MLS and try again.',
+        )
+      }
+
+      // 2. Upload the text sidecar (this is what gets analyzed).
+      setBusyPhase('Uploading…')
+      const { error: txtErr } = await supabase.storage
         .from('disclosures')
-        .upload(path, file, { upsert: true, contentType: 'application/pdf' })
-      if (upErr) throw new Error(`Upload failed: ${upErr.message}`)
+        .upload(txtPath, new Blob([text], { type: 'text/plain' }), { upsert: true, contentType: 'text/plain' })
+      if (txtErr) throw new Error(`Text upload failed: ${txtErr.message}`)
 
-      // Write the file path + reset status to pending so the poller picks it up.
+      // 3. Upload the raw PDF for the record (best-effort — don't fail the run if
+      //    a very large raw is rejected; the text sidecar is what matters).
+      const { error: pdfErr } = await supabase.storage
+        .from('disclosures')
+        .upload(pdfPath, file, { upsert: true, contentType: 'application/pdf' })
+      if (pdfErr) {
+        // Non-fatal: log to the UI but proceed — analysis runs on the text.
+        console.warn('Raw PDF upload skipped:', pdfErr.message)
+      }
+
+      // 4. Save the file path + reset status to pending.
       const patch = kind === 'disclosure'
-        ? { disclosure_file_path: path, disclosure_status: 'pending' as AnalysisStatus, disclosure_error: null }
-        : { cma_file_path: path, cma_status: 'pending' as AnalysisStatus, cma_error: null }
+        ? { disclosure_file_path: pdfPath, disclosure_status: 'pending' as AnalysisStatus, disclosure_error: null }
+        : { cma_file_path: pdfPath, cma_status: 'pending' as AnalysisStatus, cma_error: null }
       const { error: updErr } = await supabase.from('property_analyses').update(patch).eq('id', row.id)
       if (updErr) throw new Error(`Could not save file path: ${updErr.message}`)
 
-      // Optimistic local status bump → 'analyzing' (the function sets it too).
       setAnalyses((rows) => rows.map((r) => r.id === row.id
         ? { ...r, ...patch, [kind === 'disclosure' ? 'disclosure_status' : 'cma_status']: 'analyzing' as AnalysisStatus }
         : r))
 
-      // Invoke the analysis Edge Function (verify_jwt=false, but we still send
-      // the bearer for consistency). Fire-and-forget: the function writes the
-      // draft + emails; we poll the row for the result.
+      // 5. Invoke the analysis Edge Function. It returns 202 immediately and runs
+      //    the analysis in the background; we poll the row for the result.
+      setBusyPhase('Starting analysis…')
       const fn = kind === 'disclosure' ? 'analyze_disclosure' : 'analyze_cma'
       const resp = await fetch(`${SUPABASE_URL}/functions/v1/${fn}`, {
         method: 'POST',
@@ -210,8 +240,6 @@ export default function Analyze() {
         },
         body: JSON.stringify({ analysis_id: row.id }),
       })
-      // The function returns 200 even on handled failures (it records the error
-      // on the row). Surface a transport-level failure only.
       if (!resp.ok && resp.status >= 500) {
         const t = await resp.text().catch(() => '')
         throw new Error(`Analysis service error ${resp.status}: ${t.slice(0, 200)}`)
@@ -221,6 +249,7 @@ export default function Analyze() {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setBusy(null)
+      setBusyPhase('')
     }
   }
 
@@ -306,8 +335,9 @@ export default function Analyze() {
             kind="disclosure"
             Icon={FileText}
             title="Disclosure package"
-            blurb="Combined seller disclosures as one text PDF (Disclosures.io export works best)."
+            blurb="Combined seller disclosures as one PDF, however large. We read it right here in your browser."
             busy={busy === 'disclosure'}
+            phase={busy === 'disclosure' ? busyPhase : ''}
             disabled={busy !== null}
             onFile={(f) => handleUpload('disclosure', f)}
           />
@@ -317,6 +347,7 @@ export default function Analyze() {
             title="MLS CMA"
             blurb="The agent CMA PDF with the subject + comparable sales."
             busy={busy === 'cma'}
+            phase={busy === 'cma' ? busyPhase : ''}
             disabled={busy !== null}
             onFile={(f) => handleUpload('cma', f)}
           />
@@ -368,6 +399,53 @@ export default function Analyze() {
 
 /* -------------------------------- pieces -------------------------------- */
 
+// Extract the text layer from a PDF entirely in the browser. pdf.js is loaded
+// from the CDN on demand (not bundled) so the main app bundle is unchanged and
+// we avoid Vite worker-config friction. Returns the concatenated page text.
+//
+// This is the load-bearing piece of the large-file story: an 80 MB / 500-page
+// SF disclosure yields only a few hundred KB of text, which the Edge Function
+// then analyzes without ever decoding the heavy binary.
+let pdfjsLoader: Promise<any> | null = null
+function loadPdfjs(): Promise<any> {
+  if (pdfjsLoader) return pdfjsLoader
+  pdfjsLoader = (async () => {
+    const VERSION = '4.7.76'
+    // @ts-ignore — runtime CDN ESM import; no types bundled.
+    const pdfjs = await import(
+      /* @vite-ignore */ `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${VERSION}/pdf.min.mjs`
+    )
+    pdfjs.GlobalWorkerOptions.workerSrc =
+      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${VERSION}/pdf.worker.min.mjs`
+    return pdfjs
+  })()
+  return pdfjsLoader
+}
+
+async function extractPdfText(
+  file: File,
+  onProgress?: (done: number, total: number) => void,
+): Promise<string> {
+  const pdfjs = await loadPdfjs()
+  const buf = await file.arrayBuffer()
+  const doc = await pdfjs.getDocument({ data: buf }).promise
+  const total: number = doc.numPages
+  const parts: string[] = []
+  for (let p = 1; p <= total; p++) {
+    const page = await doc.getPage(p)
+    const content = await page.getTextContent()
+    // items[].str holds the text fragments; join with spaces, page-break with \n.
+    const line = (content.items as Array<{ str?: string }>)
+      .map((it) => it.str || '')
+      .join(' ')
+    parts.push(line)
+    page.cleanup()
+    if (onProgress && (p % 5 === 0 || p === total)) onProgress(p, total)
+  }
+  try { await doc.destroy() } catch { /* ignore */ }
+  return parts.join('\n')
+}
+
 function Field({ label, children, className = '' }: { label: string; children: React.ReactNode; className?: string }) {
   return (
     <div className={className}>
@@ -378,13 +456,14 @@ function Field({ label, children, className = '' }: { label: string; children: R
 }
 
 function DropZone({
-  kind, Icon, title, blurb, busy, disabled, onFile,
+  kind, Icon, title, blurb, busy, phase, disabled, onFile,
 }: {
   kind: 'disclosure' | 'cma'
   Icon: React.ComponentType<{ className?: string }>
   title: string
   blurb: string
   busy: boolean
+  phase?: string
   disabled: boolean
   onFile: (f: File) => void
 }) {
@@ -421,7 +500,7 @@ function DropZone({
       <div className="font-medium text-ink-900">{title}</div>
       <p className="text-xs text-ink-500 mt-1.5 leading-relaxed max-w-xs mx-auto">{blurb}</p>
       <div className="inline-flex items-center gap-1.5 mt-4 text-2xs uppercase tracking-widest text-ink-600">
-        {busy ? 'Uploading…' : <><Upload className="w-3 h-3" /> Drop PDF or click</>}
+        {busy ? (phase || 'Working…') : <><Upload className="w-3 h-3" /> Drop PDF or click</>}
       </div>
     </div>
   )
