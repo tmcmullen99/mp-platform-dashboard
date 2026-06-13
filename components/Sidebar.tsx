@@ -15,6 +15,7 @@ import {
   LucideIcon,
   Inbox,
   BadgeDollarSign,
+  FileSearch,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -27,6 +28,7 @@ const navItems: NavItem[] = [
   { to: '/credit-applications', label: '$10K Credits', Icon: BadgeDollarSign },
   { to: '/clients', label: 'Clients', Icon: Briefcase },
   { to: '/cmas/new', label: 'New CMA', Icon: FileBarChart2 },
+  { to: '/analyze', label: 'Analyze', Icon: FileSearch },
   { to: '/prospecting', label: 'Prospecting', Icon: Search },
   { to: '/campaigns', label: 'Campaigns', Icon: Send },
   { to: '/listings', label: 'Listings', Icon: Home },
