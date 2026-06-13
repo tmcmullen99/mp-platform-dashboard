@@ -65,7 +65,7 @@ export default function OnboardingChecklist({ tenantId, branding }: Props) {
     {
       key: 'clients',
       label: 'Add your first client',
-      hint: 'Open a war room and start a deal',
+      hint: 'Open a situation room and start a deal',
       to: '/clients',
       done: counts.clients > 0,
     },
