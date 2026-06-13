@@ -103,7 +103,7 @@ function ClientsList() {
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">P8.1 · Client Portal</div>
           <h1 className="font-display text-3xl sm:text-4xl text-ink-900 leading-tight">Clients</h1>
           <p className="text-ink-700 mt-2 max-w-xl">
-            Active engagements. Each client has one or more deals, a war room, a timeline, and documents.
+            Active engagements. Each client has one or more deals, a situation room, a timeline, and documents.
           </p>
         </div>
         <button
@@ -469,7 +469,7 @@ const TABS: { key: Tab; label: string; Icon: typeof Home }[] = [
   { key: 'saved', label: 'Saved properties', Icon: Heart },
   { key: 'timeline', label: 'Timeline', Icon: Clock },
   { key: 'documents', label: 'Documents', Icon: FileText },
-  { key: 'war_room', label: 'War Room', Icon: MessageSquare },
+  { key: 'war_room', label: 'Situation Room', Icon: MessageSquare },
 ]
 
 function ClientDetail() {
@@ -665,7 +665,7 @@ function OverviewTab({
         <StatBlock to={`/clients/${client.id}/listing`} label="Deals" value={deals.length.toString()} />
         <StatBlock to={`/clients/${client.id}/timeline`} label="Activities" value={activities.length.toString()} />
         <StatBlock to={`/clients/${client.id}/documents`} label="Documents" value={documents.length.toString()} />
-        <StatBlock to={`/clients/${client.id}/war_room`} label="War rooms" value={warRooms.length.toString()} />
+        <StatBlock to={`/clients/${client.id}/war_room`} label="Situation rooms" value={warRooms.length.toString()} />
       </div>
 
       <div className="space-y-8">
@@ -914,7 +914,7 @@ function DocumentsTab({ client }: { client: Client }) {
 // --- War Room (real) ---
 function WarRoomTab({ warRooms }: { warRooms: WarRoom[] }) {
   if (warRooms.length === 0) {
-    return <p className="text-sm text-ink-500">No war rooms yet.</p>
+    return <p className="text-sm text-ink-500">No situation rooms yet.</p>
   }
   return (
     <div className="space-y-8">
