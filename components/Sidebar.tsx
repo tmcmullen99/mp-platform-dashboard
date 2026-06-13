@@ -16,6 +16,7 @@ import {
   Inbox,
   BadgeDollarSign,
   FileSearch,
+  X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -39,19 +40,38 @@ const navItems: NavItem[] = [
   { to: '/settings', label: 'Settings', Icon: Settings },
 ]
 
-export default function Sidebar() {
+// Sidebar is a static rail on desktop (lg+) and an off-canvas drawer on mobile.
+// `open` / `onClose` drive the mobile drawer; on desktop they're inert because
+// the aside is always translated into view at the lg breakpoint.
+export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
   const { currentTenant, currentBranding } = useAuth()
 
   return (
-    <aside className="w-64 bg-ink-900 text-cream/90 flex flex-col h-screen sticky top-0 shrink-0">
-      {/* Brand */}
-      <div className="p-7 border-b border-white/5">
-        <div className="font-display text-xl text-cream leading-tight tracking-tight">
-          {currentTenant?.display_name || 'McMullen Platform'}
+    <aside
+      className={`
+        fixed inset-y-0 left-0 z-40 w-64 bg-ink-900 text-cream/90 flex flex-col h-screen
+        transform transition-transform duration-200 ease-out
+        ${open ? 'translate-x-0' : '-translate-x-full'}
+        lg:translate-x-0 lg:sticky lg:top-0 lg:z-auto lg:shrink-0
+      `}
+    >
+      {/* Brand + mobile close */}
+      <div className="p-7 border-b border-white/5 flex items-start justify-between">
+        <div>
+          <div className="font-display text-xl text-cream leading-tight tracking-tight">
+            {currentTenant?.display_name || 'McMullen Platform'}
+          </div>
+          <div className="text-2xs uppercase tracking-widest text-cream/40 mt-2">
+            {currentBranding?.brokerage_affiliation || 'Brokerage OS'}
+          </div>
         </div>
-        <div className="text-2xs uppercase tracking-widest text-cream/40 mt-2">
-          {currentBranding?.brokerage_affiliation || 'Brokerage OS'}
-        </div>
+        <button
+          onClick={onClose}
+          className="lg:hidden text-cream/50 hover:text-cream -mr-1 -mt-1 p-1"
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
 
       {/* Nav */}
@@ -62,6 +82,7 @@ export default function Sidebar() {
               <NavLink
                 to={item.to}
                 end={item.to === '/'}
+                onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 text-sm transition-colors ${
                     isActive
