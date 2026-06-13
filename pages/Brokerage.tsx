@@ -130,7 +130,7 @@ export default function Brokerage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-8 py-10">
+    <div className="max-w-5xl mx-auto px-5 sm:px-8 py-8 sm:py-10">
       <div className="mb-8">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1">Operator</div>
         <h1 className="font-display text-3xl text-ink-900">Brokerage</h1>
