@@ -163,7 +163,7 @@ export default function AccountDashboard() {
               Icon={Scale}
               title="Compare properties"
               blurb="Paste Zillow links or addresses, build a ranked comparison."
-              to="/portal/saved"
+              to="/compare"
               cta="Open"
             />
             <ToolCard
