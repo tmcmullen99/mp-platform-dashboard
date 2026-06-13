@@ -24,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext'
 // Map notification_type → icon + human label. Unknown types fall back to a bell
 // with the raw type humanized, so new server-side types render gracefully.
 const TYPE_META: Record<string, { Icon: LucideIcon; label: string }> = {
-  war_room_message: { Icon: MessageCircle, label: 'War room' },
+  war_room_message: { Icon: MessageCircle, label: 'Situation Room' },
   tour_requested: { Icon: Calendar, label: 'Tour request' },
   tour_confirmed: { Icon: CalendarCheck, label: 'Tour confirmed' },
   tour_cancelled: { Icon: CalendarX, label: 'Tour cancelled' },
