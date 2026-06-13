@@ -149,7 +149,7 @@ export default function DealDetail() {
         tenant_id: currentTenant.id,
         deal_id: deal.id,
         client_id: deal.client_id,
-        name: deal.title || 'Deal war room',
+        name: deal.title || 'Deal situation room',
       })
       .select()
       .maybeSingle()
@@ -380,9 +380,9 @@ export default function DealDetail() {
         )}
       </section>
 
-      {/* War room */}
+      {/* Situation room */}
       <section className="mb-14">
-        <SectionLabel>War room</SectionLabel>
+        <SectionLabel>Situation Room</SectionLabel>
         {warRoom ? (
           <WarRoomThread warRoom={warRoom} viewerType="agent" />
         ) : (
@@ -392,8 +392,8 @@ export default function DealDetail() {
                 <MessageCircle className="w-4 h-4 text-ink-400" strokeWidth={1.5} />
                 <div className="text-sm text-ink-600">
                   {deal.client_id
-                    ? 'No war room for this deal yet — start one to message the client.'
-                    : 'Attach a client to this deal to start a war room.'}
+                    ? 'No situation room for this deal yet — start one to message the client.'
+                    : 'Attach a client to this deal to start a situation room.'}
                 </div>
               </div>
               {deal.client_id && (
@@ -403,7 +403,7 @@ export default function DealDetail() {
                   className="inline-flex items-center gap-2 px-4 py-2.5 bg-ink-900 text-cream text-2xs uppercase tracking-widest hover:bg-ink-700 disabled:opacity-50 shrink-0"
                 >
                   {startingWarRoom ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <MessageCircle className="w-3.5 h-3.5" />}
-                  Start war room
+                  Start situation room
                 </button>
               )}
             </div>
