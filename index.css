@@ -38,3 +38,12 @@ body {
 .font-display {
   letter-spacing: -0.015em;
 }
+
+/* Hide scrollbar on horizontally-scrollable mobile tab strips while keeping scroll */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
