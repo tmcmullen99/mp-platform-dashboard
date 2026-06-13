@@ -257,7 +257,7 @@ export default function Analyze() {
     [l.address, l.city].filter(Boolean).join(', ') || l.source_url
 
   return (
-    <div className="p-12 max-w-6xl">
+    <div className="p-5 sm:p-8 lg:p-12 max-w-6xl">
       <div className="flex items-start justify-between mb-8">
         <div>
           <div className="text-2xs uppercase tracking-widest text-ink-400 mb-2">Sprint C</div>
