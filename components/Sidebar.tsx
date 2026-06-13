@@ -16,6 +16,7 @@ import {
   Inbox,
   BadgeDollarSign,
   FileSearch,
+  Building2,
   X,
 } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -44,7 +45,12 @@ const navItems: NavItem[] = [
 // `open` / `onClose` drive the mobile drawer; on desktop they're inert because
 // the aside is always translated into view at the lg breakpoint.
 export default function Sidebar({ open = false, onClose }: { open?: boolean; onClose?: () => void }) {
-  const { currentTenant, currentBranding } = useAuth()
+  const { currentTenant, currentBranding, profile } = useAuth()
+
+  // Brokerage operator console is admin-only — appended for brokerage admins.
+  const items: NavItem[] = profile?.is_brokerage_admin
+    ? [...navItems, { to: '/brokerage', label: 'Brokerage', Icon: Building2 }]
+    : navItems
 
   return (
     <aside
@@ -77,7 +83,7 @@ export default function Sidebar({ open = false, onClose }: { open?: boolean; onC
       {/* Nav */}
       <nav className="flex-1 p-3 overflow-y-auto">
         <ul className="space-y-0.5">
-          {navItems.map((item) => (
+          {items.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
