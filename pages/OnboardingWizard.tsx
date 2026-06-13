@@ -373,8 +373,8 @@ export default function OnboardingWizard() {
       </header>
 
       {step === 'ask' && (
-        <main className="max-w-2xl mx-auto px-6 pt-20 pb-24">
-          <h1 className="font-display text-4xl leading-tight text-ink-900">
+        <main className="max-w-2xl mx-auto px-5 sm:px-6 pt-14 sm:pt-20 pb-24">
+          <h1 className="font-display text-3xl sm:text-4xl leading-tight text-ink-900">
             Let's build your workspace.
           </h1>
           <p className="mt-4 text-ink-600 leading-relaxed">
@@ -467,7 +467,7 @@ export default function OnboardingWizard() {
       )}
 
       {step === 'review' && (
-        <main className="max-w-5xl mx-auto px-6 pt-12 pb-28">
+        <main className="max-w-5xl mx-auto px-5 sm:px-6 pt-10 sm:pt-12 pb-28">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <h1 className="font-display text-3xl text-ink-900">Does this look right?</h1>
