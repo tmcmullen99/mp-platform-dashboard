@@ -334,7 +334,7 @@ export default function WarRoomThread({
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => e.preventDefault()}
           rows={2}
-          placeholder="Type a message… (⌘+Enter to send, or drag a file in)"
+          placeholder="Type a message…"
           className="flex-1 px-3 py-2 border border-ink-200 text-sm resize-none focus:outline-none focus:border-ink-900"
           disabled={sending || uploading}
         />
