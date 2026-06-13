@@ -1223,7 +1223,7 @@ function RequestTourDialog({
       <p className="text-sm text-ink-600 mb-5">
         Schedule a tour of{' '}
         <span className="text-ink-900 font-medium">{addressLine}</span>. Your agent gets an
-        email immediately and confirms (or proposes a new time) in the war room. Tours need at
+        email immediately and confirms (or proposes a new time) in the situation room. Tours need at
         least 24 hours notice — earliest available is tomorrow.
       </p>
 
