@@ -12,6 +12,8 @@ import Portal from '@/pages/Portal'
 import NewCMA from '@/pages/NewCMA'
 import CommissionSettings from '@/pages/CommissionSettings'
 import CMAViewer from '@/components/CMAViewer'
+import Analyze from '@/pages/Analyze'
+import AnalyzeReview from '@/pages/AnalyzeReview'
 // Public website surface (no auth) — served before the AuthGate.
 import McMullenHome from '@/pages/public/McMullenHome'
 import TenantHome from '@/pages/public/TenantHome'
@@ -139,6 +141,8 @@ function AuthGate() {
             picks best-match regardless of declaration order). */}
         <Route path="/cmas/:slug/edit" element={<NewCMA />} />
         <Route path="/cmas/:slug" element={<CMAViewer />} />
+        <Route path="/analyze" element={<Analyze />} />
+        <Route path="/analyze/:id" element={<AnalyzeReview />} />
         <Route path="/make-me-move" element={<MakeMeMove />} />
         <Route
           path="/prospecting"
