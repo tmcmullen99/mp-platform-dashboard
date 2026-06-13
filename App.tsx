@@ -25,6 +25,7 @@ import ListingsAdmin from '@/pages/ListingsAdmin'
 import Inquiries from '@/pages/Inquiries'
 import CreditApplications from '@/pages/CreditApplications'
 import Welcome from '@/pages/public/Welcome'
+import Compare from '@/pages/public/Compare'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/account" element={<AccountDashboard />} />
           <Route path="/account/apply" element={<CreditApplication />} />
+          <Route path="/compare" element={<Compare />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
