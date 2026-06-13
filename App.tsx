@@ -14,6 +14,9 @@ import CommissionSettings from '@/pages/CommissionSettings'
 import CMAViewer from '@/components/CMAViewer'
 import Analyze from '@/pages/Analyze'
 import AnalyzeReview from '@/pages/AnalyzeReview'
+import Signup from '@/pages/Signup'
+import OnboardingWizard from '@/pages/OnboardingWizard'
+import Brokerage from '@/pages/Brokerage'
 // Public website surface (no auth) — served before the AuthGate.
 import McMullenHome from '@/pages/public/McMullenHome'
 import TenantHome from '@/pages/public/TenantHome'
@@ -68,6 +71,7 @@ export default function App() {
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
+          <Route path="/signup" element={<Signup />} />
           <Route path="*" element={<AuthGate />} />
         </Routes>
       </BrowserRouter>
@@ -104,7 +108,7 @@ function AuthedRoot() {
 }
 
 function AuthGate() {
-  const { session, loading, isAgent, isClient } = useAuth()
+  const { session, loading, isAgent, isClient, currentTenant, currentBranding } = useAuth()
   if (loading) {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center">
@@ -120,6 +124,25 @@ function AuthGate() {
       <Routes>
         <Route path="/portal/*" element={<Portal />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
+      </Routes>
+    )
+  }
+
+  // First-run onboarding gate. A brand-new agent has a tenant but no
+  // tenant_branding.onboarded_at stamp yet. We route them into the full-screen
+  // wizard exactly once; it stamps onboarded_at on finish/skip and hard-navigates
+  // to "/", which re-reads branding and releases the gate. The wizard lives
+  // OUTSIDE <Layout> so there's no dashboard chrome during setup.
+  // Guard: only gate once branding has actually loaded (currentBranding !== null)
+  // to avoid a flash-redirect on the first render before the fetch resolves.
+  const needsOnboarding =
+    isAgent && !!currentTenant && currentBranding !== null && !currentBranding.onboarded_at
+
+  if (needsOnboarding) {
+    return (
+      <Routes>
+        <Route path="/onboarding" element={<OnboardingWizard />} />
+        <Route path="*" element={<Navigate to="/onboarding" replace />} />
       </Routes>
     )
   }
@@ -196,6 +219,7 @@ function AuthGate() {
           }
         />
         <Route path="/settings/commission" element={<CommissionSettings />} />
+        <Route path="/brokerage" element={<Brokerage />} />
         <Route
           path="/settings"
           element={
@@ -209,6 +233,9 @@ function AuthGate() {
           }
         />
       </Route>
+      {/* Full-screen onboarding wizard (re-runnable after first pass) — outside
+          Layout so there's no dashboard chrome. */}
+      <Route path="/onboarding" element={<OnboardingWizard />} />
       <Route path="/portal/*" element={<Portal />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
