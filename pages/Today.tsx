@@ -161,11 +161,11 @@ export default function Today() {
   }
 
   return (
-    <div className="p-12 max-w-6xl">
+    <div className="p-5 sm:p-8 lg:p-12 max-w-6xl">
       {/* Header */}
       <div className="mb-10">
         <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">P9.4 · Agent home</div>
-        <h1 className="font-display text-4xl text-ink-900 leading-tight">
+        <h1 className="font-display text-3xl sm:text-4xl text-ink-900 leading-tight">
           {greeting()}
           {name ? `, ${capitalize(name)}` : ''}.
         </h1>
