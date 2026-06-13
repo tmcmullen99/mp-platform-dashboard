@@ -97,21 +97,22 @@ function ClientsList() {
   }, [currentTenant?.id])
 
   return (
-    <div className="p-12 max-w-6xl">
-      <div className="flex items-start justify-between mb-12">
+    <div className="p-5 sm:p-8 lg:p-12 max-w-6xl">
+      <div className="flex items-start justify-between gap-4 mb-8 sm:mb-12">
         <div>
           <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">P8.1 · Client Portal</div>
-          <h1 className="font-display text-4xl text-ink-900 leading-tight">Clients</h1>
-          <p className="text-ink-600 mt-2 max-w-xl">
+          <h1 className="font-display text-3xl sm:text-4xl text-ink-900 leading-tight">Clients</h1>
+          <p className="text-ink-700 mt-2 max-w-xl">
             Active engagements. Each client has one or more deals, a war room, a timeline, and documents.
           </p>
         </div>
         <button
           onClick={() => setCreateOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 transition-colors"
+          className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-ink-900 text-cream text-sm hover:bg-ink-800 transition-colors shrink-0"
         >
-          <Plus className="w-4 h-4" />
-          New client
+          <Plus className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">New client</span>
+          <span className="sm:hidden">New</span>
         </button>
       </div>
 
@@ -296,7 +297,7 @@ function CreateClientModal({ onClose, onCreated }: { onClose: () => void; onCrea
   }
 
   return (
-    <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center p-12 overflow-y-auto">
+    <div className="fixed inset-0 bg-black/30 z-50 flex items-start justify-center p-4 sm:p-8 lg:p-12 overflow-y-auto">
       <div className="bg-cream w-full max-w-lg">
         <div className="flex items-center justify-between p-6 border-b border-ink-200">
           <h2 className="font-display text-xl text-ink-900">New client</h2>
@@ -528,7 +529,7 @@ function ClientDetail() {
 
   if (loading) {
     return (
-      <div className="p-12 flex items-center gap-2 text-ink-500 text-sm">
+      <div className="p-5 sm:p-8 lg:p-12 flex items-center gap-2 text-ink-500 text-sm">
         <Loader2 className="w-4 h-4 animate-spin" />
         Loading…
       </div>
@@ -537,7 +538,7 @@ function ClientDetail() {
 
   if (!client) {
     return (
-      <div className="p-12 max-w-3xl">
+      <div className="p-5 sm:p-8 lg:p-12 max-w-3xl">
         <p className="text-ink-600">Client not found.</p>
         <Link to="/clients" className="text-sm text-ink-900 underline mt-4 inline-block">
           ← Back to clients
@@ -549,7 +550,7 @@ function ClientDetail() {
   const primaryDeal = deals[0]
 
   return (
-    <div className="p-12 max-w-6xl">
+    <div className="p-5 sm:p-8 lg:p-12 max-w-6xl">
       {/* Breadcrumb */}
       <Link
         to="/clients"
@@ -561,9 +562,9 @@ function ClientDetail() {
 
       {/* Header */}
       <div className="border-b border-ink-200 pb-8 mb-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="font-display text-4xl text-ink-900 leading-tight">{client.name}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl sm:text-4xl text-ink-900 leading-tight">{client.name}</h1>
             <div className="flex items-center gap-3 mt-3">
               <StageBadge stage={client.stage} />
               {client.client_type && (
@@ -572,50 +573,54 @@ function ClientDetail() {
                 </span>
               )}
             </div>
-            <div className="flex items-center gap-6 mt-4 text-sm text-ink-600">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-x-6 sm:gap-y-2 mt-4 text-sm text-ink-700">
               {client.email && (
-                <span className="flex items-center gap-2">
-                  <Mail className="w-3.5 h-3.5" />
+                <a href={`mailto:${client.email}`} className="flex items-center gap-2 hover:text-ink-900 break-all">
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
                   {client.email}
-                </span>
+                </a>
               )}
               {client.phone && (
-                <span className="flex items-center gap-2">
-                  <Phone className="w-3.5 h-3.5" />
+                <a href={`tel:${client.phone}`} className="flex items-center gap-2 hover:text-ink-900">
+                  <Phone className="w-3.5 h-3.5 shrink-0" />
                   {client.phone}
-                </span>
+                </a>
               )}
               {client.contact_id && (
                 <Link
                   to={`/crm/contacts/${client.contact_id}`}
                   className="flex items-center gap-1 text-ink-500 hover:text-ink-900"
                 >
-                  <ArrowUpRight className="w-3 h-3" />
+                  <ArrowUpRight className="w-3 h-3 shrink-0" />
                   Linked contact
                 </Link>
               )}
             </div>
           </div>
-          <InviteToPortalButton client={client} />
+          <div className="shrink-0">
+            <InviteToPortalButton client={client} />
+          </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="border-b border-ink-200 mb-8 flex">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => navigate(`/clients/${clientId}/${t.key === 'overview' ? '' : t.key}`)}
-            className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors border-b-2 -mb-px ${
-              activeTab === t.key
-                ? 'border-ink-900 text-ink-900'
-                : 'border-transparent text-ink-500 hover:text-ink-900'
-            }`}
-          >
-            <t.Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
-            {t.label}
-          </button>
-        ))}
+      {/* Tabs — horizontally scrollable on mobile so nothing clips */}
+      <div className="border-b border-ink-200 mb-8 -mx-5 sm:mx-0 px-5 sm:px-0">
+        <div className="flex overflow-x-auto no-scrollbar gap-1 snap-x">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => navigate(`/clients/${clientId}/${t.key === 'overview' ? '' : t.key}`)}
+              className={`flex items-center gap-2 px-3 sm:px-4 py-3 text-sm whitespace-nowrap shrink-0 snap-start transition-colors border-b-2 -mb-px ${
+                activeTab === t.key
+                  ? 'border-ink-900 text-ink-900 font-medium'
+                  : 'border-transparent text-ink-500 hover:text-ink-900'
+              }`}
+            >
+              <t.Icon className="w-3.5 h-3.5 shrink-0" strokeWidth={1.5} />
+              {t.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Tab content */}
@@ -654,12 +659,20 @@ function OverviewTab({
 }) {
   const recent = activities.slice(0, 5)
   return (
-    <div className="grid grid-cols-3 gap-8">
-      <div className="col-span-2 space-y-8">
+    <div className="space-y-8">
+      {/* At-a-glance stats — lead with the numbers; each is a tap target to its tab */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <StatBlock to={`/clients/${client.id}/listing`} label="Deals" value={deals.length.toString()} />
+        <StatBlock to={`/clients/${client.id}/timeline`} label="Activities" value={activities.length.toString()} />
+        <StatBlock to={`/clients/${client.id}/documents`} label="Documents" value={documents.length.toString()} />
+        <StatBlock to={`/clients/${client.id}/war_room`} label="War rooms" value={warRooms.length.toString()} />
+      </div>
+
+      <div className="space-y-8">
         {client.notes && (
           <section>
             <h2 className="text-2xs uppercase tracking-widest text-ink-500 mb-3">Notes</h2>
-            <p className="text-sm text-ink-700 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
+            <p className="text-sm text-ink-800 whitespace-pre-wrap leading-relaxed">{client.notes}</p>
           </section>
         )}
 
@@ -697,46 +710,47 @@ function OverviewTab({
           )}
         </section>
       </div>
-
-      <div className="space-y-6">
-        <StatBlock label="Deals" value={deals.length.toString()} />
-        <StatBlock label="Activities" value={activities.length.toString()} />
-        <StatBlock label="Documents" value={documents.length.toString()} />
-        <StatBlock label="War rooms" value={warRooms.length.toString()} />
-      </div>
     </div>
   )
 }
 
-function StatBlock({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="border border-ink-200 p-5">
-      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-2">{label}</div>
-      <div className="font-display text-3xl text-ink-900">{value}</div>
-    </div>
+function StatBlock({ label, value, to }: { label: string; value: string; to?: string }) {
+  const inner = (
+    <>
+      <div className="text-2xs uppercase tracking-widest text-ink-500 mb-1.5">{label}</div>
+      <div className="font-display text-2xl sm:text-3xl text-ink-900 leading-none">{value}</div>
+    </>
   )
+  if (to) {
+    return (
+      <Link to={to} className="border border-ink-200 bg-white p-4 hover:border-ink-400 transition-colors block">
+        {inner}
+      </Link>
+    )
+  }
+  return <div className="border border-ink-200 bg-white p-4">{inner}</div>
 }
 
 function DealRow({ deal }: { deal: Deal }) {
   const pkg = SERVICE_PACKAGES.find((p) => p.value === deal.service_package)
   return (
-    <div className="border border-ink-200 p-4">
-      <div className="flex items-start justify-between">
-        <div>
+    <div className="border border-ink-200 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
           <div className="text-sm text-ink-900 font-medium">{deal.title || 'Untitled deal'}</div>
-          <div className="flex items-center gap-3 mt-1.5 text-2xs text-ink-500">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5 text-2xs text-ink-500">
             <span className="uppercase tracking-widest">{deal.deal_type}</span>
             {pkg && <span className="uppercase tracking-widest">· {pkg.label}</span>}
             <span className="uppercase tracking-widest">· {deal.stage}</span>
           </div>
         </div>
         {deal.estimated_value && (
-          <div className="font-mono text-sm text-ink-900">
+          <div className="font-mono text-sm text-ink-900 shrink-0 whitespace-nowrap">
             ${deal.estimated_value.toLocaleString()}
           </div>
         )}
       </div>
-      {deal.notes && <p className="text-xs text-ink-600 mt-2">{deal.notes}</p>}
+      {deal.notes && <p className="text-xs text-ink-700 mt-2 leading-relaxed">{deal.notes}</p>}
     </div>
   )
 }
