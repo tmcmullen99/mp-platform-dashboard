@@ -260,7 +260,7 @@ export default function AnalyzeReview() {
   const published = row.disclosure_status === 'published' && (!cma || cma.status === 'published')
 
   return (
-    <div className="p-12 max-w-6xl">
+    <div className="p-5 sm:p-8 lg:p-12 max-w-6xl">
       {/* header */}
       <div className="flex items-start justify-between mb-8 gap-6">
         <div className="min-w-0">
@@ -429,7 +429,7 @@ export default function AnalyzeReview() {
                       placeholder="Address"
                       className="w-full border border-ink-200 px-2 py-1.5 text-sm mb-2 focus:outline-none focus:border-ink-900"
                     />
-                    <div className="grid grid-cols-4 gap-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                       <CompNum label="List $" value={c.listPrice} onChange={(v) => patchComp(i, { listPrice: v })} />
                       <CompNum label="Sold $" value={c.soldPrice} onChange={(v) => patchComp(i, { soldPrice: v })} />
                       <CompNum label="Sqft" value={c.sqft} onChange={(v) => patchComp(i, { sqft: v })} />
