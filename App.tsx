@@ -23,6 +23,10 @@ import MakeMeMove from '@/pages/MakeMeMove'
 import SiteEditor from '@/pages/SiteEditor'
 import ListingsAdmin from '@/pages/ListingsAdmin'
 import Inquiries from '@/pages/Inquiries'
+import CreditApplications from '@/pages/CreditApplications'
+import Welcome from '@/pages/public/Welcome'
+import AccountDashboard from '@/pages/account/AccountDashboard'
+import CreditApplication from '@/pages/account/CreditApplication'
 import {
   Search,
   Send,
@@ -53,6 +57,10 @@ export default function App() {
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
           {/* Public Make-Me-Move marketplace (anon via mmm_public_read RLS) */}
           <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
+          {/* Self-signup: post-confirmation provisioning + member dashboard */}
+          <Route path="/welcome" element={<Welcome />} />
+          <Route path="/account" element={<AccountDashboard />} />
+          <Route path="/account/apply" element={<CreditApplication />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
@@ -120,6 +128,7 @@ function AuthGate() {
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
         <Route path="/inquiries" element={<Inquiries />} />
+        <Route path="/credit-applications" element={<CreditApplications />} />
         <Route path="/clients/*" element={<Clients />} />
         <Route path="/cmas/new" element={<NewCMA />} />
         {/* P9.4 Sprint I — edit existing CMA. Reuses NewCMA in edit mode
