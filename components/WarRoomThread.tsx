@@ -283,7 +283,7 @@ export default function WarRoomThread({
         <div>
           <div className="text-sm font-medium text-ink-900">{warRoom.name}</div>
           <div className="text-2xs uppercase tracking-widest text-ink-500 mt-0.5">
-            {viewerType === 'client' ? 'Listing chat' : 'War room'}
+            {viewerType === 'client' ? 'Listing chat' : 'Situation Room'}
           </div>
         </div>
         <div className="text-2xs text-ink-500">
