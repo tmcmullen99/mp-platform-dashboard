@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
-import { LogOut } from 'lucide-react'
+import { LogOut, Menu } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import NotificationBell from '@/components/NotificationBell'
 
-export default function TopBar() {
+export default function TopBar({ onMenuClick }: { onMenuClick?: () => void }) {
   const { profile, currentTenant, availableTenants, switchTenant, signOut } = useAuth()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -26,16 +26,23 @@ export default function TopBar() {
 
   return (
     <header className="border-b border-ink-100 bg-cream/95 backdrop-blur sticky top-0 z-10">
-      <div className="flex items-center justify-between px-12 h-16">
-        {/* Tenant switcher (only if multiple) */}
+      <div className="flex items-center justify-between px-5 sm:px-8 lg:px-12 h-16">
+        {/* Hamburger (mobile) + tenant switcher */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={onMenuClick}
+            className="lg:hidden text-ink-700 hover:text-ink-900 -ml-1 p-1"
+            aria-label="Open menu"
+          >
+            <Menu className="w-6 h-6" strokeWidth={1.5} />
+          </button>
           {availableTenants.length > 1 && currentTenant && (
             <>
-              <div className="text-2xs uppercase tracking-widest text-ink-500">Workspace</div>
+              <div className="hidden sm:block text-2xs uppercase tracking-widest text-ink-500">Workspace</div>
               <select
                 value={currentTenant.id}
                 onChange={(e) => switchTenant(e.target.value)}
-                className="text-sm bg-transparent border border-ink-200 px-3 py-1.5 focus:outline-none focus:border-ink-900 cursor-pointer"
+                className="text-sm bg-transparent border border-ink-200 px-3 py-1.5 focus:outline-none focus:border-ink-900 cursor-pointer max-w-[160px] sm:max-w-none truncate"
               >
                 {availableTenants.map((t) => (
                   <option key={t.id} value={t.id}>
