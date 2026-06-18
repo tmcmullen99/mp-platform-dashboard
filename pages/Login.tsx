@@ -7,7 +7,7 @@
 // for clients. The real guided tour lives in src/components/FirstLoginTour.tsx
 // and is unaffected.
 import { FormEvent, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { Eye, EyeOff, Loader2, ArrowRight, MailCheck } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
@@ -170,6 +170,19 @@ export default function Login() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* New agents: self-serve signup front door */}
+        {!IS_CLIENT_HOST && (
+          <div className="text-center mt-6 pt-6 border-t border-ink-100">
+            <span className="text-sm text-ink-500">New to the platform? </span>
+            <Link
+              to="/signup"
+              className="text-sm text-ink-900 font-medium hover:underline"
+            >
+              Create your workspace
+            </Link>
+          </div>
         )}
 
         {/* Footer: client view links to agent login; agent view shows version */}
