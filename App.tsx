@@ -24,6 +24,7 @@ import PortfolioIndex from '@/pages/public/PortfolioIndex'
 import PropertyDetail from '@/pages/public/PropertyDetail'
 import CorePage from '@/pages/public/CorePage'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
+import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import MakeMeMove from '@/pages/MakeMeMove'
 import SiteEditor from '@/pages/SiteEditor'
 import ListingsAdmin from '@/pages/ListingsAdmin'
@@ -63,6 +64,7 @@ export default function App() {
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
           {/* Public Make-Me-Move marketplace (anon via mmm_public_read RLS) */}
           <Route path="/m/:tenantSlug" element={<PublicMakeMeMove />} />
+          <Route path="/m/:tenantSlug/:listingId" element={<PublicMakeMeMoveDetail />} />
           {/* Self-signup: post-confirmation provisioning + member dashboard */}
           <Route path="/welcome" element={<Welcome />} />
           <Route path="/account" element={<AccountDashboard />} />
