@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
+import { LogoWordmark } from '@/components/BrandLogo'
 
 type ImageJson = { url: string; alt: string | null } | null
 
@@ -98,8 +99,8 @@ export default function PortfolioIndex() {
       {/* header */}
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="mp-serif text-2xl font-semibold text-[#0D1B2A]">
-            McMullen
+          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+            <LogoWordmark height={20} />
           </Link>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
             <Link to="/listings" className="text-[#0D1B2A]">Portfolio</Link>
@@ -208,7 +209,7 @@ export default function PortfolioIndex() {
       {/* footer */}
       <footer className="border-t border-black/[0.07] py-12">
         <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-4 text-sm text-[#273C46]">
-          <Link to="/" className="mp-serif text-xl font-semibold text-[#0D1B2A]">McMullen</Link>
+          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
           <div className="flex gap-6">
             <a href="tel:+14156919272" className="hover:opacity-70">(415) 691-9272</a>
             <a href="mailto:tim@mcmullen.properties" className="hover:opacity-70">tim@mcmullen.properties</a>
