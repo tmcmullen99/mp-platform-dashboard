@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { ArrowUpRight, Quote } from 'lucide-react'
 import { LogoWordmark } from '@/components/BrandLogo'
+import { PublicNav, PublicFooter, PublicNavKey } from '@/components/public/PublicNav'
 
 const MCMULLEN_TENANT_ID = 'e0c8abe7-cc29-45c0-99c1-7c20b920262a'
 
@@ -185,20 +186,7 @@ export default function CorePage({ slug }: { slug: string }) {
       `}</style>
 
       {/* header */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={20} /></Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
-            <Link to="/listings" className={slug === 'portfolio' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Portfolio</Link>
-            <Link to="/buy" className={slug === 'buy' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Buy</Link>
-            <Link to="/sell" className={slug === 'sell' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Sell</Link>
-            <Link to="/services" className={slug === 'services' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Services</Link>
-            <Link to="/about" className={slug === 'about' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>About</Link>
-            <Link to="/blog" className="hover:text-[#0D1B2A]">Writing</Link>
-          </nav>
-          <a href="tel:+14156919272" className="text-sm font-medium text-[#0D1B2A] hover:opacity-70">(415) 691-9272</a>
-        </div>
-      </header>
+      <PublicNav active={(slug === 'portfolio' ? 'portfolio' : slug) as PublicNavKey} />
 
       {/* hero */}
       <section className="max-w-6xl mx-auto px-6 pt-16 md:pt-24 pb-8">
@@ -330,19 +318,7 @@ export default function CorePage({ slug }: { slug: string }) {
       </section>
 
       {/* footer */}
-      <footer className="border-t border-black/[0.07] py-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-4 text-sm text-[#273C46]">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
-          <div className="flex flex-wrap gap-6">
-            <Link to="/listings" className="hover:opacity-70">Portfolio</Link>
-            <Link to="/buy" className="hover:opacity-70">Buy</Link>
-            <Link to="/sell" className="hover:opacity-70">Sell</Link>
-            <Link to="/services" className="hover:opacity-70">Services</Link>
-            <Link to="/about" className="hover:opacity-70">About</Link>
-            <a href="tel:+14156919272" className="hover:opacity-70">(415) 691-9272</a>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }
