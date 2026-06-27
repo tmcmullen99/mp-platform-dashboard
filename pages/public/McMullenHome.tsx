@@ -1,21 +1,37 @@
 // McMullen Properties — public homepage.
 // Route: "/" (and "/home") served BEFORE the auth gate. No authentication.
 //
-// Visual direction: the motionsites / "Viktor Oddy" aesthetic — white canvas,
-// serif display accents (Playfair Display) over a clean sans (DM Sans), an
-// infinite photo marquee, layered-shadow pill buttons, and staggered scroll
-// reveals. Content is data-driven from public.site_home_content (one JSONB row
-// per tenant), so the future admin CRUD edits the page without code changes.
+// Visual direction (this revision): the navy-gradient hero with a muted YouTube
+// video background — Tim's "Variation A" motionsites direction — replacing the
+// earlier plain-white hero. Editorial Playfair display over DM Sans, blue-gray
+// accents, layered-shadow pill CTAs, a quiet stat strip, an "As Seen In" trust
+// bar, a "Decade of Results" video block, and a LIVE sold-properties carousel
+// driven from public.properties (so it always reflects real, current sales).
 //
-// This page is intentionally self-contained: it does NOT use PublicLayout
-// (that chrome is the platform's navy/cream system, a different visual language).
+// Hero copy / stats / services / testimonials / agent remain data-driven from
+// public.site_home_content (one JSONB row per tenant), so the future admin CRUD
+// can edit the page without code changes. The sold carousel is read live from
+// public.properties and is NOT part of that JSON.
+//
+// Brand: canonical navy is #0D1B2A (not the #1a1f2e in the original paste);
+// blue-gray #91a1ba accent; #4f82b9 logo-blue; Playfair Display + DM Sans.
 
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { ArrowUpRight, Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowUpRight, Star, Quote, ChevronLeft, ChevronRight, MessageSquare, Calendar, Check } from 'lucide-react'
 import { LogoWordmark, LogoMark } from '@/components/BrandLogo'
 
 const MCMULLEN_TENANT_ID = 'e0c8abe7-cc29-45c0-99c1-7c20b920262a'
+
+// Brand tokens
+const NAVY = '#0D1B2A'
+const NAVY_DEEP = '#080f18'
+const BLUEGRAY = '#91a1ba'
+const INK = '#273C46'
+
+// Hero background film (muted, looping). Tim's brand video.
+const HERO_VIDEO_ID = 'S_R_LZ5z6_s'
 
 /* ----------------------------- content types ----------------------------- */
 type CTA = { label: string; href: string }
@@ -71,6 +87,17 @@ type HomeContent = {
     whatsapp: string
     brokerage: string
   }
+}
+
+// Live sold-listing card (read from public.properties, not the JSON blob).
+type SoldCard = {
+  slug: string
+  name: string
+  price: number | null
+  beds: number | null
+  baths: number | null
+  hood: string | null
+  img: string | null
 }
 
 /* --------------------------- scroll-reveal hook --------------------------- */
@@ -141,11 +168,11 @@ function PillButton({
   return (
     <a
       href={href}
-      className="inline-flex items-center justify-center rounded-full px-7 py-3 text-sm font-medium transition-transform duration-200 hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D1B2A]"
+      className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3 text-sm font-medium transition-transform duration-200 hover:-translate-y-0.5"
       style={
         primary
-          ? { background: '#0D1B2A', color: '#fff', boxShadow: PRIMARY_SHADOW }
-          : { background: '#fff', color: '#0D1B2A', boxShadow: SECONDARY_SHADOW }
+          ? { background: NAVY, color: '#fff', boxShadow: PRIMARY_SHADOW }
+          : { background: '#fff', color: NAVY, boxShadow: SECONDARY_SHADOW }
       }
     >
       {children}
@@ -156,31 +183,67 @@ function PillButton({
 /* --------------------------------- page ---------------------------------- */
 export default function McMullenHome() {
   const [content, setContent] = useState<HomeContent | null>(null)
+  const [sold, setSold] = useState<SoldCard[]>([])
   const [loading, setLoading] = useState(true)
-
+  // Hero pointer-parallax: content drifts subtly toward the cursor for an
+  // interactive, alive feel over the video. Disabled under reduced-motion.
+  const [parallax, setParallax] = useState({ x: 0, y: 0 })
+  const onHeroPointer = (e: React.MouseEvent<HTMLElement>) => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const dx = (e.clientX - r.left) / r.width - 0.5
+    const dy = (e.clientY - r.top) / r.height - 0.5
+    setParallax({ x: dx, y: dy })
+  }
   useEffect(() => {
     let cancelled = false
     async function load() {
-      const { data } = await supabase
+      // Home JSON (hero copy, stats, services, testimonials, agent).
+      const contentP = supabase
         .from('site_home_content')
         .select('content')
         .eq('tenant_id', MCMULLEN_TENANT_ID)
         .eq('published', true)
         .maybeSingle()
+
+      // Live sold listings for the carousel.
+      const soldP = supabase
+        .from('properties')
+        .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, neighborhoods(name)')
+        .eq('listing_stage', 'sold')
+        .neq('slug', 'union-house-residence-5c')
+        .order('price', { ascending: false, nullsFirst: false })
+        .limit(12)
+
+      const [{ data: cData }, { data: sData }] = await Promise.all([contentP, soldP])
       if (cancelled) return
-      setContent((data?.content as HomeContent) ?? null)
+
+      setContent((cData?.content as HomeContent) ?? null)
+
+      const cards: SoldCard[] = (sData ?? [])
+        .map((r: Record<string, unknown>) => ({
+          slug: r.slug as string,
+          name: r.name as string,
+          price: (r.price as number) ?? null,
+          beds: (r.bedrooms as number) ?? null,
+          baths: (r.bathrooms as number) ?? null,
+          hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
+          img: ((r.main_image as { url?: string } | null)?.url) ?? null,
+        }))
+        // only cards with a photo + real bed count (filters equity-exchange rows)
+        .filter((c) => c.img && c.beds != null)
+      setSold(cards)
+
       setLoading(false)
     }
     load()
-    return () => {
-      cancelled = true
-    }
+    return () => { cancelled = true }
   }, [])
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="font-mono text-xs uppercase tracking-[0.3em] text-[#273C46]">
+      <div className="min-h-screen flex items-center justify-center" style={{ background: NAVY }}>
+        <div className="font-mono text-xs uppercase tracking-[0.3em]" style={{ color: BLUEGRAY }}>
           McMullen Properties
         </div>
       </div>
@@ -191,236 +254,266 @@ export default function McMullenHome() {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center px-6 text-center">
         <div>
-          <div className="font-serif text-3xl text-[#0D1B2A] mb-3">McMullen Properties</div>
-          <p className="text-[#273C46]">The site is being updated. Please check back shortly.</p>
+          <div className="font-serif text-3xl mb-3" style={{ color: NAVY }}>McMullen Properties</div>
+          <p style={{ color: INK }}>The site is being updated. Please check back shortly.</p>
         </div>
       </div>
     )
   }
 
   const c = content
-  const marquee = [...c.marquee, ...c.marquee] // duplicate for seamless loop
 
   return (
-    <div className="mp-home min-h-screen bg-white text-[#0D1B2A]">
-      {/* scoped styles: serif accents, marquee, mono utility — no global leakage */}
+    <div className="mp-home min-h-screen bg-white" style={{ color: NAVY }}>
+      {/* scoped styles — serif accents, hero video cover, marquee, no global leakage */}
       <style>{`
         .mp-home { font-family: 'DM Sans', system-ui, -apple-system, sans-serif; }
-        .mp-serif { font-family: 'Playfair Display', Georgia, serif; font-style: italic; letter-spacing: -0.02em; }
+        .mp-serif { font-family: 'Playfair Display', Georgia, serif; letter-spacing: -0.02em; }
         .mp-mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
+
+        /* ---- navy video hero ---- */
+        .mp-hero { position: relative; min-height: 100vh; min-height: 100dvh; display: flex; align-items: center; justify-content: center; overflow: hidden; background: ${NAVY}; }
+        .mp-hero-bg { position: absolute; inset: 0; z-index: 0; }
+        .mp-hero-bg iframe { width: 100vw; height: 56.25vw; min-height: 100vh; min-height: 100dvh; min-width: 177.77vh; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); pointer-events: none; border: 0; }
+        .mp-hero-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(135deg, rgba(13,27,42,0.93) 0%, rgba(13,27,42,0.78) 50%, rgba(13,27,42,0.95) 100%); }
+        .mp-hero-vignette { position: absolute; inset: 0; z-index: 1; background: radial-gradient(120% 80% at 50% 0%, transparent 40%, rgba(8,15,24,0.55) 100%); }
+        .mp-hero-content { position: relative; z-index: 2; text-align: center; max-width: 880px; width: 100%; margin: 0 auto; padding: 0 24px; display: flex; flex-direction: column; align-items: center; }
+
+        @keyframes mpScrollCue { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(7px); } }
+        .mp-scroll-cue { position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 2; animation: mpScrollCue 2.5s infinite; }
+
+        @keyframes mpFadeUp { from { opacity: 0; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+        .mp-anim { opacity: 0; animation: mpFadeUp 1s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        /* ---- headline accent shimmer ---- */
+        @keyframes mpSheen { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
+        .mp-accent { color: ${BLUEGRAY}; font-style: normal; background-image: linear-gradient(110deg, ${BLUEGRAY} 0%, #c5d2e6 30%, #fff 50%, #c5d2e6 70%, ${BLUEGRAY} 100%); background-size: 200% auto; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; animation: mpSheen 6s linear infinite; }
+        @media (prefers-reduced-motion: reduce) { .mp-accent { animation: none; -webkit-text-fill-color: ${BLUEGRAY}; } }
+
+        /* ---- sold carousel ---- */
+        .mp-sold-track { display: flex; gap: 22px; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; padding: 6px 0 26px; scrollbar-width: none; }
+        .mp-sold-track::-webkit-scrollbar { display: none; }
+        .mp-sold-card { min-width: 320px; max-width: 320px; scroll-snap-align: start; flex-shrink: 0; }
+        @media (max-width: 640px) { .mp-sold-card { min-width: 280px; max-width: 280px; } }
+
+        /* ---- marquee (kept available for future proof strip) ---- */
         @keyframes mpMarquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        .mp-marquee-track { display: flex; width: max-content; animation: mpMarquee 40s linear infinite; }
-        @media (max-width: 768px) { .mp-marquee-track { animation-duration: 18s; } }
-        @media (prefers-reduced-motion: reduce) { .mp-marquee-track { animation: none; } }
+        .mp-marquee-track { display: flex; width: max-content; animation: mpMarquee 45s linear infinite; }
+        @media (max-width: 768px) { .mp-marquee-track { animation-duration: 22s; } }
+
+        @media (prefers-reduced-motion: reduce) {
+          .mp-anim, .mp-scroll-cue, .mp-marquee-track { animation: none !important; opacity: 1 !important; }
+        }
       `}</style>
 
       {/* ============================== HEADER ============================== */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
-            <LogoWordmark height={20} />
+      <header
+        className="sticky top-0 z-40 border-b"
+        style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(12px)', borderColor: 'rgba(255,255,255,0.08)' }}
+      >
+        <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
+          <a href="/" className="flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+            <LogoWordmark height={34} />
           </a>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
-            <a href="/listings" className="hover:text-[#0D1B2A] transition-colors">Portfolio</a>
-            <a href="/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</a>
-            <a href="/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</a>
-            <a href="/services" className="hover:text-[#0D1B2A] transition-colors">Services</a>
+          <nav className="hidden md:flex items-center gap-7 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
+            <a href="/listings" className="hover:text-white transition-colors">Portfolio</a>
+            <a href="/buy" className="hover:text-white transition-colors">Buy</a>
+            <a href="/sell" className="hover:text-white transition-colors">Sell</a>
+            <a href="/services" className="hover:text-white transition-colors">Services</a>
           </nav>
           <a
-            href={c.agent.phone_href}
-            className="text-sm font-medium text-[#0D1B2A] hover:opacity-70 transition-opacity"
+            href={c.agent.schedule_href}
+            className="text-sm font-semibold px-5 py-2.5 rounded-full transition-transform hover:-translate-y-0.5"
+            style={{ background: '#fff', color: NAVY }}
           >
-            {c.agent.phone}
+            Meet Tim
           </a>
         </div>
       </header>
 
       {/* =============================== HERO =============================== */}
-      <section className="max-w-3xl mx-auto px-6 pt-16 md:pt-24 pb-4 text-center">
-        <Reveal delay={0.1}>
-          <div className="mp-mono text-xs uppercase tracking-[0.25em] text-[#273C46] mb-6">
+      <section className="mp-hero" onMouseMove={onHeroPointer} onMouseLeave={() => setParallax({ x: 0, y: 0 })}>
+        <div className="mp-hero-bg" style={{ transform: `scale(1.06) translate(${parallax.x * -14}px, ${parallax.y * -14}px)`, transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)' }}>
+          <iframe
+            src={`https://www.youtube.com/embed/${HERO_VIDEO_ID}?autoplay=1&mute=1&loop=1&playlist=${HERO_VIDEO_ID}&controls=0&showinfo=0&rel=0&modestbranding=1&playsinline=1`}
+            title="McMullen Properties"
+            allow="autoplay; encrypted-media"
+            allowFullScreen
+          />
+        </div>
+        <div className="mp-hero-overlay" />
+        <div className="mp-hero-vignette" />
+
+        <div className="mp-hero-content" style={{ transform: `translate(${parallax.x * 16}px, ${parallax.y * 16}px)`, transition: 'transform 0.5s cubic-bezier(0.16,1,0.3,1)' }}>
+          <div className="mp-anim mp-mono text-[11px] uppercase mb-6" style={{ letterSpacing: '0.28em', color: 'rgba(145,161,186,0.7)', animationDelay: '0.1s' }}>
             {c.hero.eyebrow}
           </div>
-        </Reveal>
-        <Reveal delay={0.2}>
-          <h1 className="text-[40px] md:text-[64px] lg:text-[72px] leading-[1.05] font-semibold tracking-tight">
+
+          <h1
+            className="mp-anim mp-serif text-white"
+            style={{ fontSize: 'clamp(40px,7vw,72px)', fontWeight: 500, lineHeight: 1.06, margin: 0, animationDelay: '0.25s' }}
+          >
             {c.hero.headline_lead}{' '}
-            <span className="mp-serif font-normal text-[#0D1B2A]">{c.hero.headline_accent}</span>{' '}
+            <em className="mp-accent">{c.hero.headline_accent}</em>{' '}
             {c.hero.headline_tail}
           </h1>
-        </Reveal>
-        <Reveal delay={0.35}>
-          <p className="mt-6 text-lg md:text-xl text-[#273C46] leading-relaxed max-w-xl mx-auto">
+
+          <p
+            className="mp-anim"
+            style={{ fontSize: 17, color: 'rgba(255,255,255,0.55)', maxWidth: 520, margin: '22px auto 0', lineHeight: 1.6, animationDelay: '0.4s' }}
+          >
             {c.hero.subhead}
           </p>
-        </Reveal>
-        <Reveal delay={0.5}>
-          <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
-            <PillButton href={c.hero.primary_cta.href}>{c.hero.primary_cta.label}</PillButton>
-            <PillButton href={c.hero.secondary_cta.href} variant="secondary">
-              {c.hero.secondary_cta.label}
-            </PillButton>
-          </div>
-        </Reveal>
 
-        {/* stat bar */}
-        <Reveal delay={0.65}>
-          <div className="mt-16 flex items-stretch justify-center divide-x divide-black/10">
-            {c.stats.map((s) => (
-              <div key={s.label} className="px-7 md:px-10">
-                <div className="text-3xl md:text-4xl font-semibold tracking-tight">
-                  {s.value}
-                </div>
-                <div className="mp-mono text-[10px] md:text-xs uppercase tracking-[0.18em] text-[#273C46] mt-1">
-                  {s.label}
-                </div>
+          <div className="mp-anim flex flex-col sm:flex-row gap-3 justify-center mt-9" style={{ animationDelay: '0.55s' }}>
+            <a
+              href={c.hero.primary_cta.href}
+              className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+              style={{ background: `linear-gradient(135deg, ${BLUEGRAY} 0%, #6b7a8f 100%)`, color: NAVY, boxShadow: '0 10px 30px rgba(145,161,186,0.3)' }}
+            >
+              <MessageSquare className="w-[18px] h-[18px]" />
+              {c.hero.primary_cta.label}
+            </a>
+            <a
+              href={c.hero.secondary_cta.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-semibold transition-colors"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)' }}
+            >
+              <Calendar className="w-[18px] h-[18px]" />
+              {c.hero.secondary_cta.label}
+            </a>
+          </div>
+
+          {/* quiet stat strip */}
+          <div className="mp-anim flex items-stretch mt-14 w-full max-w-[480px] pt-6" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', animationDelay: '0.7s' }}>
+            {c.stats.map((s, i) => (
+              <div key={s.label} className="flex-1 text-center px-3" style={{ borderRight: i < c.stats.length - 1 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                <div className="mp-serif text-2xl sm:text-[26px] text-white" style={{ fontWeight: 500 }}>{s.value}</div>
+                <div className="mp-mono text-[10px] uppercase tracking-[0.12em] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.label}</div>
               </div>
             ))}
           </div>
-        </Reveal>
+        </div>
 
-        {/* press row */}
-        <Reveal delay={0.75}>
-          <div className="mt-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-            <span className="mp-mono text-[10px] uppercase tracking-[0.25em] text-[#273C46]/60">
-              As seen in
-            </span>
-            {c.press.map((p) => (
-              <span key={p} className="text-sm font-medium text-[#273C46]/70">
-                {p}
-              </span>
-            ))}
-          </div>
-        </Reveal>
-      </section>
-
-      {/* ============================= MARQUEE ============================= */}
-      <section className="mt-16 md:mt-20 mb-20 overflow-hidden">
-        <div className="mp-marquee-track">
-          {marquee.map((src, i) => (
-            <img
-              key={i}
-              src={src}
-              alt=""
-              loading="lazy"
-              className="h-[260px] md:h-[440px] w-auto object-cover mx-3 rounded-2xl shadow-lg"
-            />
-          ))}
+        <div className="mp-scroll-cue flex flex-col items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.3)' }}>
+          <span className="mp-mono text-[9px] uppercase tracking-[0.2em]">Scroll</span>
+          <ChevronRight className="w-4 h-4 rotate-90" />
         </div>
       </section>
 
-      {/* ========================= ACTIVE LISTING ========================= */}
-      <section className="max-w-6xl mx-auto px-6 py-12">
-        <Reveal>
-          <div className="grid md:grid-cols-2 gap-10 items-center">
-            <a href={c.active_listing.href} className="block group">
-              <div className="overflow-hidden rounded-[28px] shadow-xl">
-                <img
-                  src={c.active_listing.image}
-                  alt={c.active_listing.name}
-                  className="w-full h-[320px] md:h-[460px] object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-                />
-              </div>
-            </a>
-            <div>
-              <div className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">
-                {c.active_listing.badge}
-              </div>
-              <h2 className="text-3xl md:text-4xl font-semibold tracking-tight">
-                {c.active_listing.name}
-              </h2>
-              <p className="text-[#273C46] mt-2">{c.active_listing.location}</p>
-              <div className="flex items-baseline gap-4 mt-5">
-                <span className="mp-serif text-4xl font-semibold not-italic text-[#0D1B2A]">
-                  {c.active_listing.price}
-                </span>
-                <span className="text-sm text-[#273C46]">{c.active_listing.hoa}</span>
-              </div>
-              <div className="flex flex-wrap gap-x-8 gap-y-2 mt-5">
-                {c.active_listing.facts.map((f) => (
-                  <div key={f.k}>
-                    <div className="text-xl font-semibold">{f.v}</div>
-                    <div className="mp-mono text-[10px] uppercase tracking-[0.15em] text-[#273C46]">
-                      {f.k}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[#273C46] leading-relaxed mt-6">{c.active_listing.blurb}</p>
-              <div className="mt-7">
-                <PillButton href={c.active_listing.href}>View full listing</PillButton>
-              </div>
-            </div>
+      {/* ============================ TRUST BAR ============================ */}
+      <section className="relative py-9 px-5" style={{ background: NAVY_DEEP }}>
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[70%] h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(145,161,186,0.2), transparent)' }} />
+        <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-5 sm:gap-10">
+          <span className="mp-mono text-[10px] font-semibold uppercase tracking-[0.2em] whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.3)' }}>
+            As Seen In
+          </span>
+          <div className="flex items-center gap-7 sm:gap-9 flex-wrap justify-center" style={{ color: 'rgba(255,255,255,0.5)' }}>
+            {c.press.map((p) => (
+              <span key={p} className="text-sm font-medium transition-colors hover:text-white">{p}</span>
+            ))}
           </div>
-        </Reveal>
+        </div>
       </section>
 
-      {/* =========================== RECORD SALE =========================== */}
-      <section className="bg-[#0D1B2A] text-white py-20 md:py-28 mt-12">
-        <div className="max-w-5xl mx-auto px-6">
+      {/* ========================= DECADE OF RESULTS ======================= */}
+      <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
+        <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
           <Reveal>
-            <div className="mp-mono text-xs uppercase tracking-[0.22em] text-white/55 mb-5">
+            <div className="relative rounded-[24px] overflow-hidden shadow-2xl aspect-video bg-black">
+              <iframe
+                className="absolute inset-0 w-full h-full"
+                src={`https://www.youtube.com/embed/${HERO_VIDEO_ID}?rel=0&modestbranding=1`}
+                title="Meet Tim McMullen"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <div className="mp-mono text-xs uppercase tracking-[0.22em]" style={{ color: BLUEGRAY }}>Meet Tim</div>
+            <h2 className="mt-3 text-[34px] md:text-[46px] leading-[1.08] font-semibold tracking-tight">
+              A decade of <span className="mp-serif font-normal" style={{ color: NAVY }}>results.</span>
+            </h2>
+            <p className="mt-5 leading-relaxed" style={{ color: INK }}>
+              From 1-bedroom TICs in San Francisco to $31M Tahoe lakefront estates — Tim has sold it all.
+              After years in client representation and city-scale development, he&rsquo;s built the ultimate
+              toolkit to maximize your real estate ROI.
+            </p>
+            <div className="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-3">
+              {[
+                '$100M+ in closed transactions',
+                'Off-market & private exclusives',
+                'Development & renovation expertise',
+                'Factory-direct material sourcing',
+              ].map((f) => (
+                <div key={f} className="flex items-start gap-2.5 text-sm" style={{ color: INK }}>
+                  <Check className="w-[18px] h-[18px] mt-0.5 shrink-0" style={{ color: BLUEGRAY }} />
+                  {f}
+                </div>
+              ))}
+            </div>
+            <div className="mt-8">
+              <PillButton href="/about">Learn more about Tim <ArrowUpRight className="w-4 h-4" /></PillButton>
+            </div>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ========================= SOLD CAROUSEL ========================== */}
+      {sold.length > 0 && <SoldCarousel cards={sold} />}
+
+      {/* =========================== RECORD SALE =========================== */}
+      <section className="py-20 md:py-28" style={{ background: NAVY }}>
+        <div className="max-w-5xl mx-auto px-6 text-white">
+          <Reveal>
+            <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-5" style={{ color: 'rgba(145,161,186,0.7)' }}>
               {c.record_sale.badge}
             </div>
             <h2 className="text-[40px] md:text-[56px] leading-[1.05] font-semibold tracking-tight">
               Sold for{' '}
-              <span className="mp-serif font-normal">
+              <span className="mp-serif font-normal" style={{ color: BLUEGRAY }}>
                 {c.record_sale.headline.replace('Sold for ', '')}
               </span>
             </h2>
-            <p className="text-white/70 text-lg leading-relaxed mt-5 max-w-2xl">
+            <p className="text-lg leading-relaxed mt-5 max-w-2xl" style={{ color: 'rgba(255,255,255,0.7)' }}>
               {c.record_sale.subhead}
             </p>
-            <p className="mp-mono text-xs uppercase tracking-[0.18em] text-white/45 mt-4">
+            <p className="mp-mono text-xs uppercase tracking-[0.18em] mt-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
               {c.record_sale.address}
             </p>
           </Reveal>
-
           <Reveal delay={0.15}>
-            <div className="mt-10 overflow-hidden rounded-[28px] shadow-2xl">
-              <img
-                src={c.record_sale.image}
-                alt={c.record_sale.address}
-                className="w-full h-[300px] md:h-[480px] object-cover"
-              />
+            <div className="mt-10 overflow-hidden rounded-[24px] shadow-2xl">
+              <img src={c.record_sale.image} alt={c.record_sale.address} className="w-full h-[300px] md:h-[480px] object-cover" />
             </div>
           </Reveal>
-
           <Reveal delay={0.25}>
             <div className="mt-10 grid grid-cols-2 md:grid-cols-4 gap-6">
               {c.record_sale.stats.map((s) => (
                 <div key={s.label}>
-                  <div className="mp-serif text-3xl md:text-4xl font-semibold not-italic">
-                    {s.value}
-                  </div>
-                  <div className="mp-mono text-[10px] uppercase tracking-[0.16em] text-white/55 mt-1">
-                    {s.label}
-                  </div>
+                  <div className="mp-serif text-3xl md:text-4xl font-semibold">{s.value}</div>
+                  <div className="mp-mono text-[10px] uppercase tracking-[0.16em] mt-1" style={{ color: 'rgba(255,255,255,0.55)' }}>{s.label}</div>
                 </div>
               ))}
             </div>
           </Reveal>
-
           <Reveal delay={0.35}>
-            <blockquote className="mt-12 border-l-2 border-white/25 pl-6 max-w-2xl">
-              <p className="text-lg md:text-xl leading-relaxed text-white/85">
+            <blockquote className="mt-12 border-l-2 pl-6 max-w-2xl" style={{ borderColor: 'rgba(145,161,186,0.4)' }}>
+              <p className="text-lg md:text-xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.85)' }}>
                 &ldquo;{c.record_sale.quote}&rdquo;
               </p>
-              <footer className="mp-mono text-xs uppercase tracking-[0.18em] text-white/50 mt-4">
+              <footer className="mp-mono text-xs uppercase tracking-[0.18em] mt-4" style={{ color: 'rgba(255,255,255,0.5)' }}>
                 Tim McMullen · DRE #{c.agent.dre}
               </footer>
             </blockquote>
           </Reveal>
-
           <Reveal delay={0.45}>
-            <div className="mt-9">
-              <a
-                href={c.record_sale.href}
-                className="inline-flex items-center gap-2 text-sm font-medium text-white hover:gap-3 transition-all"
-              >
-                See the full sale story <ArrowUpRight className="w-4 h-4" />
-              </a>
-            </div>
+            <a href={c.record_sale.href} className="inline-flex items-center gap-2 text-sm font-medium text-white hover:gap-3 transition-all mt-9">
+              See the full sale story <ArrowUpRight className="w-4 h-4" />
+            </a>
           </Reveal>
         </div>
       </section>
@@ -428,11 +521,11 @@ export default function McMullenHome() {
       {/* ============================= SERVICES ============================= */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
         <Reveal>
-          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: BLUEGRAY }}>
             Elite representation
           </div>
           <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
-            One agent. <span className="mp-serif font-normal">Every solution.</span>
+            One agent. <span className="mp-serif font-normal" style={{ color: NAVY }}>Every solution.</span>
           </h2>
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
@@ -440,14 +533,15 @@ export default function McMullenHome() {
             <Reveal key={s.title} delay={0.05 * i}>
               <a
                 href={s.href}
-                className="group block h-full rounded-[28px] border border-black/[0.07] p-8 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_50px_-20px_rgba(13,27,42,0.30)] bg-white"
+                className="group block h-full rounded-[24px] border p-8 transition-all duration-300 hover:-translate-y-1 bg-white"
+                style={{ borderColor: 'rgba(13,27,42,0.08)' }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-xl font-semibold tracking-tight">{s.title}</h3>
-                  <ArrowUpRight className="w-5 h-5 text-[#273C46] transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                  <ArrowUpRight className="w-5 h-5 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" style={{ color: BLUEGRAY }} />
                 </div>
-                <p className="text-[#273C46] leading-relaxed mt-3 text-sm">{s.blurb}</p>
-                <span className="mp-mono text-[11px] uppercase tracking-[0.16em] text-[#0D1B2A] mt-5 inline-block">
+                <p className="leading-relaxed mt-3 text-sm" style={{ color: INK }}>{s.blurb}</p>
+                <span className="mp-mono text-[11px] uppercase tracking-[0.16em] mt-5 inline-block" style={{ color: NAVY }}>
                   {s.cta} &rarr;
                 </span>
               </a>
@@ -456,110 +550,73 @@ export default function McMullenHome() {
         </div>
       </section>
 
-      {/* =========================== SOLD GRID =========================== */}
-      <section className="bg-[#FAFAF7] py-20 md:py-28">
-        <div className="max-w-6xl mx-auto px-6">
+      {/* =========================== TESTIMONIALS =========================== */}
+      <TestimonialCarousel testimonials={c.testimonials} />
+
+      {/* =============================== CTA =============================== */}
+      <section className="relative overflow-hidden py-24 md:py-32" style={{ background: NAVY }}>
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(900px circle at 50% 0%, rgba(145,161,186,0.12), transparent 60%)' }} />
+        <div className="relative max-w-5xl mx-auto px-6 text-center">
           <Reveal>
-            <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">
-              Track record
-            </div>
-            <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
-              <span className="mp-serif font-normal">$100M+</span> across the Bay Area
+            <img src={c.agent.photo} alt={c.agent.name} className="w-20 h-20 rounded-full object-cover mx-auto mb-8 shadow-lg" />
+            <h2 className="text-[36px] md:text-[56px] leading-[1.05] font-semibold tracking-tight text-white">
+              Ready to make <span className="mp-serif font-normal" style={{ color: BLUEGRAY }}>your move?</span>
             </h2>
-          </Reveal>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-12">
-            {c.sold.map((s, i) => (
-              <Reveal key={s.address + i} delay={0.04 * i}>
-                <a
-                  href={s.href}
-                  className="group block rounded-2xl bg-white border border-black/[0.06] p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_16px_40px_-22px_rgba(13,27,42,0.30)]"
-                >
-                  <div className="mp-mono text-[10px] uppercase tracking-[0.16em] text-[#273C46]/70">
-                    Sold · {s.area}
-                  </div>
-                  <div className="mp-serif text-2xl font-semibold not-italic text-[#0D1B2A] mt-2">
-                    {s.price}
-                  </div>
-                  <div className="text-sm text-[#0D1B2A] mt-1">{s.address}</div>
-                  <div className="text-xs text-[#273C46] mt-2">
-                    {s.beds} bd · {s.baths} ba
-                  </div>
-                </a>
-              </Reveal>
-            ))}
-          </div>
-          <Reveal delay={0.2}>
-            <div className="mt-10">
-              <PillButton href="/listings" variant="secondary">
-                See all sales
-              </PillButton>
+            <p className="text-lg mt-5 max-w-xl mx-auto leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
+              Whether you&rsquo;re buying, selling, investing, or improving — let&rsquo;s talk about how Tim
+              can help you achieve your real estate goals.
+            </p>
+            <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
+              <a
+                href={c.agent.schedule_href}
+                className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+                style={{ background: '#fff', color: NAVY }}
+              >
+                <Calendar className="w-[18px] h-[18px]" /> Schedule a call
+              </a>
+              <a
+                href={c.agent.phone_href}
+                className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-4 text-sm font-semibold transition-colors"
+                style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff' }}
+              >
+                {c.agent.phone}
+              </a>
             </div>
           </Reveal>
         </div>
       </section>
 
-      {/* =========================== TESTIMONIALS =========================== */}
-      <TestimonialCarousel testimonials={c.testimonials} />
-
-      {/* =============================== CTA =============================== */}
-      <section className="max-w-5xl mx-auto px-6 py-24 md:py-32 text-center">
-        <Reveal>
-          <img
-            src={c.agent.photo}
-            alt={c.agent.name}
-            className="w-20 h-20 rounded-full object-cover mx-auto mb-8 shadow-lg"
-          />
-          <h2 className="text-[36px] md:text-[56px] leading-[1.05] font-semibold tracking-tight">
-            Ready to make <span className="mp-serif font-normal">your move?</span>
-          </h2>
-          <p className="text-[#273C46] text-lg mt-5 max-w-xl mx-auto leading-relaxed">
-            Whether you&rsquo;re buying, selling, investing, or improving — let&rsquo;s talk about how I
-            can help you achieve your real estate goals.
-          </p>
-          <div className="mt-9 flex flex-col sm:flex-row gap-3 justify-center">
-            <PillButton href={c.agent.schedule_href}>Schedule a call</PillButton>
-            <PillButton href={c.agent.phone_href} variant="secondary">
-              {c.agent.phone}
-            </PillButton>
-          </div>
-        </Reveal>
-      </section>
-
       {/* ============================== FOOTER ============================== */}
-      <footer className="border-t border-black/[0.07] py-14">
+      <footer style={{ background: NAVY_DEEP }} className="py-14">
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between gap-10">
             <div className="max-w-sm">
-              <div className="text-[#0D1B2A]"><LogoWordmark height={22} /></div>
-              <p className="text-sm text-[#273C46] leading-relaxed mt-3">
+              <div className="text-white"><LogoWordmark height={28} /></div>
+              <p className="text-sm leading-relaxed mt-4" style={{ color: 'rgba(255,255,255,0.55)' }}>
                 A decade of experience, now setting neighborhood price records in Silicon Valley&rsquo;s
                 $5M SFR market.
               </p>
             </div>
             <div className="flex gap-14">
               <div>
-                <div className="mp-mono text-[10px] uppercase tracking-[0.2em] text-[#273C46]/60 mb-3">
-                  Explore
-                </div>
-                <ul className="space-y-2 text-sm">
-                  <li><a href="/buy" className="hover:opacity-70 transition-opacity">Buy</a></li>
-                  <li><a href="/sell" className="hover:opacity-70 transition-opacity">Sell</a></li>
-                  <li><a href="/listings" className="hover:opacity-70 transition-opacity">Portfolio</a></li>
+                <div className="mp-mono text-[10px] uppercase tracking-[0.2em] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>Explore</div>
+                <ul className="space-y-2 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <li><a href="/buy" className="hover:text-white transition-colors">Buy</a></li>
+                  <li><a href="/sell" className="hover:text-white transition-colors">Sell</a></li>
+                  <li><a href="/listings" className="hover:text-white transition-colors">Portfolio</a></li>
                 </ul>
               </div>
               <div>
-                <div className="mp-mono text-[10px] uppercase tracking-[0.2em] text-[#273C46]/60 mb-3">
-                  Contact
-                </div>
-                <ul className="space-y-2 text-sm">
-                  <li><a href={c.agent.phone_href} className="hover:opacity-70 transition-opacity">{c.agent.phone}</a></li>
-                  <li><a href={`mailto:${c.agent.email}`} className="hover:opacity-70 transition-opacity">{c.agent.email}</a></li>
-                  <li><a href={c.agent.youtube} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">YouTube</a></li>
+                <div className="mp-mono text-[10px] uppercase tracking-[0.2em] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>Contact</div>
+                <ul className="space-y-2 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
+                  <li><a href={c.agent.phone_href} className="hover:text-white transition-colors">{c.agent.phone}</a></li>
+                  <li><a href={`mailto:${c.agent.email}`} className="hover:text-white transition-colors">{c.agent.email}</a></li>
+                  <li><a href={c.agent.youtube} target="_blank" rel="noopener noreferrer" className="hover:text-white transition-colors">YouTube</a></li>
                 </ul>
               </div>
             </div>
           </div>
-          <div className="mt-12 pt-6 border-t border-black/[0.06] flex flex-col md:flex-row justify-between gap-3 text-xs text-[#273C46]/70 leading-relaxed">
+          <div className="mt-12 pt-6 flex flex-col md:flex-row justify-between gap-3 text-xs leading-relaxed" style={{ borderTop: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)' }}>
             <p className="max-w-3xl">{c.agent.brokerage} DRE #{c.agent.dre}.</p>
             <p className="shrink-0">© {new Date().getFullYear()} McMullen Properties</p>
           </div>
@@ -568,21 +625,97 @@ export default function McMullenHome() {
 
       {/* ========================= FIXED BOTTOM NAV ========================= */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-        <div
-          className="flex items-center gap-3 bg-white rounded-full pl-6 pr-2 py-2"
-          style={{ boxShadow: SECONDARY_SHADOW }}
-        >
-          <span className="text-[#0D1B2A] flex items-center"><LogoMark size={22} /></span>
-          <a
-            href={c.hero.secondary_cta.href}
-            className="rounded-full px-5 py-2 text-sm font-medium text-white"
-            style={{ background: '#0D1B2A', boxShadow: PRIMARY_SHADOW }}
-          >
+        <div className="flex items-center gap-3 bg-white rounded-full pl-5 pr-2 py-2" style={{ boxShadow: SECONDARY_SHADOW }}>
+          <span className="flex items-center" style={{ color: NAVY }}><LogoMark size={22} /></span>
+          <a href={c.hero.primary_cta.href} className="rounded-full px-5 py-2 text-sm font-medium text-white" style={{ background: NAVY, boxShadow: PRIMARY_SHADOW }}>
             Start a chat
           </a>
         </div>
       </div>
     </div>
+  )
+}
+
+/* ---------------------- live sold-properties carousel --------------------- */
+function money(n: number | null): string {
+  if (n == null) return 'Sold'
+  return '$' + Math.round(n).toLocaleString()
+}
+
+function SoldCarousel({ cards }: { cards: SoldCard[] }) {
+  const trackRef = useRef<HTMLDivElement>(null)
+  const scroll = (dir: number) =>
+    trackRef.current?.scrollBy({ left: dir * 350, behavior: 'smooth' })
+
+  return (
+    <section className="py-20 md:py-28 bg-white">
+      <div className="max-w-6xl mx-auto px-6">
+        <Reveal>
+          <div className="flex items-end justify-between gap-6 mb-10">
+            <div>
+              <div className="mp-mono text-xs uppercase tracking-[0.22em]" style={{ color: BLUEGRAY }}>Track record</div>
+              <h2 className="mt-3 text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
+                Sold <span className="mp-serif font-normal" style={{ color: NAVY }}>properties.</span>
+              </h2>
+            </div>
+            <div className="hidden sm:flex gap-3 shrink-0">
+              <button onClick={() => scroll(-1)} aria-label="Scroll left"
+                className="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: '#f0f2f5', color: NAVY }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f2f5'; e.currentTarget.style.color = NAVY }}>
+                <ChevronLeft className="w-5 h-5" />
+              </button>
+              <button onClick={() => scroll(1)} aria-label="Scroll right"
+                className="w-12 h-12 rounded-full flex items-center justify-center transition-colors"
+                style={{ background: '#f0f2f5', color: NAVY }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = '#f0f2f5'; e.currentTarget.style.color = NAVY }}>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </Reveal>
+
+        <div ref={trackRef} className="mp-sold-track">
+          {cards.map((s) => (
+            <Link
+              key={s.slug}
+              to={`/listings/${s.slug}`}
+              className="mp-sold-card group block rounded-[20px] overflow-hidden bg-white"
+              style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
+            >
+              <div className="relative h-[220px] overflow-hidden">
+                {s.img ? (
+                  <img src={s.img} alt={s.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+                ) : null}
+                <span
+                  className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide"
+                  style={{ background: `linear-gradient(135deg, ${BLUEGRAY}, #6b7a8f)`, color: NAVY }}
+                >
+                  Sold
+                </span>
+              </div>
+              <div className="p-5">
+                <div className="mp-serif text-[22px]" style={{ color: NAVY }}>{money(s.price)}</div>
+                <div className="flex gap-3 text-[13px] mt-1.5" style={{ color: '#5a6578' }}>
+                  {s.beds != null ? <span>{s.beds} beds</span> : null}
+                  {s.baths != null ? <span>{s.baths} baths</span> : null}
+                  {s.hood ? <span>{s.hood}</span> : null}
+                </div>
+                <div className="text-sm mt-1.5" style={{ color: BLUEGRAY }}>{s.name}</div>
+              </div>
+            </Link>
+          ))}
+        </div>
+
+        <div className="flex justify-center mt-10">
+          <a href="/listings" className="inline-flex items-center gap-2 px-8 py-4 rounded-xl text-sm font-semibold text-white transition-transform hover:-translate-y-0.5" style={{ background: NAVY }}>
+            See more sales <ArrowUpRight className="w-[18px] h-[18px]" />
+          </a>
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -613,23 +746,23 @@ function TestimonialCarousel({
       <div className="max-w-4xl mx-auto px-6">
         <div className="flex items-end justify-between gap-6 mb-12">
           <h2 className="text-[32px] md:text-[48px] leading-[1.05] font-semibold tracking-tight">
-            What <span className="mp-serif font-normal">people</span> say
+            What <span className="mp-serif font-normal" style={{ color: NAVY }}>people</span> say
           </h2>
           <div className="flex items-center gap-2 shrink-0">
             {[0, 1, 2, 3, 4].map((i) => (
-              <Star key={i} className="w-4 h-4 fill-[#0D1B2A] text-[#0D1B2A]" />
+              <Star key={i} className="w-4 h-4" style={{ fill: NAVY, color: NAVY }} />
             ))}
           </div>
         </div>
 
-        <div className="rounded-[32px] border border-black/[0.07] bg-white p-8 md:p-12 shadow-[0_4px_24px_rgba(0,0,0,0.05)] min-h-[260px] flex flex-col justify-between">
-          <Quote className="w-8 h-8 text-[#0D1B2A]/20" />
-          <p className="text-xl md:text-2xl leading-relaxed text-[#0D1B2A] mt-4">
+        <div className="rounded-[28px] border p-8 md:p-12 min-h-[260px] flex flex-col justify-between" style={{ borderColor: 'rgba(13,27,42,0.08)', boxShadow: '0 4px 24px rgba(0,0,0,0.05)' }}>
+          <Quote className="w-8 h-8" style={{ color: 'rgba(13,27,42,0.2)' }} />
+          <p className="text-xl md:text-2xl leading-relaxed mt-4" style={{ color: NAVY }}>
             {testimonials[idx]?.quote}
           </p>
           <div className="mt-8">
             <div className="font-semibold text-sm">{testimonials[idx]?.name}</div>
-            <div className="mp-mono text-[11px] uppercase tracking-[0.16em] text-[#273C46] mt-0.5">
+            <div className="mp-mono text-[11px] uppercase tracking-[0.16em] mt-0.5" style={{ color: INK }}>
               &rarr; {testimonials[idx]?.role}
             </div>
           </div>
@@ -643,26 +776,23 @@ function TestimonialCarousel({
                 aria-label={`Show testimonial ${i + 1}`}
                 onClick={() => setIdx(i)}
                 className="h-1.5 rounded-full transition-all duration-300"
-                style={{
-                  width: i === idx ? 28 : 8,
-                  background: i === idx ? '#0D1B2A' : 'rgba(13,27,42,0.2)',
-                }}
+                style={{ width: i === idx ? 28 : 8, background: i === idx ? NAVY : 'rgba(13,27,42,0.2)' }}
               />
             ))}
           </div>
           <div className="flex gap-3">
-            <button
-              onClick={() => go(-1)}
-              aria-label="Previous testimonial"
-              className="w-11 h-11 rounded-full border border-[#0D1B2A]/20 flex items-center justify-center hover:bg-[#0D1B2A] hover:text-white transition-colors"
-            >
+            <button onClick={() => go(-1)} aria-label="Previous testimonial"
+              className="w-11 h-11 rounded-full border flex items-center justify-center transition-colors"
+              style={{ borderColor: 'rgba(13,27,42,0.2)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'inherit' }}>
               <ChevronLeft className="w-5 h-5" />
             </button>
-            <button
-              onClick={() => go(1)}
-              aria-label="Next testimonial"
-              className="w-11 h-11 rounded-full border border-[#0D1B2A]/20 flex items-center justify-center hover:bg-[#0D1B2A] hover:text-white transition-colors"
-            >
+            <button onClick={() => go(1)} aria-label="Next testimonial"
+              className="w-11 h-11 rounded-full border flex items-center justify-center transition-colors"
+              style={{ borderColor: 'rgba(13,27,42,0.2)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = NAVY; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'inherit' }}>
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
