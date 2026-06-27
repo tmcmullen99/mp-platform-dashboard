@@ -256,3 +256,55 @@ export function num(v: unknown): number | null {
   const n = typeof v === 'string' ? parseFloat(v.replace(/[^0-9.-]/g, '')) : typeof v === 'number' ? v : NaN
   return Number.isFinite(n) ? n : null
 }
+
+/* ------------------------------------------------ tool request capture ----- */
+/* Posts a request (comps / review / etc.) to submit_inquiry — the same lead
+   capture the public listing pages use. message carries the tool context. */
+export async function submitToolRequest(payload: {
+  name: string
+  email: string
+  phone?: string
+  message: string
+  website?: string // honeypot
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${EDGE_FUNCTIONS_BASE_URL}/submit_inquiry?token=${SITE_TOKEN}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: payload.name.trim(),
+        email: payload.email.trim(),
+        phone: payload.phone?.trim() || undefined,
+        message: payload.message,
+        page_path: typeof window !== 'undefined' ? window.location.pathname : undefined,
+        website: payload.website || '',
+      }),
+    })
+    const body = await res.json().catch(() => ({}))
+    if (!res.ok || body?.error) return { ok: false, error: body?.error || 'Something went wrong.' }
+    return { ok: true }
+  } catch {
+    return { ok: false, error: 'Could not reach the server — please try again.' }
+  }
+}
+
+/* A small reusable contact block (name / email / phone) for request tools. */
+export function RequestContactFields({
+  value, onChange,
+}: {
+  value: { name: string; email: string; phone: string; website: string }
+  onChange: (v: { name: string; email: string; phone: string; website: string }) => void
+}) {
+  const set = (k: 'name' | 'email' | 'phone' | 'website', v: string) => onChange({ ...value, [k]: v })
+  const cls = 'w-full rounded-xl border border-black/[0.12] bg-white px-3.5 py-2.5 text-sm text-[#0D1B2A] focus:outline-none focus:border-[#0D1B2A]/50'
+  return (
+    <div className="grid sm:grid-cols-2 gap-3">
+      <input className={cls} placeholder="Your name" value={value.name} onChange={(e) => set('name', e.target.value)} />
+      <input className={cls} type="email" placeholder="Email" value={value.email} onChange={(e) => set('email', e.target.value)} />
+      <input className={cls + ' sm:col-span-2'} placeholder="Phone (optional)" value={value.phone} onChange={(e) => set('phone', e.target.value)} />
+      {/* honeypot */}
+      <input type="text" tabIndex={-1} autoComplete="off" className="hidden" value={value.website}
+        onChange={(e) => set('website', e.target.value)} />
+    </div>
+  )
+}
