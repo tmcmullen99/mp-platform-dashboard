@@ -194,6 +194,7 @@ export default function CorePage({ slug }: { slug: string }) {
             <Link to="/sell" className={slug === 'sell' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Sell</Link>
             <Link to="/services" className={slug === 'services' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>Services</Link>
             <Link to="/about" className={slug === 'about' ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A]'}>About</Link>
+            <Link to="/blog" className="hover:text-[#0D1B2A]">Writing</Link>
           </nav>
           <a href="tel:+14156919272" className="text-sm font-medium text-[#0D1B2A] hover:opacity-70">(415) 691-9272</a>
         </div>
