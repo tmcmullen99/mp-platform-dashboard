@@ -8,6 +8,7 @@ import { useState, useCallback, ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 import { LogoWordmark } from '@/components/BrandLogo'
+import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import { Loader2, Link2, ArrowRight, Lock, Sparkles } from 'lucide-react'
 
 /* The public site ingest token — tenant-binds the no-account edge functions.
@@ -205,23 +206,7 @@ export function ToolShell({
         .mp-mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; }
       `}</style>
 
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
-            <LogoWordmark height={20} />
-          </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
-            <Link to="/listings" className="hover:text-[#0D1B2A] transition-colors">Portfolio</Link>
-            <Link to="/tools" className="text-[#0D1B2A]">Tools</Link>
-            <Link to="/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</Link>
-            <Link to="/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</Link>
-            <Link to="/blog" className="hover:text-[#0D1B2A] transition-colors">Writing</Link>
-          </nav>
-          <Link to="/join" className="text-sm font-medium rounded-full bg-[#0D1B2A] text-white px-4 py-2 hover:opacity-90">
-            Sign up
-          </Link>
-        </div>
-      </header>
+      <PublicNav active="tools" cta="signup" />
 
       <section className="max-w-6xl mx-auto px-6 pt-12 md:pt-16 pb-8">
         <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">{eyebrow}</div>
@@ -233,16 +218,7 @@ export function ToolShell({
 
       <main className="max-w-6xl mx-auto px-6 pb-24">{children}</main>
 
-      <footer className="border-t border-black/[0.07] py-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-4 text-sm text-[#273C46]">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
-          <div className="flex gap-6">
-            <Link to="/tools" className="hover:opacity-70">All tools</Link>
-            <a href="tel:+14156919272" className="hover:opacity-70">(415) 691-9272</a>
-            <a href="mailto:tim@mcmullen.properties" className="hover:opacity-70">tim@mcmullen.properties</a>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }
