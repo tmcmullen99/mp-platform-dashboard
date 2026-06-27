@@ -38,6 +38,10 @@ import Compare from '@/pages/public/Compare'
 import JoinTeaser from '@/pages/public/JoinTeaser'
 import ToolsHub from '@/pages/public/ToolsHub'
 import NetSheetTool from '@/pages/public/NetSheetTool'
+import CMATool from '@/pages/public/CMATool'
+import CompsRequestTool from '@/pages/public/CompsRequestTool'
+import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
+import OffMarketTool from '@/pages/public/OffMarketTool'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -81,6 +85,10 @@ export default function App() {
           <Route path="/join" element={<JoinTeaser />} />
           <Route path="/tools" element={<ToolsHub />} />
           <Route path="/tools/net-sheet" element={<NetSheetTool />} />
+          <Route path="/tools/cma" element={<CMATool />} />
+          <Route path="/tools/comps" element={<CompsRequestTool />} />
+          <Route path="/tools/review" element={<ReviewRequestTool />} />
+          <Route path="/tools/off-market" element={<OffMarketTool />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
