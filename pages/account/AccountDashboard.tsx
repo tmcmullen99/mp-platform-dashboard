@@ -9,6 +9,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import { ArrowRight, Check, Clock, Loader2, Calculator, Scale, FileSearch } from 'lucide-react'
+import { LogoWordmark } from '@/components/BrandLogo'
 
 type AppRow = {
   id: string
@@ -73,7 +74,7 @@ export default function AccountDashboard() {
       {/* top bar */}
       <header className="border-b border-black/[0.06] bg-white/70 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="mp-serif text-lg not-italic">McMullen Properties</Link>
+          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
           <div className="flex items-center gap-5">
             <Link to="/portal" className="text-sm text-[#273C46] hover:text-[#0D1B2A]">Portal</Link>
             <button onClick={() => { signOut(); navigate('/') }} className="text-sm text-[#273C46] hover:text-[#0D1B2A]">
