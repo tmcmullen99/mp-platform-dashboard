@@ -338,14 +338,16 @@ export default function McMullenHome() {
         style={{ background: 'rgba(13,27,42,0.85)', backdropFilter: 'blur(12px)', borderColor: 'rgba(255,255,255,0.08)' }}
       >
         <div className="max-w-6xl mx-auto px-6 h-[72px] flex items-center justify-between">
-          <a href="/" className="flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+          <a href="/home" className="flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
             <LogoWordmark height={34} />
           </a>
           <nav className="hidden md:flex items-center gap-7 text-sm" style={{ color: 'rgba(255,255,255,0.75)' }}>
             <a href="/listings" className="hover:text-white transition-colors">Portfolio</a>
+            <a href="/tools" className="hover:text-white transition-colors">Tools</a>
             <a href="/buy" className="hover:text-white transition-colors">Buy</a>
             <a href="/sell" className="hover:text-white transition-colors">Sell</a>
             <a href="/services" className="hover:text-white transition-colors">Services</a>
+            <a href="/blog" className="hover:text-white transition-colors">Market Insight</a>
           </nav>
           <a
             href={c.agent.schedule_href}
@@ -633,6 +635,8 @@ export default function McMullenHome() {
                   <li><a href="/buy" className="hover:text-white transition-colors">Buy</a></li>
                   <li><a href="/sell" className="hover:text-white transition-colors">Sell</a></li>
                   <li><a href="/listings" className="hover:text-white transition-colors">Portfolio</a></li>
+                  <li><a href="/tools" className="hover:text-white transition-colors">Tools</a></li>
+                  <li><a href="/blog" className="hover:text-white transition-colors">Market Insight</a></li>
                 </ul>
               </div>
               <div>
