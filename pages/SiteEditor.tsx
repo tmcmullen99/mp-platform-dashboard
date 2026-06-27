@@ -482,6 +482,12 @@ export default function SiteEditor() {
         >
           Listings
         </Link>
+        <Link
+          to="/site/blog"
+          className="px-4 py-2.5 text-sm border-b-2 -mb-px border-transparent text-ink-500 hover:text-ink-800"
+        >
+          Blog
+        </Link>
       </div>
 
       {/* toolbar */}
