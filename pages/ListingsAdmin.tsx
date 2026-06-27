@@ -52,6 +52,7 @@ type PropertyRow = {
   meta_title: string | null
   meta_description: string | null
   status_id: string | null
+  listing_stage: string | null
   neighborhood_id: string | null
   property_type_id: string | null
   architecture_style_id: string | null
@@ -80,6 +81,7 @@ const BLANK: Omit<PropertyRow, 'id'> = {
   meta_title: null,
   meta_description: null,
   status_id: null,
+  listing_stage: 'active',
   neighborhood_id: null,
   property_type_id: null,
   architecture_style_id: null,
@@ -283,10 +285,15 @@ export default function ListingsAdmin() {
               <div className="text-sm font-medium text-ink-900 w-28 text-right shrink-0">
                 {money(r.price)}
               </div>
-              <div className="w-32 text-right shrink-0">
+              <div className="w-32 text-right shrink-0 flex flex-col items-end gap-1">
                 <span className="text-2xs uppercase tracking-widest text-ink-600 bg-ink-50 border border-ink-200 px-2 py-1">
                   {statusName(r.status_id)}
                 </span>
+                {r.listing_stage && r.listing_stage !== 'active' ? (
+                  <span className="text-[10px] uppercase tracking-widest text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5">
+                    {r.listing_stage === 'coming_soon' ? 'Coming Soon' : r.listing_stage}
+                  </span>
+                ) : null}
               </div>
             </button>
           ))}
@@ -423,6 +430,7 @@ function ListingForm({
       meta_title: form.meta_title,
       meta_description: form.meta_description,
       status_id: form.status_id,
+      listing_stage: form.listing_stage ?? 'active',
       neighborhood_id: form.neighborhood_id,
       property_type_id: form.property_type_id,
       architecture_style_id: form.architecture_style_id,
@@ -527,6 +535,22 @@ function ListingForm({
               </select>
             </Field>
           ))}
+          <Field label="Stage (controls the public page)">
+            <select
+              className={INPUT_CLS}
+              value={form.listing_stage ?? 'active'}
+              onChange={(e) => set('listing_stage', e.target.value as never)}
+            >
+              <option value="coming_soon">Coming Soon — email-gated teaser</option>
+              <option value="active">Active — full page, Comp Review</option>
+              <option value="pending">Pending</option>
+              <option value="sold">Sold — Deal Review, no tour/docs</option>
+            </select>
+            <p className="text-2xs text-ink-500 mt-1.5 leading-relaxed">
+              Coming Soon hides photos/price behind an email capture. Sold swaps Comp Review → Deal
+              Review and removes the tour, disclosures, and showing form.
+            </p>
+          </Field>
         </div>
       </section>
 
