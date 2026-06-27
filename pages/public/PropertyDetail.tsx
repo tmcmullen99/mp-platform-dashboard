@@ -445,7 +445,7 @@ function ComingSoonGate({
 
       {/* top bar with the wordmark */}
       <div className="relative z-10 px-6 sm:px-10 md:px-14 pt-6">
-        <Link to="/" className="inline-flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+        <Link to="/home" className="inline-flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
           <LogoWordmark height={22} />
         </Link>
       </div>
@@ -1357,7 +1357,7 @@ function Footer() {
             <LogoMark size={24} />
           </span>
           <div>
-            <Link to="/" className="text-white font-semibold text-sm tracking-wide">McMULLEN PROPERTIES</Link>
+            <Link to="/home" className="text-white font-semibold text-sm tracking-wide">McMULLEN PROPERTIES</Link>
             <div className="text-xs text-white/50">Campbell, CA · under Real Broker</div>
           </div>
         </div>
