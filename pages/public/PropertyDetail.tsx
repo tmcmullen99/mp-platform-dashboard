@@ -147,6 +147,15 @@ export default function PropertyDetail() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [lightbox, setLightbox] = useState<number | null>(null)
+  // Coming-soon gate: once a visitor submits their email, the full page unlocks
+  // for this browser. Soft gate (lead capture), persisted per-slug in localStorage.
+  const [unlocked, setUnlocked] = useState(false)
+  useEffect(() => {
+    if (!slug) return
+    try {
+      if (localStorage.getItem(`mp_unlocked_${slug}`) === '1') setUnlocked(true)
+    } catch { /* localStorage unavailable — gate stays until submit */ }
+  }, [slug])
 
   useEffect(() => {
     if (!slug) return
@@ -217,6 +226,7 @@ export default function PropertyDetail() {
   }
 
   const sold = isSold(p.listing_stage)
+  const comingSoon = p.listing_stage === 'coming_soon'
 
   // Hero image + reveal layer (2nd distinct image powers the spotlight reveal).
   const heroImg = p.main_image ?? (p.images && p.images[0]) ?? null
@@ -225,6 +235,24 @@ export default function PropertyDetail() {
   const revealImg = gallery[0] ?? null // distinct from hero by construction
 
   const ytId = sold ? null : youTubeId(p.video) // film removed when sold
+
+  // Coming soon + not yet unlocked → show the email-gated teaser instead of the
+  // full page. Submitting captures the lead (submit_inquiry) and unlocks.
+  if (comingSoon && !unlocked) {
+    return (
+      <ComingSoonGate
+        name={p.name}
+        slug={p.slug}
+        pin={p.pin_code}
+        neighborhood={p.neighborhood_name}
+        heroUrl={heroImg?.url ?? null}
+        onUnlock={() => {
+          try { localStorage.setItem(`mp_unlocked_${p.slug}`, '1') } catch { /* ignore */ }
+          setUnlocked(true)
+        }}
+      />
+    )
+  }
 
   return (
     <div id="top" className="mp-listing min-h-screen" style={{ background: PAPER }}>
@@ -349,6 +377,118 @@ function LogoWordmark({ height = 22 }: { height?: number }) {
       <path d="M319.61,41.86v1.83H309.36V27.08H319.6v1.83h-8v5.52h6.47v1.76h-6.47v5.67Z" />
       <path d="M333.57,29.67a.73.73,0,0,1-.22.26.51.51,0,0,1-.3.09.82.82,0,0,1-.46-.2c-.18-.13-.4-.27-.67-.43a6.2,6.2,0,0,0-1-.44,4.23,4.23,0,0,0-1.37-.19,3.82,3.82,0,0,0-1.32.2,2.77,2.77,0,0,0-1,.55,2.27,2.27,0,0,0-.58.82,2.6,2.6,0,0,0-.2,1,1.94,1.94,0,0,0,.34,1.16,3,3,0,0,0,.91.78,6.75,6.75,0,0,0,1.27.56l1.46.49c.5.17,1,.37,1.47.58a5.16,5.16,0,0,1,1.27.8,3.74,3.74,0,0,1,.91,1.2,4.09,4.09,0,0,1,.34,1.74,5.73,5.73,0,0,1-.37,2A4.7,4.7,0,0,1,333,42.36a5,5,0,0,1-1.75,1.11,6.45,6.45,0,0,1-2.36.41,7.18,7.18,0,0,1-2.94-.59,6.91,6.91,0,0,1-2.26-1.58l.64-1.07a1.15,1.15,0,0,1,.23-.21.53.53,0,0,1,.3-.09.67.67,0,0,1,.34.12c.13.08.27.19.43.31l.56.41a5.28,5.28,0,0,0,.71.4,4.41,4.41,0,0,0,.91.31A5.08,5.08,0,0,0,329,42a4.25,4.25,0,0,0,1.43-.22,3,3,0,0,0,1.06-.62,2.82,2.82,0,0,0,.67-1,3.26,3.26,0,0,0,.23-1.24,2.13,2.13,0,0,0-.34-1.23,2.94,2.94,0,0,0-.9-.81,6.57,6.57,0,0,0-1.28-.55l-1.46-.46c-.49-.16-1-.35-1.46-.55a4.59,4.59,0,0,1-1.28-.82,3.71,3.71,0,0,1-.9-1.24,4.82,4.82,0,0,1,0-3.56,4.53,4.53,0,0,1,1-1.46,5.15,5.15,0,0,1,1.61-1,6,6,0,0,1,2.2-.38,7,7,0,0,1,2.53.44,5.84,5.84,0,0,1,2,1.28Z" />
     </svg>
+  )
+}
+
+/* ============================== coming-soon gate ======================= */
+// Email-gated teaser for listing_stage === 'coming_soon'. Shows the address +
+// a blurred hero behind a capture form; submitting posts to submit_inquiry
+// (captures the lead + emails Tim) and unlocks the full page for this browser.
+function ComingSoonGate({
+  name, slug, pin, neighborhood, heroUrl, onUnlock,
+}: {
+  name: string
+  slug: string
+  pin: string | null
+  neighborhood: string | null
+  heroUrl: string | null
+  onUnlock: () => void
+}) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '' })
+  const [website, setWebsite] = useState('') // honeypot
+  const [status, setStatus] = useState<'idle' | 'sending' | 'error'>('idle')
+  const [err, setErr] = useState('')
+
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [k]: e.target.value }))
+
+  const valid =
+    form.name.trim().length > 1 && /\S+@\S+\.\S+/.test(form.email)
+
+  const submit = async () => {
+    if (!valid) { setErr('Please add your name and a valid email.'); setStatus('error'); return }
+    setStatus('sending'); setErr('')
+    try {
+      const res = await fetch(INQUIRY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim(),
+          phone: form.phone.trim() || undefined,
+          message: `Coming Soon early-access request for ${name}.`,
+          property_slug: slug,
+          page_path: typeof window !== 'undefined' ? `${window.location.pathname}?unlock=coming_soon` : undefined,
+          website,
+        }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok || body?.error) throw new Error(body?.error || 'Something went wrong.')
+      onUnlock() // reveal the full page
+    } catch (e) {
+      setStatus('error')
+      setErr(e instanceof Error ? e.message : 'Could not reach the server — please try again.')
+    }
+  }
+
+  const inputStyle = { borderColor: 'rgba(255,255,255,0.18)', background: 'rgba(255,255,255,0.06)' }
+  const inputCls = 'text-sm px-4 py-3 rounded-xl border text-white placeholder-white/45 focus:outline-none transition'
+
+  return (
+    <div className="mp-listing min-h-screen relative overflow-hidden" style={{ background: NAVY }}>
+      <ScopedStyles />
+      {/* blurred hero behind */}
+      {heroUrl && (
+        <div className="absolute inset-0 z-0 bg-center bg-cover" style={{ backgroundImage: `url(${heroUrl})`, filter: 'blur(22px) brightness(0.5)', transform: 'scale(1.1)' }} />
+      )}
+      <div className="absolute inset-0 z-0" style={{ background: 'linear-gradient(to bottom, rgba(13,27,42,0.7), rgba(13,27,42,0.92))' }} />
+
+      {/* top bar with the wordmark */}
+      <div className="relative z-10 px-6 sm:px-10 md:px-14 pt-6">
+        <Link to="/" className="inline-flex items-center text-white hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+          <LogoWordmark height={22} />
+        </Link>
+      </div>
+
+      <div className="relative z-10 min-h-[calc(100dvh-80px)] flex items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md text-center">
+          <div className="mp-mono text-[11px] uppercase mb-5" style={{ letterSpacing: '0.34em', color: BLUEGRAY }}>
+            Coming Soon{neighborhood ? ` · ${neighborhood}` : ''}
+          </div>
+          <h1 className="mp-display text-4xl sm:text-5xl font-semibold text-white leading-tight">{name}</h1>
+          {pin && <div className="text-white/55 text-sm mt-2">CA {pin}</div>}
+          <p className="mt-5 text-white/70 leading-relaxed text-sm sm:text-base">
+            This listing is coming to market soon. Enter your details for early access to photos,
+            pricing, and full details the moment it goes live.
+          </p>
+
+          <div className="mt-8 flex flex-col gap-3 text-left">
+            <input value={form.name} onChange={set('name')} placeholder="Full name" autoComplete="name" className={inputCls} style={inputStyle} />
+            <input value={form.email} onChange={set('email')} placeholder="Email address" type="email" autoComplete="email" className={inputCls} style={inputStyle} />
+            <input value={form.phone} onChange={set('phone')} placeholder="Phone (optional)" type="tel" autoComplete="tel" className={inputCls} style={inputStyle} />
+            {/* honeypot */}
+            <input type="text" name="website" value={website} onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1} autoComplete="off" aria-hidden="true"
+              style={{ position: 'absolute', left: '-9999px', height: 0, width: 0, opacity: 0 }} />
+            {status === 'error' && <p className="text-sm text-red-300 text-center">{err}</p>}
+            <button onClick={submit} disabled={status === 'sending'}
+              className="w-full text-sm font-semibold py-3.5 rounded-xl transition-colors disabled:opacity-50"
+              style={{ background: '#fff', color: NAVY }}>
+              {status === 'sending' ? 'Unlocking…' : 'Get early access'}
+            </button>
+            <p className="text-[11px] text-center leading-relaxed" style={{ color: 'rgba(255,255,255,0.45)' }}>
+              We'll notify you the moment {name} is live. No spam — unsubscribe anytime.
+            </p>
+          </div>
+
+          <div className="mt-8">
+            <Link to="/listings" className="mp-mono text-[11px] uppercase tracking-widest text-white/50 hover:text-white transition-colors">
+              ← View available listings
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 
