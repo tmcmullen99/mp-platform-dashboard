@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { ArrowUpRight, Star, Quote, ChevronLeft, ChevronRight } from 'lucide-react'
+import { LogoWordmark, LogoMark } from '@/components/BrandLogo'
 
 const MCMULLEN_TENANT_ID = 'e0c8abe7-cc29-45c0-99c1-7c20b920262a'
 
@@ -216,8 +217,8 @@ export default function McMullenHome() {
       {/* ============================== HEADER ============================== */}
       <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <a href="/" className="mp-serif text-2xl font-semibold text-[#0D1B2A]">
-            McMullen
+          <a href="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
+            <LogoWordmark height={20} />
           </a>
           <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
             <a href="/listings" className="hover:text-[#0D1B2A] transition-colors">Portfolio</a>
@@ -529,7 +530,7 @@ export default function McMullenHome() {
         <div className="max-w-6xl mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between gap-10">
             <div className="max-w-sm">
-              <div className="mp-serif text-2xl font-semibold text-[#0D1B2A]">McMullen</div>
+              <div className="text-[#0D1B2A]"><LogoWordmark height={22} /></div>
               <p className="text-sm text-[#273C46] leading-relaxed mt-3">
                 A decade of experience, now setting neighborhood price records in Silicon Valley&rsquo;s
                 $5M SFR market.
@@ -571,7 +572,7 @@ export default function McMullenHome() {
           className="flex items-center gap-3 bg-white rounded-full pl-6 pr-2 py-2"
           style={{ boxShadow: SECONDARY_SHADOW }}
         >
-          <span className="mp-serif text-xl font-semibold text-[#0D1B2A]">M</span>
+          <span className="text-[#0D1B2A] flex items-center"><LogoMark size={22} /></span>
           <a
             href={c.hero.secondary_cta.href}
             className="rounded-full px-5 py-2 text-sm font-medium text-white"
