@@ -6,6 +6,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { LogoWordmark } from '@/components/BrandLogo'
+import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 
 type ImageJson = { url: string; alt: string | null } | null
 
@@ -74,27 +75,11 @@ export default function BlogIndex() {
       `}</style>
 
       {/* header */}
-      <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home">
-            <LogoWordmark height={20} />
-          </Link>
-          <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
-            <Link to="/listings" className="hover:text-[#0D1B2A] transition-colors">Portfolio</Link>
-            <Link to="/buy" className="hover:text-[#0D1B2A] transition-colors">Buy</Link>
-            <Link to="/sell" className="hover:text-[#0D1B2A] transition-colors">Sell</Link>
-            <Link to="/services" className="hover:text-[#0D1B2A] transition-colors">Services</Link>
-            <Link to="/blog" className="text-[#0D1B2A]">Writing</Link>
-          </nav>
-          <a href="tel:+14156919272" className="text-sm font-medium text-[#0D1B2A] hover:opacity-70">
-            (415) 691-9272
-          </a>
-        </div>
-      </header>
+      <PublicNav active="insight" />
 
       {/* intro */}
       <section className="max-w-6xl mx-auto px-6 pt-16 md:pt-20 pb-8">
-        <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">Writing</div>
+        <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">Market Insight</div>
         <h1 className="text-[40px] md:text-[56px] leading-[1.05] font-semibold tracking-tight">
           Notes from the <span className="mp-serif font-normal">market.</span>
         </h1>
@@ -211,15 +196,7 @@ export default function BlogIndex() {
       </section>
 
       {/* footer */}
-      <footer className="border-t border-black/[0.07] py-12">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-4 text-sm text-[#273C46]">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
-          <div className="flex gap-6">
-            <a href="tel:+14156919272" className="hover:opacity-70">(415) 691-9272</a>
-            <a href="mailto:tim@mcmullen.properties" className="hover:opacity-70">tim@mcmullen.properties</a>
-          </div>
-        </div>
-      </footer>
+      <PublicFooter />
     </div>
   )
 }
