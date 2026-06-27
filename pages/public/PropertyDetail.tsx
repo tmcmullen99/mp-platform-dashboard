@@ -256,7 +256,7 @@ export default function PropertyDetail() {
 
       {!sold && <Documents address={p.name} />}
 
-      <Contact name={p.name} slug={p.slug} />
+      {!sold && <Contact name={p.name} slug={p.slug} />}
 
       <Footer />
 
@@ -297,6 +297,26 @@ function ScopedStyles() {
   )
 }
 
+/* ============================== logo ==================================== */
+// Real McMullen monogram mark (from brand_assets), inlined so it inherits the
+// nav's text color via currentColor — white over the hero, navy once solid.
+function LogoMark({ size = 30 }: { size?: number }) {
+  return (
+    <svg
+      viewBox="0 0 350 294.64"
+      width={size}
+      height={size}
+      fill="currentColor"
+      aria-hidden="true"
+      style={{ display: 'block', flexShrink: 0 }}
+    >
+      <path d="M40.66,134c5.69,12.4,2.26,4.26,4.14-1.75a26.33,26.33,0,0,1,5.53-9.62c5.33-6,12.86-9.54,20.08-12.7C87.54,102.45,105,95.68,122.6,89.32A971.18,971.18,0,0,1,232.31,56.89C231.74,57,228,43.8,227.19,44a966.35,966.35,0,0,0-125.74,38.4Q86.69,88,72.14,94.13c-8.83,3.71-18.43,7.27-25.42,14.07-5.74,5.57-9.51,13.87-7.59,21.93,1.33,5.58,4,11.17,6.44,16.36-1.38-3-3.15-8.64-4.91-12.46Z" />
+      <path d="M176.62,104a612.63,612.63,0,0,1-66.28,133.32c-1.68,2.55,5.56,10.9,4,13.31a613.08,613.08,0,0,0,66.28-133.32c1.26-3.59-5.19-9.84-4-13.31Z" />
+      <path d="M183.48,209.12a409.74,409.74,0,0,1,30.8-94.83l-11.46-7.85a72.78,72.78,0,0,0-.72,24.41c1,6.44,2.38,14.67,7.36,19.36,7.84,7.39,16.81,11.87,27.59,10.95,27.88-2.36,53.33-18.9,67.5-42.87l-11.46-7.84q-7.74,39.95-13.4,80.25c-.57,4.06-3.63,12.64-1.41,16.43,1.36,2.31,6.4,4.47,8.59,6,2.84,1.91,4.37,3,8,2.85,6.18-.24,11.76-2.91,16.5-6.73-1,.78-10.34-8.74-11.46-7.84-4.75,3.82-15.21,9.73-21.41,5.89L289.74,215c-1.05-3,.07-6.62.49-9.71q.81-6,1.68-12.09,1.83-12.75,3.87-25.47,4-24.78,8.77-49.41c.22-1.14-11.82-7.23-11.46-7.84a88.25,88.25,0,0,1-35.24,33.41A86.84,86.84,0,0,1,234.72,152c-7.54,1.5-16.74,3.11-23.8-.68L222.19,159c-6-4.68-7.59-13.24-8.63-20.35a73,73,0,0,1,.72-24.4c.26-1.37-11.89-6.92-11.46-7.85A409.89,409.89,0,0,0,172,201.27c-.36,1.9,11.8,6.14,11.46,7.85Z" />
+    </svg>
+  )
+}
+
 /* ============================== nav ===================================== */
 function Nav({ hidden, sold }: { hidden?: boolean; sold: boolean }) {
   const [solid, setSolid] = useState(false)
@@ -327,9 +347,10 @@ function Nav({ hidden, sold }: { hidden?: boolean; sold: boolean }) {
       }}
     >
       <div className="px-5 sm:px-8 md:px-14 flex items-center justify-between">
-        <Link to="/" className="mp-display text-2xl font-semibold transition-colors"
+        <Link to="/" className="flex items-center gap-2.5 transition-colors"
           style={{ color: solid ? NAVY : '#fff' }}>
-          McMullen
+          <LogoMark size={30} />
+          <span className="mp-display text-2xl font-semibold">McMullen</span>
         </Link>
 
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-1">
@@ -1157,7 +1178,9 @@ function Footer() {
     <footer style={{ background: NAVY, borderTop: '1px solid rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.7)' }}>
       <div className="max-w-6xl mx-auto px-6 sm:px-10 py-12 grid sm:grid-cols-2 gap-8 items-center">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full flex items-center justify-center mp-display text-lg" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff' }}>M</div>
+          <span className="h-10 w-10 rounded-full flex items-center justify-center" style={{ background: 'rgba(255,255,255,0.08)', color: '#fff' }}>
+            <LogoMark size={24} />
+          </span>
           <div>
             <Link to="/" className="text-white font-semibold text-sm tracking-wide">McMULLEN PROPERTIES</Link>
             <div className="text-xs text-white/50">Campbell, CA · under Real Broker</div>
