@@ -23,6 +23,8 @@ import TenantHome from '@/pages/public/TenantHome'
 import PortfolioIndex from '@/pages/public/PortfolioIndex'
 import PropertyDetail from '@/pages/public/PropertyDetail'
 import CorePage from '@/pages/public/CorePage'
+import BlogIndex from '@/pages/public/BlogIndex'
+import BlogPost from '@/pages/public/BlogPost'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
 import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import MakeMeMove from '@/pages/MakeMeMove'
@@ -61,6 +63,8 @@ export default function App() {
           <Route path="/buy" element={<CorePage slug="buy" />} />
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
+          <Route path="/blog" element={<BlogIndex />} />
+          <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
           {/* Public Make-Me-Move marketplace (anon via mmm_public_read RLS) */}
