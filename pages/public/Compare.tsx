@@ -17,6 +17,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { LogoWordmark } from '@/components/BrandLogo'
+import { PublicNav } from '@/components/public/PublicNav'
 import { EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 import {
   Plus, Loader2, ArrowUpDown, Star, Trash2, FileSearch, Save, Home as HomeIcon,
@@ -217,12 +218,7 @@ export default function Compare() {
   return (
     <div className="mp-public min-h-screen bg-[#FAFAF7] text-[#0D1B2A]">
       {/* header */}
-      <header className="border-b border-black/[0.06] bg-white/70 backdrop-blur-md sticky top-0 z-30">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity" aria-label="McMullen Properties — home"><LogoWordmark height={18} /></Link>
-          <Link to="/join" className="text-sm text-[#273C46] hover:text-[#0D1B2A]">Create account</Link>
-        </div>
-      </header>
+      <PublicNav active="tools" cta="signup" />
 
       <div className="max-w-6xl mx-auto px-6 py-12 md:py-16">
         <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">Free tool · no account</div>
