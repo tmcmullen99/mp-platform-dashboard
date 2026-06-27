@@ -1,11 +1,22 @@
 // McMullen Properties — public property detail.
 // Route: "/listings/:slug" (no auth). Reads one row from public.properties
 // (anon-readable) with its gallery + rich HTML fields. Motionsites aesthetic.
+//
+// Luxury-listing template (Huckleberry interaction vocabulary, ported native):
+//   - Cursor-spotlight hero over main_image, with title/price/stat band overlaid
+//   - Hero de-duped from the gallery grid (main_image never repeats as a frame)
+//   - Click-to-open lightbox gallery (keyboard arrows + escape)
+//   - Mortgage estimator tool (down payment + rate -> monthly P&I)
+//   - Scroll-reveal sections (reduced-motion respected)
+//   - listing_stage pill (coming_soon / active / pending / sold)
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { ArrowLeft, MapPin, Bed, Bath, Square, Calendar, Car } from 'lucide-react'
+import {
+  ArrowLeft, MapPin, Bed, Bath, Square, Calendar, Car,
+  X, ChevronLeft, ChevronRight,
+} from 'lucide-react'
 
 type ImageJson = { url: string; alt: string | null }
 
@@ -29,6 +40,7 @@ type PropertyDetail = {
   video: { url?: string } | null
   map_link: string | null
   meta_description: string | null
+  listing_stage: string | null
   status_name: string | null
   neighborhood_name: string | null
   property_type_name: string | null
@@ -42,11 +54,25 @@ function money(n: number | null): string {
 const PRIMARY_SHADOW =
   '0 1px 2px 0 rgba(13,27,42,0.10), 0 4px 4px 0 rgba(13,27,42,0.09), 0 9px 6px 0 rgba(13,27,42,0.05), inset 0 2px 8px 0 rgba(255,255,255,0.30)'
 
+// listing_stage -> human label + tone. Drives the hero pill.
+function stageMeta(stage: string | null): { label: string; fg: string; bg: string } | null {
+  switch (stage) {
+    case 'coming_soon': return { label: 'Coming Soon', fg: '#1d4ed8', bg: 'rgba(29,78,216,0.12)' }
+    case 'active':      return { label: 'For Sale',     fg: '#1f7a4d', bg: 'rgba(31,122,77,0.12)' }
+    case 'pending':     return { label: 'Pending',      fg: '#b45309', bg: 'rgba(180,83,9,0.12)' }
+    case 'sold':        return { label: 'Sold',         fg: '#0D1B2A', bg: 'rgba(255,255,255,0.16)' }
+    default:            return null
+  }
+}
+
 export default function PropertyDetail() {
   const { slug } = useParams<{ slug: string }>()
   const [p, setP] = useState<PropertyDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
+
+  // Lightbox state: index into the full gallery, or null when closed.
+  const [lightbox, setLightbox] = useState<number | null>(null)
 
   useEffect(() => {
     if (!slug) return
@@ -56,7 +82,7 @@ export default function PropertyDetail() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, statuses(name), neighborhoods(name), property_types(name)'
+          'slug, name, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, listing_stage, statuses(name), neighborhoods(name), property_types(name)'
         )
         .eq('slug', slug)
         .maybeSingle()
@@ -87,6 +113,7 @@ export default function PropertyDetail() {
         video: (r.video as { url?: string }) ?? null,
         map_link: (r.map_link as string) ?? null,
         meta_description: (r.meta_description as string) ?? null,
+        listing_stage: (r.listing_stage as string) ?? null,
         status_name: ((r.statuses as { name?: string } | null)?.name) ?? null,
         neighborhood_name: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
         property_type_name: ((r.property_types as { name?: string } | null)?.name) ?? null,
@@ -120,13 +147,16 @@ export default function PropertyDetail() {
     )
   }
 
-  // Build gallery: prefer images[], fall back to main_image.
-  const gallery: ImageJson[] =
-    p.images && p.images.length > 0
-      ? p.images
-      : p.main_image
-      ? [p.main_image]
-      : []
+  // The hero is main_image when present, else the first gallery frame.
+  const heroImg: ImageJson | null =
+    p.main_image ?? (p.images && p.images.length > 0 ? p.images[0] : null)
+
+  // Full gallery, de-duped against the hero so the cover never shows twice.
+  // (Fixes listings like 1694-clay-drive where 000.jpg is both main + images[0].)
+  const allImages: ImageJson[] = p.images && p.images.length > 0 ? p.images : []
+  const gallery: ImageJson[] = heroImg
+    ? allImages.filter((im) => im.url !== heroImg.url)
+    : allImages
 
   const facts: { icon: typeof Bed; label: string; value: string }[] = []
   if (p.bedrooms != null) facts.push({ icon: Bed, label: 'Beds', value: String(p.bedrooms) })
@@ -134,6 +164,8 @@ export default function PropertyDetail() {
   if (p.area_sqft != null) facts.push({ icon: Square, label: 'Sq Ft', value: Math.round(p.area_sqft).toLocaleString() })
   if (p.built_year != null) facts.push({ icon: Calendar, label: 'Built', value: String(p.built_year) })
   if (p.parking_description) facts.push({ icon: Car, label: 'Parking', value: p.parking_description })
+
+  const stage = stageMeta(p.listing_stage)
 
   return (
     <div className="mp-home min-h-screen bg-white text-[#0D1B2A]">
@@ -147,6 +179,12 @@ export default function PropertyDetail() {
         .mp-rte li { margin-bottom: 0.4rem; line-height: 1.6; }
         .mp-rte a { color: #1d4ed8; }
         .mp-rte strong { color: #0D1B2A; }
+        /* scroll-reveal — hidden by default, .is-in when observed; disabled under reduced-motion */
+        .mp-reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s cubic-bezier(0.16,1,0.3,1), transform 0.7s cubic-bezier(0.16,1,0.3,1); }
+        .mp-reveal.is-in { opacity: 1; transform: none; }
+        @media (prefers-reduced-motion: reduce) {
+          .mp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+        }
       `}</style>
 
       {/* header */}
@@ -162,137 +200,91 @@ export default function PropertyDetail() {
         </div>
       </header>
 
-      {/* title */}
-      <section className="max-w-6xl mx-auto px-6 pt-12 md:pt-16">
-        <div className="flex flex-wrap items-center gap-3 mb-3">
-          {p.status_name ? (
-            <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#273C46]">
-              {p.status_name}
-            </span>
-          ) : null}
-          {p.neighborhood_name ? (
-            <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#273C46]">
-              · {p.neighborhood_name}
-            </span>
-          ) : null}
-          {p.property_type_name ? (
-            <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#273C46]">
-              · {p.property_type_name}
-            </span>
-          ) : null}
-        </div>
-        <h1 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
-          {p.name}
-        </h1>
-        <div className="flex items-baseline gap-4 mt-4 flex-wrap">
-          <span className="mp-serif text-4xl md:text-5xl font-semibold not-italic text-[#0D1B2A]">
-            {money(p.price)}
-          </span>
-          {p.price_per_sqft ? (
-            <span className="text-sm text-[#273C46]">${Number(p.price_per_sqft).toLocaleString()}/sqft</span>
-          ) : null}
-          {p.monthly_hoa_fee ? (
-            <span className="text-sm text-[#273C46]">${p.monthly_hoa_fee}/mo. HOA</span>
-          ) : null}
-        </div>
-      </section>
+      {/* hero — cursor-spotlight cover with title/price/stat band overlaid */}
+      <Hero
+        image={heroImg}
+        name={p.name}
+        price={money(p.price)}
+        pricePerSqft={p.price_per_sqft}
+        hoa={p.monthly_hoa_fee}
+        stage={stage}
+        neighborhood={p.neighborhood_name}
+        propertyType={p.property_type_name}
+        facts={facts}
+      />
 
-      {/* gallery */}
+      {/* gallery (de-duped from hero) */}
       {gallery.length > 0 ? (
-        <section className="max-w-6xl mx-auto px-6 mt-8">
-          {gallery.length === 1 ? (
-            <img
-              src={gallery[0].url}
-              alt={gallery[0].alt ?? p.name}
-              className="w-full h-[340px] md:h-[560px] object-cover rounded-[24px] shadow-xl"
-            />
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <img
-                src={gallery[0].url}
-                alt={gallery[0].alt ?? p.name}
-                className="col-span-2 md:col-span-2 row-span-2 w-full h-full object-cover rounded-[20px] shadow-lg aspect-square md:aspect-auto"
-              />
-              {gallery.slice(1, 5).map((img, i) => (
+        <Reveal as="section" className="max-w-6xl mx-auto px-6 mt-12">
+          <div className="flex items-end justify-between mb-4">
+            <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46]">Gallery</h2>
+            <span className="mp-mono text-[11px] text-[#273C46]/70">{gallery.length} photos</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {gallery.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => setLightbox(i)}
+                className="group relative block w-full overflow-hidden rounded-[16px] shadow-md aspect-[4/3] focus:outline-none focus:ring-2 focus:ring-[#0D1B2A]/40"
+                aria-label={`Open photo ${i + 1} of ${gallery.length}`}
+              >
                 <img
-                  key={i}
                   src={img.url}
-                  alt={img.alt ?? `${p.name} ${i + 2}`}
+                  alt={img.alt ?? `${p.name} — photo ${i + 1}`}
                   loading="lazy"
-                  className="w-full h-full object-cover rounded-[16px] shadow-md aspect-square"
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.04]"
                 />
-              ))}
-            </div>
-          )}
-          {gallery.length > 5 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3">
-              {gallery.slice(5).map((img, i) => (
-                <img
-                  key={i}
-                  src={img.url}
-                  alt={img.alt ?? `${p.name} ${i + 6}`}
-                  loading="lazy"
-                  className="w-full h-full object-cover rounded-[16px] shadow-md aspect-square"
-                />
-              ))}
-            </div>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* facts */}
-      {facts.length > 0 ? (
-        <section className="max-w-6xl mx-auto px-6 mt-10">
-          <div className="flex flex-wrap gap-x-12 gap-y-5 border-y border-black/[0.08] py-6">
-            {facts.map((f) => (
-              <div key={f.label} className="flex items-center gap-3">
-                <f.icon className="w-5 h-5 text-[#273C46]" />
-                <div>
-                  <div className="text-xl font-semibold leading-none">{f.value}</div>
-                  <div className="mp-mono text-[10px] uppercase tracking-[0.15em] text-[#273C46] mt-1">
-                    {f.label}
-                  </div>
-                </div>
-              </div>
+              </button>
             ))}
           </div>
-        </section>
+        </Reveal>
       ) : null}
 
       {/* body: description + sidebar */}
-      <section className="max-w-6xl mx-auto px-6 mt-12 grid md:grid-cols-[1fr_320px] gap-12">
+      <section className="max-w-6xl mx-auto px-6 mt-14 grid md:grid-cols-[1fr_320px] gap-12">
         <div>
           {p.description_html ? (
-            <div className="mp-rte" dangerouslySetInnerHTML={{ __html: p.description_html }} />
+            <Reveal className="mp-rte" dangerouslySetInnerHTML={{ __html: p.description_html }} />
           ) : p.meta_description ? (
-            <p className="text-[#273C46] leading-relaxed text-lg">{p.meta_description}</p>
+            <Reveal as="p" className="text-[#273C46] leading-relaxed text-lg">{p.meta_description}</Reveal>
           ) : null}
 
           {p.amenities_html ? (
-            <div className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">Amenities</h2>
               <div className="mp-rte" dangerouslySetInnerHTML={{ __html: p.amenities_html }} />
-            </div>
+            </Reveal>
           ) : null}
 
           {p.features_html ? (
-            <div className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">Features</h2>
               <div className="mp-rte" dangerouslySetInnerHTML={{ __html: p.features_html }} />
-            </div>
+            </Reveal>
           ) : null}
 
           {p.neighborhood_html ? (
-            <div className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">
                 The neighborhood
               </h2>
               <div className="mp-rte" dangerouslySetInnerHTML={{ __html: p.neighborhood_html }} />
-            </div>
+            </Reveal>
+          ) : null}
+
+          {/* mortgage estimator — the one interactive tool */}
+          {p.price != null ? (
+            <Reveal className="mt-10">
+              <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">
+                Estimate the monthly payment
+              </h2>
+              <MortgageEstimator price={p.price} hoa={p.monthly_hoa_fee} />
+            </Reveal>
           ) : null}
 
           {p.video?.url ? (
-            <div className="mt-10">
+            <Reveal className="mt-10">
               <h2 className="mp-mono text-xs uppercase tracking-[0.2em] text-[#273C46] mb-4">Video tour</h2>
               <a
                 href={p.video.url}
@@ -302,7 +294,7 @@ export default function PropertyDetail() {
               >
                 Watch the property tour →
               </a>
-            </div>
+            </Reveal>
           ) : null}
         </div>
 
@@ -359,8 +351,333 @@ export default function PropertyDetail() {
           </div>
         </div>
       </footer>
+
+      {/* lightbox overlay */}
+      {lightbox != null && gallery[lightbox] ? (
+        <Lightbox
+          images={gallery}
+          index={lightbox}
+          name={p.name}
+          onClose={() => setLightbox(null)}
+          onIndex={setLightbox}
+        />
+      ) : null}
     </div>
   )
+}
+
+/* --------------------------------- hero ---------------------------------- */
+// Full-bleed cover with a cursor-following radial spotlight (the signature
+// interaction). Title, price, stage pill, and a compact stat band sit on a
+// bottom scrim. Falls back to a plain navy panel when no image exists.
+
+function Hero({
+  image, name, price, pricePerSqft, hoa, stage, neighborhood, propertyType, facts,
+}: {
+  image: ImageJson | null
+  name: string
+  price: string
+  pricePerSqft: number | null
+  hoa: string | null
+  stage: { label: string; fg: string; bg: string } | null
+  neighborhood: string | null
+  propertyType: string | null
+  facts: { icon: typeof Bed; label: string; value: string }[]
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+
+  function onMove(e: React.MouseEvent<HTMLDivElement>) {
+    const el = ref.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    el.style.setProperty('--mx', `${e.clientX - rect.left}px`)
+    el.style.setProperty('--my', `${e.clientY - rect.top}px`)
+  }
+
+  const meta = [neighborhood, propertyType].filter(Boolean) as string[]
+
+  return (
+    <section className="max-w-6xl mx-auto px-6 pt-8">
+      <div
+        ref={ref}
+        onMouseMove={onMove}
+        className="group/hero relative overflow-hidden rounded-[24px] shadow-xl"
+        style={{
+          background: image ? '#0D1B2A' : 'linear-gradient(160deg,#0D1B2A,#1a2942)',
+        }}
+      >
+        {/* cover image */}
+        {image ? (
+          <img
+            src={image.url}
+            alt={image.alt ?? name}
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+        ) : null}
+
+        {/* cursor spotlight — a soft lift that tracks the pointer */}
+        <div
+          className="pointer-events-none absolute inset-0 z-[1] opacity-0 transition-opacity duration-300 group-hover/hero:opacity-100 motion-reduce:hidden"
+          style={{
+            background:
+              'radial-gradient(420px circle at var(--mx,50%) var(--my,40%), rgba(255,255,255,0.16), transparent 70%)',
+          }}
+        />
+        {/* bottom scrim for legibility */}
+        <div
+          className="pointer-events-none absolute inset-x-0 bottom-0 z-[2] h-2/3"
+          style={{ background: 'linear-gradient(to top, rgba(7,15,26,0.86) 6%, rgba(7,15,26,0.34) 48%, transparent)' }}
+        />
+
+        {/* content */}
+        <div className="relative z-[3] flex flex-col justify-end min-h-[420px] md:min-h-[600px] p-7 md:p-12">
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            {stage ? (
+              <span
+                className="mp-mono text-[11px] uppercase tracking-[0.16em] px-3 py-1 rounded-full"
+                style={{ color: stage.fg === '#0D1B2A' ? '#fff' : stage.fg, background: stage.bg, backdropFilter: 'blur(4px)' }}
+              >
+                {stage.label}
+              </span>
+            ) : null}
+            {meta.map((m) => (
+              <span key={m} className="mp-mono text-[11px] uppercase tracking-[0.16em] text-white/80">
+                {m}
+              </span>
+            ))}
+          </div>
+
+          <h1 className="text-white text-[34px] md:text-[56px] leading-[1.04] font-semibold tracking-tight max-w-3xl">
+            {name}
+          </h1>
+
+          <div className="flex items-baseline gap-4 mt-4 flex-wrap">
+            <span className="mp-serif text-3xl md:text-5xl font-semibold not-italic text-white">
+              {price}
+            </span>
+            {pricePerSqft ? (
+              <span className="text-sm text-white/75">${Number(pricePerSqft).toLocaleString()}/sqft</span>
+            ) : null}
+            {hoa ? <span className="text-sm text-white/75">${hoa}/mo. HOA</span> : null}
+          </div>
+
+          {/* stat band */}
+          {facts.length > 0 ? (
+            <div className="flex flex-wrap gap-x-9 gap-y-4 mt-7 pt-6 border-t border-white/15">
+              {facts.map((f) => (
+                <div key={f.label} className="flex items-center gap-3">
+                  <f.icon className="w-5 h-5 text-white/70" />
+                  <div>
+                    <div className="text-xl font-semibold leading-none text-white">{f.value}</div>
+                    <div className="mp-mono text-[10px] uppercase tracking-[0.15em] text-white/60 mt-1">
+                      {f.label}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ------------------------------- lightbox -------------------------------- */
+// Full-screen gallery viewer. Arrow keys page, Escape closes. Click backdrop
+// to dismiss; the image itself stops propagation.
+
+function Lightbox({
+  images, index, name, onClose, onIndex,
+}: {
+  images: ImageJson[]
+  index: number
+  name: string
+  onClose: () => void
+  onIndex: (i: number) => void
+}) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+      else if (e.key === 'ArrowLeft') onIndex((index - 1 + images.length) % images.length)
+      else if (e.key === 'ArrowRight') onIndex((index + 1) % images.length)
+    }
+    window.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [index, images.length, onClose, onIndex])
+
+  const img = images[index]
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 backdrop-blur-sm"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${name} photo ${index + 1} of ${images.length}`}
+    >
+      <button
+        type="button"
+        onClick={onClose}
+        className="absolute top-5 right-5 z-[2] inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60"
+        aria-label="Close"
+      >
+        <X className="w-5 h-5" />
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onIndex((index - 1 + images.length) % images.length) }}
+        className="absolute left-3 md:left-6 z-[2] inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60"
+        aria-label="Previous photo"
+      >
+        <ChevronLeft className="w-6 h-6" />
+      </button>
+
+      <figure className="max-w-[92vw] max-h-[88vh]" onClick={(e) => e.stopPropagation()}>
+        <img
+          src={img.url}
+          alt={img.alt ?? `${name} — photo ${index + 1}`}
+          className="max-w-[92vw] max-h-[80vh] object-contain rounded-lg shadow-2xl"
+        />
+        <figcaption className="mt-3 text-center mp-mono text-[11px] uppercase tracking-[0.2em] text-white/60">
+          {index + 1} / {images.length}
+        </figcaption>
+      </figure>
+
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onIndex((index + 1) % images.length) }}
+        className="absolute right-3 md:right-6 z-[2] inline-flex items-center justify-center w-11 h-11 rounded-full bg-white/10 text-white hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white/60"
+        aria-label="Next photo"
+      >
+        <ChevronRight className="w-6 h-6" />
+      </button>
+    </div>
+  )
+}
+
+/* --------------------------- mortgage estimator -------------------------- */
+// Pure client-side P&I estimate. Down payment % and rate are adjustable;
+// payment recomputes live. This is an estimate, not a quote — labeled as such.
+
+function MortgageEstimator({ price, hoa }: { price: number; hoa: string | null }) {
+  const [downPct, setDownPct] = useState(20)
+  const [rate, setRate] = useState(6.5)
+  const years = 30
+
+  const { monthly, loan, down } = useMemo(() => {
+    const down = Math.round(price * (downPct / 100))
+    const loan = Math.max(price - down, 0)
+    const r = rate / 100 / 12
+    const n = years * 12
+    const pi = r === 0 ? loan / n : (loan * r) / (1 - Math.pow(1 + r, -n))
+    const hoaNum = hoa ? Number(String(hoa).replace(/[^0-9.]/g, '')) : 0
+    const monthly = Math.round(pi + (Number.isFinite(hoaNum) ? hoaNum : 0))
+    return { monthly, loan, down }
+  }, [price, downPct, rate, years, hoa])
+
+  const inputWrap = 'flex items-center justify-between gap-4'
+  const labelCls = 'text-sm text-[#273C46]'
+  return (
+    <div className="rounded-[20px] border border-black/[0.08] p-6 shadow-[0_8px_30px_rgba(0,0,0,0.05)]">
+      <div className="flex items-baseline justify-between flex-wrap gap-2">
+        <div className="mp-serif text-3xl md:text-4xl font-semibold not-italic text-[#0D1B2A]">
+          ${monthly.toLocaleString()}<span className="text-base font-normal text-[#273C46]">/mo</span>
+        </div>
+        <div className="mp-mono text-[10px] uppercase tracking-[0.16em] text-[#273C46]/70">
+          Est. principal &amp; interest{hoa ? ' + HOA' : ''}
+        </div>
+      </div>
+
+      <div className="mt-6 space-y-5">
+        <div>
+          <div className={inputWrap}>
+            <span className={labelCls}>Down payment</span>
+            <span className="text-sm font-medium text-[#0D1B2A]">
+              {downPct}% · ${down.toLocaleString()}
+            </span>
+          </div>
+          <input
+            type="range" min={5} max={50} step={1} value={downPct}
+            onChange={(e) => setDownPct(Number(e.target.value))}
+            className="w-full mt-2 accent-[#0D1B2A]"
+            aria-label="Down payment percent"
+          />
+        </div>
+
+        <div>
+          <div className={inputWrap}>
+            <span className={labelCls}>Interest rate</span>
+            <span className="text-sm font-medium text-[#0D1B2A]">{rate.toFixed(2)}%</span>
+          </div>
+          <input
+            type="range" min={3} max={9} step={0.05} value={rate}
+            onChange={(e) => setRate(Number(e.target.value))}
+            className="w-full mt-2 accent-[#0D1B2A]"
+            aria-label="Interest rate percent"
+          />
+        </div>
+
+        <div className="flex items-center justify-between pt-1 text-sm">
+          <span className={labelCls}>Loan amount</span>
+          <span className="font-medium text-[#0D1B2A]">${loan.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <p className="mt-5 text-[11px] leading-relaxed text-[#273C46]/70">
+        Estimate only, for a {years}-year fixed loan. Excludes taxes, insurance, and PMI. Not a loan offer or
+        commitment to lend — confirm figures with your lender.
+      </p>
+    </div>
+  )
+}
+
+/* -------------------------------- reveal --------------------------------- */
+// Scroll-reveal wrapper. Adds .is-in when the element scrolls into view.
+// Honors reduced-motion via the CSS rule above (which forces .mp-reveal visible).
+
+function Reveal(
+  props: {
+    children?: React.ReactNode
+    className?: string
+    as?: 'div' | 'section' | 'p'
+    dangerouslySetInnerHTML?: { __html: string }
+  }
+) {
+  const { children, className = '', as = 'div', dangerouslySetInnerHTML } = props
+  const ref = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-in')
+            obs.unobserve(entry.target)
+          }
+        }
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  const cls = `mp-reveal ${className}`.trim()
+
+  if (dangerouslySetInnerHTML) {
+    return <div ref={ref as React.Ref<HTMLDivElement>} className={cls} dangerouslySetInnerHTML={dangerouslySetInnerHTML} />
+  }
+  if (as === 'section') return <section ref={ref as React.Ref<HTMLElement>} className={cls}>{children}</section>
+  if (as === 'p') return <p ref={ref as React.Ref<HTMLParagraphElement>} className={cls}>{children}</p>
+  return <div ref={ref as React.Ref<HTMLDivElement>} className={cls}>{children}</div>
 }
 
 /* ------------------------------ inquiry form ------------------------------ */
