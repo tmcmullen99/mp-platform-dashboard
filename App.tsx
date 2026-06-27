@@ -28,6 +28,7 @@ import PublicMakeMeMoveDetail from '@/pages/public/PublicMakeMeMoveDetail'
 import MakeMeMove from '@/pages/MakeMeMove'
 import SiteEditor from '@/pages/SiteEditor'
 import ListingsAdmin from '@/pages/ListingsAdmin'
+import BlogAdmin from '@/pages/BlogAdmin'
 import Inquiries from '@/pages/Inquiries'
 import CreditApplications from '@/pages/CreditApplications'
 import Welcome from '@/pages/public/Welcome'
@@ -208,6 +209,7 @@ function AuthGate() {
         />
         <Route path="/site" element={<SiteEditor />} />
         <Route path="/site/listings" element={<ListingsAdmin />} />
+        <Route path="/site/blog" element={<BlogAdmin />} />
         <Route
           path="/analytics"
           element={
