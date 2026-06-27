@@ -75,6 +75,16 @@ type HomeContent = {
   services: { title: string; blurb: string; cta: string; href: string }[]
   sold: { address: string; price: string; beds: string; baths: string; area: string; href: string }[]
   testimonials: { quote: string; name: string; role: string }[]
+  same_developer?: {
+    eyebrow: string
+    headline_lead: string
+    headline_accent: string
+    subhead: string
+    proof: { slug: string; label: string; name: string; location: string; price: string; caption: string }
+    mandate: { slug: string; label: string; name: string; location: string; price: string; caption: string; href: string }
+    footnote: string
+    cta: { label: string; href: string }
+  }
   agent: {
     name: string
     dre: string
@@ -184,6 +194,9 @@ function PillButton({
 export default function McMullenHome() {
   const [content, setContent] = useState<HomeContent | null>(null)
   const [sold, setSold] = useState<SoldCard[]>([])
+  // Live hero images for the "Same Developer" proof→mandate pair, keyed by slug,
+  // so they auto-update once Huckleberry's photos are rehosted to Supabase.
+  const [devImgs, setDevImgs] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
   // Hero pointer-parallax: content drifts subtly toward the cursor for an
   // interactive, alive feel over the video. Disabled under reduced-motion.
@@ -215,10 +228,23 @@ export default function McMullenHome() {
         .order('price', { ascending: false, nullsFirst: false })
         .limit(12)
 
-      const [{ data: cData }, { data: sData }] = await Promise.all([contentP, soldP])
+      // Live hero images for the Same Developer pair.
+      const devP = supabase
+        .from('properties')
+        .select('slug, main_image')
+        .in('slug', ['4250-west-lake-blvd', '175-huckleberry-drive'])
+
+      const [{ data: cData }, { data: sData }, { data: dData }] = await Promise.all([contentP, soldP, devP])
       if (cancelled) return
 
       setContent((cData?.content as HomeContent) ?? null)
+
+      const dmap: Record<string, string> = {}
+      ;(dData ?? []).forEach((r: Record<string, unknown>) => {
+        const url = (r.main_image as { url?: string } | null)?.url
+        if (url) dmap[r.slug as string] = url
+      })
+      setDevImgs(dmap)
 
       const cards: SoldCard[] = (sData ?? [])
         .map((r: Record<string, unknown>) => ({
@@ -464,6 +490,9 @@ export default function McMullenHome() {
 
       {/* ========================= SOLD CAROUSEL ========================== */}
       {sold.length > 0 && <SoldCarousel cards={sold} />}
+
+      {/* ======================= SAME DEVELOPER STORY ===================== */}
+      {c.same_developer && <SameDeveloper data={c.same_developer} imgs={devImgs} />}
 
       {/* =========================== RECORD SALE =========================== */}
       <section className="py-20 md:py-28" style={{ background: NAVY }}>
@@ -714,6 +743,136 @@ function SoldCarousel({ cards }: { cards: SoldCard[] }) {
             See more sales <ArrowUpRight className="w-[18px] h-[18px]" />
           </a>
         </div>
+      </div>
+    </section>
+  )
+}
+
+/* ------------------- same developer: proof → mandate -------------------- */
+function SameDeveloper({
+  data,
+  imgs,
+}: {
+  data: NonNullable<HomeContent['same_developer']>
+  imgs: Record<string, string>
+}) {
+  const proofImg = imgs[data.proof.slug] ?? ''
+  const mandateImg = imgs[data.mandate.slug] ?? ''
+
+  const Card = ({
+    img, label, name, location, price, caption, sold, href,
+  }: {
+    img: string; label: string; name: string; location: string; price: string
+    caption: string; sold?: boolean; href?: string
+  }) => {
+    const inner = (
+      <div
+        className="group relative rounded-[24px] overflow-hidden h-full"
+        style={{ border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.03)' }}
+      >
+        <div className="relative aspect-[4/3] overflow-hidden" style={{ background: NAVY_DEEP }}>
+          {img ? (
+            <img src={img} alt={name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+          ) : null}
+          <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(8,15,24,0.85), transparent 55%)' }} />
+          <span
+            className="absolute top-4 left-4 mp-mono text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-full"
+            style={{ background: sold ? 'rgba(145,161,186,0.92)' : 'rgba(255,255,255,0.92)', color: NAVY }}
+          >
+            {label}
+          </span>
+        </div>
+        <div className="p-6">
+          <div className="flex items-baseline justify-between gap-3 flex-wrap">
+            <div className="mp-serif text-2xl text-white" style={{ fontWeight: 500 }}>{price}</div>
+            {sold ? (
+              <span className="mp-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: BLUEGRAY }}>Sold</span>
+            ) : (
+              <span className="mp-mono text-[10px] uppercase tracking-[0.16em] inline-flex items-center gap-1" style={{ color: '#fff' }}>
+                View listing <ArrowUpRight className="w-3 h-3" />
+              </span>
+            )}
+          </div>
+          <div className="text-white mt-1">{name}</div>
+          <div className="text-sm mt-0.5" style={{ color: 'rgba(255,255,255,0.5)' }}>{location}</div>
+          <p className="text-sm leading-relaxed mt-3" style={{ color: 'rgba(255,255,255,0.6)' }}>{caption}</p>
+        </div>
+      </div>
+    )
+    return href ? (
+      <Link to={href} className="block h-full transition-transform duration-300 hover:-translate-y-1">{inner}</Link>
+    ) : (
+      <div className="h-full">{inner}</div>
+    )
+  }
+
+  return (
+    <section className="relative overflow-hidden py-20 md:py-28" style={{ background: NAVY }}>
+      <div className="absolute inset-0 pointer-events-none" style={{ background: 'radial-gradient(900px circle at 50% 0%, rgba(145,161,186,0.12), transparent 60%)' }} />
+      <div className="relative max-w-6xl mx-auto px-6">
+        <Reveal>
+          <div className="text-center max-w-2xl mx-auto">
+            <div className="mp-mono text-xs uppercase tracking-[0.22em]" style={{ color: BLUEGRAY }}>
+              {data.eyebrow}
+            </div>
+            <h2 className="mt-4 text-[34px] md:text-[50px] leading-[1.08] font-semibold tracking-tight text-white">
+              {data.headline_lead}{' '}
+              <span className="mp-serif font-normal" style={{ color: BLUEGRAY }}>{data.headline_accent}</span>
+            </h2>
+            <p className="mt-5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              {data.subhead}
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="mt-14 grid lg:grid-cols-[1fr_auto_1fr] gap-6 lg:gap-4 items-center">
+          <Reveal>
+            <Card
+              img={proofImg}
+              label={data.proof.label}
+              name={data.proof.name}
+              location={data.proof.location}
+              price={data.proof.price}
+              caption={data.proof.caption}
+              sold
+            />
+          </Reveal>
+
+          {/* connector */}
+          <div className="hidden lg:flex flex-col items-center justify-center px-2" style={{ color: BLUEGRAY }}>
+            <div className="h-px w-10" style={{ background: 'rgba(145,161,186,0.4)' }} />
+            <ArrowUpRight className="w-6 h-6 rotate-45 my-2" />
+            <div className="h-px w-10" style={{ background: 'rgba(145,161,186,0.4)' }} />
+          </div>
+
+          <Reveal delay={0.12}>
+            <Card
+              img={mandateImg}
+              label={data.mandate.label}
+              name={data.mandate.name}
+              location={data.mandate.location}
+              price={data.mandate.price}
+              caption={data.mandate.caption}
+              href={data.mandate.href}
+            />
+          </Reveal>
+        </div>
+
+        <Reveal delay={0.2}>
+          <div className="mt-12 flex flex-col sm:flex-row items-center justify-center gap-5 text-center">
+            <a
+              href={data.cta.href}
+              className="inline-flex items-center justify-center gap-2 rounded-full px-7 py-3.5 text-sm font-semibold transition-transform hover:-translate-y-0.5"
+              style={{ background: '#fff', color: NAVY }}
+            >
+              {data.cta.label}
+              <ArrowUpRight className="w-4 h-4" />
+            </a>
+            <span className="mp-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+              {data.footnote}
+            </span>
+          </div>
+        </Reveal>
       </div>
     </section>
   )
