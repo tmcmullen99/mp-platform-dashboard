@@ -35,6 +35,9 @@ import Inquiries from '@/pages/Inquiries'
 import CreditApplications from '@/pages/CreditApplications'
 import Welcome from '@/pages/public/Welcome'
 import Compare from '@/pages/public/Compare'
+import JoinTeaser from '@/pages/public/JoinTeaser'
+import ToolsHub from '@/pages/public/ToolsHub'
+import NetSheetTool from '@/pages/public/NetSheetTool'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -75,6 +78,9 @@ export default function App() {
           <Route path="/account" element={<AccountDashboard />} />
           <Route path="/account/apply" element={<CreditApplication />} />
           <Route path="/compare" element={<Compare />} />
+          <Route path="/join" element={<JoinTeaser />} />
+          <Route path="/tools" element={<ToolsHub />} />
+          <Route path="/tools/net-sheet" element={<NetSheetTool />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
