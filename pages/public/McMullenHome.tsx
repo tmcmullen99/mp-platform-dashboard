@@ -30,6 +30,17 @@ const NAVY_DEEP = '#080f18'
 const BLUEGRAY = '#91a1ba'
 const INK = '#273C46'
 
+// Status badge colors: Active → green, Off Market → blue, Sold → red.
+// Matched case-insensitively on the status name; anything else falls back to
+// the neutral blue-gray treatment.
+function badgeStyle(status?: string | null): { background: string; color: string } {
+  const s = (status ?? '').trim().toLowerCase()
+  if (s.includes('active')) return { background: '#1f7a4d', color: '#fff' }       // green
+  if (s.includes('off market') || s.includes('off-market')) return { background: '#1f5fa8', color: '#fff' } // blue
+  if (s.includes('sold')) return { background: '#b3322c', color: '#fff' }         // red
+  return { background: BLUEGRAY, color: NAVY }                                     // neutral fallback
+}
+
 // Hero background film (muted, looping). Tim's brand video.
 const HERO_VIDEO_ID = 'S_R_LZ5z6_s'
 
@@ -108,6 +119,7 @@ type SoldCard = {
   baths: number | null
   hood: string | null
   img: string | null
+  badge: string
 }
 
 /* --------------------------- scroll-reveal hook --------------------------- */
@@ -222,7 +234,7 @@ export default function McMullenHome() {
       // Live sold listings for the carousel.
       const soldP = supabase
         .from('properties')
-        .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, neighborhoods(name)')
+        .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, statuses(name), neighborhoods(name)')
         .eq('listing_stage', 'sold')
         .neq('slug', 'union-house-residence-5c')
         .order('price', { ascending: false, nullsFirst: false })
@@ -255,6 +267,7 @@ export default function McMullenHome() {
           baths: (r.bathrooms as number) ?? null,
           hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
           img: ((r.main_image as { url?: string } | null)?.url) ?? null,
+          badge: ((r.statuses as { name?: string } | null)?.name) ?? 'Sold',
         }))
         // only cards with a photo + real bed count (filters equity-exchange rows)
         .filter((c) => c.img && c.beds != null)
@@ -724,9 +737,9 @@ function SoldCarousel({ cards }: { cards: SoldCard[] }) {
                 ) : null}
                 <span
                   className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide"
-                  style={{ background: `linear-gradient(135deg, ${BLUEGRAY}, #6b7a8f)`, color: NAVY }}
+                  style={badgeStyle(s.badge)}
                 >
-                  Sold
+                  {s.badge}
                 </span>
               </div>
               <div className="p-5">
@@ -781,7 +794,7 @@ function SameDeveloper({
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, rgba(8,15,24,0.85), transparent 55%)' }} />
           <span
             className="absolute top-4 left-4 mp-mono text-[10px] uppercase tracking-[0.16em] px-3 py-1.5 rounded-full"
-            style={{ background: sold ? 'rgba(145,161,186,0.92)' : 'rgba(255,255,255,0.92)', color: NAVY }}
+            style={badgeStyle(sold ? 'Sold' : label)}
           >
             {label}
           </span>
