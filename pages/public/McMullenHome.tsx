@@ -699,9 +699,8 @@ function SoldCarousel({ cards }: { cards: SoldCard[] }) {
         <Reveal>
           <div className="flex items-end justify-between gap-6 mb-10">
             <div>
-              <div className="mp-mono text-xs uppercase tracking-[0.22em]" style={{ color: BLUEGRAY }}>Track record</div>
-              <h2 className="mt-3 text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
-                Sold <span className="mp-serif font-normal" style={{ color: NAVY }}>properties.</span>
+              <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
+                Track <span className="mp-serif font-normal" style={{ color: NAVY }}>Record.</span>
               </h2>
             </div>
             <div className="hidden sm:flex gap-3 shrink-0">
