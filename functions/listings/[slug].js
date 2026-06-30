@@ -6,38 +6,54 @@
 // The public site is a React/Vite SPA: every route is served the same static
 // index.html, whose OG tags point at the generic McMullen share image. Social
 // crawlers (iMessage, Facebook, LinkedIn, Slack, X) DO NOT run JavaScript, so
-// the per-listing image that React sets after hydration is never seen by them —
-// every shared listing link would show the generic image.
+// the per-listing image that React sets after hydration is never seen by them.
+// This Pages Function runs at the edge on /listings/<slug>, looks up the
+// listing in Supabase, and rewrites the OG/Twitter tags in index.html before
+// the crawler sees them. Humans still get the normal SPA (React hydrates).
 //
-// This Pages Function runs at the edge on every /listings/<slug> request. It
-// looks up the listing in Supabase, then streams the site's index.html through
-// HTMLRewriter, replacing the og:image / og:title / og:description (and Twitter
-// equivalents) with that listing's primary image and details. Humans still get
-// the normal SPA and React hydrates as usual; crawlers get the right card.
+// IMPLEMENTATION NOTE
+// We fetch the static /index.html ASSET DIRECTLY via env.ASSETS (with a plain
+// origin fetch as fallback) instead of relying on next() to resolve the SPA
+// fallback. On Pages, when _routes.json scopes Functions to /listings/*, a
+// next() call for a path that has no static file does not reliably re-run the
+// _redirects SPA catch-all — so we go straight to the known index.html asset.
+// This makes the rewrite deterministic regardless of redirect ordering.
 //
-// This reproduces, at the edge, what Webflow's CMS used to do server-side.
-//
-// Env vars (already present for the build; also available to Functions):
+// Env vars (present for the build; also available to Functions):
 //   VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY
 
 export async function onRequest(context) {
-  const { request, params, env, next } = context
+  const { request, params, env } = context
+  const url = new URL(request.url)
 
-  // Fetch the unmodified SPA shell (index.html) for this route.
-  const response = await next()
+  // --- 1. Load the SPA shell (index.html) deterministically. ---
+  let shell
+  try {
+    if (env.ASSETS && typeof env.ASSETS.fetch === 'function') {
+      // Pages binding: fetch the built index.html asset directly.
+      shell = await env.ASSETS.fetch(new URL('/index.html', url.origin))
+    } else {
+      // Fallback: fetch the origin index.html over HTTP.
+      shell = await fetch(new URL('/index.html', url.origin), {
+        cf: { cacheTtl: 60 },
+      })
+    }
+  } catch {
+    // If we can't get the shell, fall back to normal serving.
+    return context.next()
+  }
 
-  // Only rewrite HTML documents. Asset requests (js/css/img) pass straight through.
-  const contentType = response.headers.get('content-type') || ''
-  if (!contentType.includes('text/html')) return response
+  const contentType = shell.headers.get('content-type') || ''
+  if (!contentType.includes('text/html')) return context.next()
 
   const slug = String(params.slug || '').trim()
-  if (!slug) return response
+  if (!slug) return shell
 
   const SUPABASE_URL = env.VITE_SUPABASE_URL
   const ANON = env.VITE_SUPABASE_ANON_KEY
-  if (!SUPABASE_URL || !ANON) return response // misconfig → serve default tags
+  if (!SUPABASE_URL || !ANON) return shell // misconfig -> default tags
 
-  // Look up the listing's share fields by slug via the public REST API.
+  // --- 2. Look up the listing's share fields by slug. ---
   let listing = null
   try {
     const api =
@@ -46,18 +62,19 @@ export async function onRequest(context) {
       `&select=name,main_image,meta_title,meta_description,price&limit=1`
     const res = await fetch(api, {
       headers: { apikey: ANON, authorization: `Bearer ${ANON}` },
-      cf: { cacheTtl: 300, cacheEverything: true }, // cache lookups 5 min at edge
+      cf: { cacheTtl: 300, cacheEverything: true },
     })
     if (res.ok) {
       const rows = await res.json()
       listing = Array.isArray(rows) && rows.length ? rows[0] : null
     }
   } catch {
-    return response // network hiccup → serve default tags rather than error
+    return shell
   }
 
-  if (!listing) return response // unknown slug → SPA renders its own 404/default
+  if (!listing) return shell // unknown slug -> default tags
 
+  // --- 3. Compute listing-specific share values. ---
   const SITE = 'https://mcmullenresidential.com'
   const imageUrl =
     (listing.main_image && listing.main_image.url) ||
@@ -69,15 +86,14 @@ export async function onRequest(context) {
   const pageUrl = `${SITE}/listings/${slug}`
   const imageAlt = listing.name || 'McMullen Properties'
 
-  // Rewrite the relevant meta tags in-stream. Each handler sets the tag's
-  // content attribute to the listing-specific value.
   const setContent = (value) => ({
     element(el) {
       el.setAttribute('content', value)
     },
   })
 
-  return new HTMLRewriter()
+  // --- 4. Rewrite the OG/Twitter tags in the shell and return it. ---
+  const out = new HTMLRewriter()
     .on('title', {
       element(el) {
         el.setInnerContent(title)
@@ -93,5 +109,11 @@ export async function onRequest(context) {
     .on('meta[name="twitter:title"]', setContent(title))
     .on('meta[name="twitter:description"]', setContent(description))
     .on('meta[name="twitter:image"]', setContent(imageUrl))
-    .transform(response)
+    .transform(shell)
+
+  // Ensure HTML content-type + no stale cache of the transformed document.
+  const headers = new Headers(out.headers)
+  headers.set('content-type', 'text/html; charset=utf-8')
+  headers.set('cache-control', 'public, max-age=0, must-revalidate')
+  return new Response(out.body, { status: 200, headers })
 }
