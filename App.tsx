@@ -42,6 +42,7 @@ import CMATool from '@/pages/public/CMATool'
 import CompsRequestTool from '@/pages/public/CompsRequestTool'
 import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
 import OffMarketTool from '@/pages/public/OffMarketTool'
+import LuxuryListings from '@/pages/public/LuxuryListings'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -89,6 +90,7 @@ export default function App() {
           <Route path="/tools/comps" element={<CompsRequestTool />} />
           <Route path="/tools/review" element={<ReviewRequestTool />} />
           <Route path="/tools/off-market" element={<OffMarketTool />} />
+          <Route path="/luxury-listings" element={<LuxuryListings />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
