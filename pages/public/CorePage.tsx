@@ -30,7 +30,7 @@ type FeatureGridSection = {
   eyebrow: string
   title: string
   intro?: string
-  items: { title: string; meta?: string; blurb: string; href?: string }[]
+  items: { title: string; meta?: string; blurb: string; href?: string; image?: string }[]
 }
 type SplitSection = {
   type: 'split'
@@ -358,22 +358,36 @@ function SectionBlock({ section }: { section: Section }) {
         </Reveal>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
           {section.items.map((it, i) => {
+            const hasImg = Boolean(it.image)
             const inner = (
               <>
-                <div className="flex items-start justify-between gap-3">
-                  <h3 className="text-xl font-semibold tracking-tight">{it.title}</h3>
-                  {it.href ? (
-                    <ArrowUpRight className="w-5 h-5 text-[#273C46] transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                  ) : null}
-                </div>
-                {it.meta ? (
-                  <div className="mp-mono text-[10px] uppercase tracking-[0.14em] text-[#273C46] mt-1">{it.meta}</div>
+                {hasImg ? (
+                  <div className="overflow-hidden rounded-t-[24px] -mt-px">
+                    <img
+                      src={it.image}
+                      alt={it.title}
+                      loading="lazy"
+                      className="w-full h-44 object-cover transition-transform duration-500 group-hover:scale-[1.04]"
+                    />
+                  </div>
                 ) : null}
-                <p className="text-sm text-[#273C46] mt-3 leading-relaxed">{it.blurb}</p>
+                <div className={hasImg ? 'p-7' : ''}>
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-xl font-semibold tracking-tight">{it.title}</h3>
+                    {it.href ? (
+                      <ArrowUpRight className="w-5 h-5 text-[#273C46] transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                    ) : null}
+                  </div>
+                  {it.meta ? (
+                    <div className="mp-mono text-[10px] uppercase tracking-[0.14em] text-[#273C46] mt-1">{it.meta}</div>
+                  ) : null}
+                  <p className="text-sm text-[#273C46] mt-3 leading-relaxed">{it.blurb}</p>
+                </div>
               </>
             )
             const cls =
-              'group block rounded-[24px] border border-black/[0.07] p-7 bg-white h-full transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_50px_-22px_rgba(13,27,42,0.30)]'
+              'group block rounded-[24px] border border-black/[0.07] bg-white h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_18px_50px_-22px_rgba(13,27,42,0.30)]' +
+              (hasImg ? '' : ' p-7')
             return (
               <Reveal key={it.title} delay={0.04 * i}>
                 {it.href ? (
