@@ -19,7 +19,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
-import { ArrowUpRight, Star, Quote, ChevronLeft, ChevronRight, MessageSquare, Calendar, Check } from 'lucide-react'
+import { ArrowUpRight, Star, Quote, ChevronLeft, ChevronRight, MessageSquare, Calendar, Check, Menu, X } from 'lucide-react'
 import { LogoWordmark, LogoMark } from '@/components/BrandLogo'
 
 const MCMULLEN_TENANT_ID = 'e0c8abe7-cc29-45c0-99c1-7c20b920262a'
@@ -213,6 +213,7 @@ export default function McMullenHome() {
   // Hero pointer-parallax: content drifts subtly toward the cursor for an
   // interactive, alive feel over the video. Disabled under reduced-motion.
   const [parallax, setParallax] = useState({ x: 0, y: 0 })
+  const [menuOpen, setMenuOpen] = useState(false)
   const onHeroPointer = (e: React.MouseEvent<HTMLElement>) => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const r = e.currentTarget.getBoundingClientRect()
@@ -362,14 +363,54 @@ export default function McMullenHome() {
             <a href="/services" className="hover:text-white transition-colors">Services</a>
             <a href="/blog" className="hover:text-white transition-colors">Market Insight</a>
           </nav>
-          <a
-            href={c.agent.schedule_href}
-            className="text-sm font-semibold px-5 py-2.5 rounded-full transition-transform hover:-translate-y-0.5"
-            style={{ background: '#fff', color: NAVY }}
-          >
-            Meet Tim
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href={c.agent.schedule_href}
+              className="text-sm font-semibold px-5 py-2.5 rounded-full transition-transform hover:-translate-y-0.5"
+              style={{ background: '#fff', color: NAVY }}
+            >
+              Meet Tim
+            </a>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="md:hidden inline-flex items-center justify-center w-10 h-10 -mr-2 text-white"
+              aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+              aria-expanded={menuOpen}
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile menu */}
+        {menuOpen && (
+          <div className="md:hidden border-t" style={{ borderColor: 'rgba(255,255,255,0.08)', background: 'rgba(13,27,42,0.97)' }}>
+            <nav className="max-w-6xl mx-auto px-6 py-3 flex flex-col text-sm" style={{ color: 'rgba(255,255,255,0.85)' }}>
+              {[
+                { to: '/listings', label: 'Portfolio' },
+                { to: '/tools', label: 'Tools' },
+                { to: '/buy', label: 'Buy' },
+                { to: '/sell', label: 'Sell' },
+                { to: '/services', label: 'Services' },
+                { to: '/blog', label: 'Market Insight' },
+              ].map((l) => (
+                <a
+                  key={l.to}
+                  href={l.to}
+                  onClick={() => setMenuOpen(false)}
+                  className="py-3 text-base border-b hover:text-white transition-colors"
+                  style={{ borderColor: 'rgba(255,255,255,0.06)' }}
+                >
+                  {l.label}
+                </a>
+              ))}
+              <a href="tel:+14156919272" onClick={() => setMenuOpen(false)} className="py-3 text-base text-white font-medium">
+                (415) 691-9272
+              </a>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* =============================== HERO =============================== */}
