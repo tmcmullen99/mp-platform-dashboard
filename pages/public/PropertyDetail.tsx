@@ -38,6 +38,17 @@ const CREAM = '#f5efe4'  // warm light background
 const PAPER = '#faf8f3'  // page light background
 const SAND = '#e7e1d4'   // hairline borders on light
 
+// Derive a US state abbreviation from a 5-digit ZIP prefix. Returns null when
+// unknown so the address line simply omits the state rather than guessing wrong.
+// (Listings span CA and WY today; extend the map as new markets are added.)
+function stateFromZip(zip: string | null): string | null {
+  if (!zip) return null
+  const z = zip.trim().slice(0, 3)
+  if (/^8[23]/.test(z)) return 'WY'   // 820xx–839xx Wyoming (Jackson = 83001)
+  if (/^9[0-6]/.test(z)) return 'CA'  // 900xx–961xx California
+  return null
+}
+
 const BOOKING_URL = 'https://calendar.app.google/Lsb5v4UTcRn3eZh36'
 const PHONE = '(415) 691-9272'
 const PHONE_RAW = '+14156919272'
@@ -1010,7 +1021,7 @@ function Location({ p, aerialUrl }: { p: Row; aerialUrl: string | null }) {
               dangerouslySetInnerHTML={{ __html: p.neighborhood_html }} />
           ) : (
             <p className="mt-6 leading-relaxed" style={{ color: 'rgba(255,255,255,0.7)' }}>
-              {p.name}{p.pin_code ? `, CA ${p.pin_code}` : ''}.
+              {p.name}{p.pin_code ? `, ${stateFromZip(p.pin_code) ? `${stateFromZip(p.pin_code)} ` : ''}${p.pin_code}` : ''}.
             </p>
           )}
           {p.map_link && (
