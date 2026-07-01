@@ -46,6 +46,7 @@ import LuxuryListings from '@/pages/public/LuxuryListings'
 import ServiceLuxury from '@/pages/public/ServiceLuxury'
 import ServiceDisclosure from '@/pages/public/ServiceDisclosure'
 import Service1031 from '@/pages/public/Service1031'
+import ServiceCommercial from '@/pages/public/ServiceCommercial'
 import ServiceImprovement from '@/pages/public/ServiceImprovement'
 import ServiceFlips from '@/pages/public/ServiceFlips'
 import CMAReview from '@/pages/public/CMAReview'
@@ -84,6 +85,7 @@ export default function App() {
           <Route path="/services/luxury-listing" element={<ServiceLuxury />} />
           <Route path="/services/disclosure-review" element={<ServiceDisclosure />} />
           <Route path="/services/1031-exchange" element={<Service1031 />} />
+          <Route path="/services/commercial" element={<ServiceCommercial />} />
           <Route path="/services/home-improvement" element={<ServiceImprovement />} />
           <Route path="/services/flips" element={<ServiceFlips />} />
           <Route path="/blog" element={<BlogIndex />} />
