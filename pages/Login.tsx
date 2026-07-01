@@ -22,7 +22,7 @@ const IS_CLIENT_HOST =
 
 const BRAND = IS_CLIENT_HOST
   ? { name: 'McMullen Properties', tagline: 'Neighborhood-Record Breaking Service' }
-  : { name: 'The MP Platform', tagline: 'Win Or Go Home' }
+  : { name: 'The MP Platform', tagline: 'Win Or No Home' }
 
 const APP_VERSION = 'PLATFORM V0.17'
 
