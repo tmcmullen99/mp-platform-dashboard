@@ -24,7 +24,7 @@ import { useAuth } from '@/contexts/AuthContext'
 type NavItem = { to: string; label: string; Icon: LucideIcon }
 
 const navItems: NavItem[] = [
-  { to: '/', label: 'Today', Icon: Sun },
+  { to: '/app', label: 'Today', Icon: Sun },
   { to: '/crm', label: 'CRM', Icon: Users },
   { to: '/inquiries', label: 'Inquiries', Icon: Inbox },
   { to: '/credit-applications', label: '$10K Credits', Icon: BadgeDollarSign },
