@@ -30,15 +30,33 @@ const LADDER = [
   },
   {
     tag: 'Free account',
-    title: 'Compare any properties',
+    title: 'Every tool, unlocked',
     blurb:
-      'Paste Zillow links or addresses and the platform builds your comparison table — specs, pricing, and side-by-side ranking, compiled automatically.',
+      'The full toolkit agents use — property comparison, comps requests, condition rankings, and a CMA you build on your own home — all in one place.',
+  },
+  {
+    tag: 'Free account',
+    title: 'Save everything to your account',
+    blurb:
+      'Favorite listings, saved comparisons, your CMAs, and disclosure reviews all live in your account — pick up exactly where you left off, on any device.',
+  },
+  {
+    tag: 'Members only',
+    title: 'Off-market & pre-market listings',
+    blurb:
+      'See homes before they hit the public portals. Account holders get access to off-market opportunities and an early look at listings still in preparation.',
   },
   {
     tag: 'Free account',
     title: 'Agent-grade analysis',
     blurb:
-      'Request disclosures on your favorites, get condition-based rankings beyond the photos, self-create a CMA on your own home, and plug Tim in the moment you want a professional read.',
+      'Request disclosures on your favorites, get condition-based rankings beyond the photos, and plug Tim in the moment you want a professional read.',
+  },
+  {
+    tag: 'After signup',
+    title: 'A $10,000 credit that\u2019s yours',
+    blurb:
+      'Apply for a $10,000 credit toward your next deal — a uniform benefit for account holders, yours to keep at closing.',
   },
 ]
 
