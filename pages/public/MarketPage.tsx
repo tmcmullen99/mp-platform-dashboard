@@ -22,9 +22,11 @@ import { supabase } from '@/lib/supabase'
 import {
   MARKETS, marketByKey,
   fetchHomePayload, fetchRecentSales, fetchPsfQuarterly, fetchBuildingStats,
+  marketBuildingPath, condoMarketBuildingUrl,
   type HomePayload, type RecentSale, type PsfQuarter, type BuildingStat, type MarketConfig,
+  type HomeIndexBuilding,
 } from '@/lib/condoMarket'
-import { Building2, Video, Phone, Newspaper, Eye, EyeOff, Lock, ArrowRight } from 'lucide-react'
+import { Building2, Video, Phone, Newspaper, Eye, EyeOff, Lock, ArrowRight, MapPin, ChevronDown, ExternalLink } from 'lucide-react'
 
 const BLUE = '#4f82b9'
 const CAL = 'https://calendar.app.google/Lsb5v4UTcRn3eZh36'
@@ -225,11 +227,14 @@ export default function MarketPage() {
   // How many articles beyond the 9 interleaved ones are revealed in the
   // "More articles" grid. Grows in batches of 6 via "Load more".
   const [visibleExtra, setVisibleExtra] = useState(6)
+  // "All buildings" directory expand/collapse.
+  const [dirOpen, setDirOpen] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     setLoaded(false)
     setVisibleExtra(6)
+    setDirOpen(false)
     ;(async () => {
       // Load only THIS market's articles — matched on the market's own tags,
       // never the shared general tags (which pulled other cities' local posts,
@@ -306,6 +311,26 @@ export default function MarketPage() {
   }, [home.index, bstats])
 
   const latestSale = s?.latest_sale_date ?? null
+
+  // Full building directory, grouped by neighborhood and sorted A→Z within each.
+  // This is the backlink + SEO surface: every building's name and address is
+  // rendered as first-party, crawlable content that links to its own McMullen
+  // page (and out to Condo Market). Buildings without a neighborhood fall under
+  // "Other".
+  const buildingGroups = useMemo(() => {
+    const groups = new Map<string, HomeIndexBuilding[]>()
+    for (const b of home.index) {
+      const key = b.neighborhood || 'Other'
+      if (!groups.has(key)) groups.set(key, [])
+      groups.get(key)!.push(b)
+    }
+    return Array.from(groups.entries())
+      .map(([neighborhood, list]) => ({
+        neighborhood,
+        list: [...list].sort((a, b) => a.name.localeCompare(b.name)),
+      }))
+      .sort((a, b) => a.neighborhood.localeCompare(b.neighborhood))
+  }, [home.index])
 
   // First 9 posts scatter through the data sections (three groups of 3).
   const g1 = posts.slice(0, 3), g2 = posts.slice(3, 6), g3 = posts.slice(6, 9)
@@ -490,7 +515,7 @@ export default function MarketPage() {
               <div className="grid md:grid-cols-3 gap-5 mt-8">
                 {activeBuildings.map((b, i) => (
                   <Reveal key={b.slug} delay={0.05 * i}>
-                    <div className="mp-lift rounded-[22px] border border-black/[0.07] bg-white overflow-hidden h-full">
+                    <Link to={marketBuildingPath(cfg.regionSlug, b.slug)} className="mp-lift block rounded-[22px] border border-black/[0.07] bg-white overflow-hidden h-full">
                       <div className="h-40 overflow-hidden bg-[#f4f7fb]">
                         {b.hero ? (
                           <img src={b.hero} alt={b.name} loading="lazy" className="w-full h-full object-cover" />
@@ -510,7 +535,7 @@ export default function MarketPage() {
                           <div><div className="mp-serif text-lg font-semibold" style={{ color: NAVY }}>{money(b.median_price)}</div><div className="mp-mono text-[9px] uppercase tracking-[0.12em]" style={{ color: INK }}>Median</div></div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </Reveal>
                 ))}
               </div>
@@ -520,6 +545,63 @@ export default function MarketPage() {
               </div>
             )}
           </section>
+
+          {/* ALL BUILDINGS directory — full backlink + SEO surface */}
+          {home.index.length ? (
+            <section className="max-w-6xl mx-auto px-6 pb-14 md:pb-20">
+              <Reveal>
+                <button
+                  onClick={() => setDirOpen((v) => !v)}
+                  className="w-full flex items-center justify-between gap-4 rounded-[22px] border border-black/[0.08] bg-[#f4f7fb] px-7 py-6 text-left transition-all"
+                  aria-expanded={dirOpen}>
+                  <div>
+                    <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-1" style={{ color: BLUE }}>
+                      Every {cfg.shortName} building
+                    </div>
+                    <div className="mp-serif text-2xl md:text-[28px] font-semibold" style={{ color: NAVY }}>
+                      Browse all {home.index.length} buildings
+                    </div>
+                  </div>
+                  <ChevronDown
+                    className="w-6 h-6 shrink-0 transition-transform duration-300"
+                    style={{ color: NAVY, transform: dirOpen ? 'rotate(180deg)' : 'none' }}
+                  />
+                </button>
+              </Reveal>
+
+              {dirOpen ? (
+                <div className="mt-8 space-y-10">
+                  {buildingGroups.map((grp) => (
+                    <div key={grp.neighborhood}>
+                      <div className="flex items-center gap-2 mb-4">
+                        <MapPin className="w-4 h-4" style={{ color: BLUE }} />
+                        <h3 className="mp-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: INK }}>
+                          {grp.neighborhood} · {grp.list.length}
+                        </h3>
+                      </div>
+                      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {grp.list.map((b) => (
+                          <div key={b.slug} className="rounded-[16px] border border-black/[0.07] bg-white p-4 flex items-start justify-between gap-3">
+                            <Link to={marketBuildingPath(cfg.regionSlug, b.slug)} className="min-w-0 group">
+                              <div className="mp-serif text-base font-semibold leading-snug group-hover:opacity-70" style={{ color: NAVY }}>{b.name}</div>
+                              <div className="text-[13px] mt-0.5 leading-snug" style={{ color: INK }}>{b.address}</div>
+                            </Link>
+                            <a
+                              href={condoMarketBuildingUrl(cfg.cmDomain, b.slug)}
+                              target="_blank" rel="noopener noreferrer"
+                              title={`View ${b.name} on ${cfg.shortName} Condo Market`}
+                              className="shrink-0 mt-0.5 opacity-50 hover:opacity-100 transition-opacity">
+                              <ExternalLink className="w-4 h-4" style={{ color: BLUE }} />
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          ) : null}
 
           {/* interleaved articles #3 */}
           <BlogStrip posts={g3} show={showArticles} />
