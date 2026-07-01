@@ -53,6 +53,12 @@ export function PublicNav({
         </nav>
 
         <div className="flex items-center gap-3">
+          <Link
+            to="/login"
+            className="hidden md:inline text-sm font-medium text-[#273C46]/70 hover:text-[#0D1B2A]"
+          >
+            Agent login
+          </Link>
           {cta === 'signup' ? (
             <Link to="/join" className="text-sm font-medium rounded-full bg-[#0D1B2A] text-white px-4 py-2 hover:opacity-90">
               Sign up
@@ -91,6 +97,13 @@ export function PublicNav({
             <a href="tel:+14156919272" onClick={() => setOpen(false)} className="py-3 text-base text-[#0D1B2A] font-medium">
               (415) 691-9272
             </a>
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              className="py-3 text-base text-[#273C46]/70 font-medium"
+            >
+              Agent login
+            </Link>
           </nav>
         </div>
       )}
