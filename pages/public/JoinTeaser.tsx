@@ -8,12 +8,18 @@
 // tenant from the site token, never from the browser).
 
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
 const PRIMARY_SHADOW = '0 14px 34px -14px rgba(13,27,42,0.55)'
-const REDIRECT_TO = `${window.location.origin}/welcome`
+
+// Only allow same-site relative paths as a post-auth destination (no open redirect).
+function safeNext(raw: string | null): string {
+  if (!raw) return ''
+  if (!raw.startsWith('/') || raw.startsWith('//')) return ''
+  return raw
+}
 
 const LADDER = [
   {
@@ -39,6 +45,8 @@ const LADDER = [
 export default function JoinTeaser() {
   const navigate = useNavigate()
   const { session, loading: authLoading } = useAuth()
+  const [searchParams] = useSearchParams()
+  const next = safeNext(searchParams.get('next'))
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -46,10 +54,16 @@ export default function JoinTeaser() {
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Already signed in? Send them to their account.
+  // After email confirmation Supabase returns to /welcome; forward the intended
+  // destination so the visitor lands back on the gated asset they wanted.
+  const redirectTo = `${window.location.origin}/welcome${
+    next ? `?next=${encodeURIComponent(next)}` : ''
+  }`
+
+  // Already signed in? Send them straight to their intended destination.
   useEffect(() => {
-    if (!authLoading && session) navigate('/welcome', { replace: true })
-  }, [session, authLoading, navigate])
+    if (!authLoading && session) navigate(next || '/welcome', { replace: true })
+  }, [session, authLoading, navigate, next])
 
   async function submit() {
     if (!name.trim() || !email.trim() || !password) {
@@ -68,7 +82,7 @@ export default function JoinTeaser() {
       email: email.trim().toLowerCase(),
       password,
       options: {
-        emailRedirectTo: REDIRECT_TO,
+        emailRedirectTo: redirectTo,
         data: { name: name.trim() },
       },
     })
