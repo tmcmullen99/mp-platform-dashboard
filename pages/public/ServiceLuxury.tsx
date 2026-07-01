@@ -8,6 +8,7 @@
 
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
+import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import LiveHuckleberryDashboard from '@/components/public/LiveHuckleberryDashboard'
 import {
   MotionStyles,
@@ -380,6 +381,7 @@ export default function ServiceLuxury() {
         </div>
       </section>
 
+      <ServiceArticleFeed />
       <PublicFooter />
     </div>
   )
