@@ -40,7 +40,18 @@ type SplitSection = {
   stats?: StatItem[]
   image?: string
 }
-type Section = ProcessSection | FeatureGridSection | SplitSection
+type EmbedSection = {
+  type: 'embed'
+  eyebrow: string
+  title: string
+  intro?: string
+  /** Full iframe src — e.g. a Google Calendar appointment scheduling URL. */
+  embed_url: string
+  /** Optional anchor id so hero CTAs can scroll here (defaults to "book"). */
+  anchor?: string
+  height?: number
+}
+type Section = ProcessSection | FeatureGridSection | SplitSection | EmbedSection
 
 type CoreContent = {
   hero: {
@@ -403,6 +414,35 @@ function SectionBlock({ section }: { section: Section }) {
             )
           })}
         </div>
+      </section>
+    )
+  }
+
+  if (section.type === 'embed') {
+    const anchor = section.anchor || 'book'
+    const height = section.height || 700
+    return (
+      <section id={anchor} className="max-w-4xl mx-auto px-6 py-20 md:py-24 scroll-mt-24">
+        <Reveal>
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">{section.eyebrow}</div>
+          <h2 className="text-[32px] md:text-[44px] leading-[1.05] font-semibold tracking-tight">{section.title}</h2>
+          {section.intro ? <p className="text-[#273C46] mt-4 max-w-2xl leading-relaxed">{section.intro}</p> : null}
+        </Reveal>
+        <Reveal delay={0.12}>
+          <div
+            className="mt-10 rounded-[24px] overflow-hidden border border-black/[0.07] bg-white"
+            style={{ boxShadow: SECONDARY_SHADOW }}
+          >
+            <iframe
+              src={section.embed_url}
+              title={section.title}
+              width="100%"
+              height={height}
+              style={{ border: 0, display: 'block' }}
+              loading="lazy"
+            />
+          </div>
+        </Reveal>
       </section>
     )
   }
