@@ -13,8 +13,6 @@ export type PublicNavKey = 'portfolio' | 'tools' | 'buy' | 'sell' | 'services' |
 const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
   { key: 'portfolio', to: '/listings', label: 'Portfolio' },
   { key: 'tools', to: '/tools', label: 'Tools' },
-  { key: 'buy', to: '/buy', label: 'Buy' },
-  { key: 'sell', to: '/sell', label: 'Sell' },
   { key: 'services', to: '/services', label: 'Services' },
   { key: 'about', to: '/meet-tim', label: 'Meet Tim' },
   { key: 'insight', to: '/blog', label: 'Market' },
@@ -126,8 +124,6 @@ export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: stri
     links: [
       { to: '/listings', label: 'Portfolio' },
       { to: '/luxury-listings', label: 'Luxury Listings' },
-      { to: '/buy', label: 'Buy' },
-      { to: '/sell', label: 'Sell' },
       { to: '/blog', label: 'Market' },
       { to: '/meet-tim', label: 'Meet Tim' },
     ],
