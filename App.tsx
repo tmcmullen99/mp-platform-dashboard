@@ -120,32 +120,14 @@ export default function App() {
   )
 }
 
-/* Root path: unauthenticated visitors see the public homepage; signed-in
-   agents/clients are sent into their workspace (dashboard or portal). */
+/* Root path: the public McMullen homepage for EVERYONE, always — including
+   signed-in agents and clients. There is deliberately zero overlap between the
+   public marketing site (apex "/") and the authenticated app. Agents reach
+   their workspace at the explicit "/app" path; clients at "/portal". This keeps
+   the marketing domain purely public and prevents an agent's session from ever
+   turning the homepage into the dashboard. */
 function RootResolver() {
-  const { session, loading, isClient, isAgent } = useAuth()
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        <div className="text-2xs uppercase tracking-widest text-ink-500">Loading…</div>
-      </div>
-    )
-  }
-  if (!session) return <McMullenHome />
-  if (isClient && !isAgent) return <Navigate to="/portal" replace />
-  return <AuthedRoot />
-}
-
-/* Agent dashboard home, mounted at "/" for authenticated agents.
-   Mirrors the AuthGate agent shell (Layout + Today). */
-function AuthedRoot() {
-  return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Today />} />
-      </Route>
-    </Routes>
-  )
+  return <McMullenHome />
 }
 
 function AuthGate() {
@@ -192,6 +174,10 @@ function AuthGate() {
   return (
     <Routes>
       <Route element={<Layout />}>
+        {/* Agent workspace home lives at the explicit /app path (the public
+            marketing homepage owns apex "/"). /today is a friendly alias. */}
+        <Route path="/app" element={<Today />} />
+        <Route path="/today" element={<Today />} />
         <Route path="/" element={<Today />} />
         <Route path="/crm/import" element={<CSVImport />} />
         <Route path="/crm/*" element={<CRM />} />
