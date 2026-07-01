@@ -14,6 +14,7 @@
 
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
+import CommercialShowcase from '@/components/public/CommercialShowcase'
 import {
   MotionStyles,
   Reveal,
@@ -176,27 +177,6 @@ const FAQS = [
   { q: 'Is my capital gains tax really deferred, not just delayed a year?', a: 'Deferred for as long as you keep exchanging. Roll asset into asset and the gain keeps moving forward. Many investors never pay it in their lifetime — heirs can receive a stepped-up basis. Your CPA and estate attorney confirm specifics.' },
 ]
 
-/* ---------------------- McMullen Commercial track record -------------------- */
-// Two closed industrial transactions where Tim represented the BUYER. Prices
-// are intentionally undisclosed. Presented like residential listing cards.
-const COMMERCIAL_DEALS = [
-  {
-    address: '499 Watt Drive',
-    city: 'Fairfield, CA 94534',
-    type: 'Industrial',
-    role: 'Represented the buyer',
-    year: '2025',
-    blurb: 'An industrial asset in the Solano County corridor — sourced, negotiated, and closed on behalf of the buyer.',
-  },
-  {
-    address: 'Lapham Drive',
-    city: 'Fairfield, CA',
-    type: 'Industrial',
-    role: 'Represented the buyer',
-    year: '2026',
-    blurb: 'A second industrial acquisition in the same market — buyer-side representation from offer through close.',
-  },
-]
 
 
 export default function Service1031() {
@@ -508,71 +488,13 @@ export default function Service1031() {
         </div>
       </section>
 
-      {/* McMULLEN COMMERCIAL — track record */}
+      {/* McMULLEN COMMERCIAL — shared DB-backed track record */}
       <section style={{ background: '#f4f8f5' }}>
-        <div className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-          <Reveal>
-            <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: EMERALD }}>
-              McMullen Commercial
-            </div>
-            <h2 className="mp-serif text-[32px] md:text-[46px] leading-[1.05] font-semibold" style={{ color: NAVY }}>
-              This isn’t theory. It’s already the work.
-            </h2>
-            <p className="mt-5 text-[17px] leading-relaxed max-w-3xl" style={{ color: INK }}>
-              Commercial real estate is a dedicated arm of the practice — McMullen Commercial —
-              representing buyers acquiring income-producing industrial and commercial assets. A
-              couple of recent closings:
-            </p>
-          </Reveal>
-
-          <div className="grid md:grid-cols-2 gap-6 mt-12">
-            {COMMERCIAL_DEALS.map((d, i) => (
-              <Reveal key={d.address} delay={0.08 * i}>
-                <div className="mp-lift rounded-[24px] overflow-hidden bg-white border border-black/[0.07] h-full">
-                  {/* image band — tasteful industrial gradient, not a scraped listing photo */}
-                  <div className="relative h-44" style={{ background: 'linear-gradient(135deg, #223449 0%, #16283c 60%, #0f1c2c 100%)' }}>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Building2 className="w-12 h-12" style={{ color: 'rgba(143,211,182,0.4)' }} />
-                    </div>
-                    <div className="absolute top-4 left-4 mp-mono text-[10px] uppercase tracking-[0.16em] px-2.5 py-1 rounded-full" style={{ background: 'rgba(63,125,90,0.9)', color: '#fff' }}>
-                      Closed · {d.year}
-                    </div>
-                    <div className="absolute bottom-4 right-4 mp-mono text-[10px] uppercase tracking-[0.16em] px-2.5 py-1 rounded-full" style={{ background: 'rgba(255,255,255,0.12)', color: '#fff', border: '1px solid rgba(255,255,255,0.2)' }}>
-                      {d.type}
-                    </div>
-                  </div>
-                  <div className="p-7">
-                    <h3 className="mp-serif text-2xl font-semibold" style={{ color: NAVY }}>{d.address}</h3>
-                    <div className="flex items-center gap-1.5 mt-1.5 text-sm" style={{ color: INK }}>
-                      <MapPin className="w-3.5 h-3.5" style={{ color: EMERALD }} />
-                      {d.city}
-                    </div>
-                    <div className="h-px my-5" style={{ background: 'rgba(13,27,42,0.08)' }} />
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="mp-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: INK }}>Role</div>
-                        <div className="text-sm font-semibold mt-0.5" style={{ color: NAVY }}>{d.role}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="mp-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: INK }}>Price</div>
-                        <div className="text-sm font-semibold mt-0.5" style={{ color: NAVY }}>Undisclosed</div>
-                      </div>
-                    </div>
-                    <p className="text-sm mt-5 leading-relaxed" style={{ color: INK }}>{d.blurb}</p>
-                  </div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={0.1}>
-            <p className="mt-8 text-sm leading-relaxed max-w-3xl" style={{ color: INK }}>
-              The same buyer-side discipline that closed these industrial deals is what guides a 1031
-              exchange out of a residential rental — sourcing the asset, running the numbers, and
-              negotiating the acquisition on your behalf.
-            </p>
-          </Reveal>
-        </div>
+        <CommercialShowcase
+          eyebrow="McMullen Commercial"
+          heading="This isn’t theory. It’s already the work."
+          intro="The same buyer-side discipline that guides a 1031 exchange out of a residential rental — McMullen Commercial represents buyers acquiring income-producing industrial and commercial assets. Recent closings:"
+        />
       </section>
 
       {/* FINAL CTA — video call */}
