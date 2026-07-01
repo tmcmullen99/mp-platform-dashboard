@@ -16,7 +16,7 @@ const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
   { key: 'buy', to: '/buy', label: 'Buy' },
   { key: 'sell', to: '/sell', label: 'Sell' },
   { key: 'services', to: '/services', label: 'Services' },
-  { key: 'about', to: '/about', label: 'About' },
+  { key: 'about', to: '/meet-tim', label: 'Meet Tim' },
   { key: 'insight', to: '/blog', label: 'Market Insight' },
 ]
 
@@ -53,21 +53,21 @@ export function PublicNav({
         </nav>
 
         <div className="flex items-center gap-3">
+          <a href="tel:+14156919272" className="hidden lg:inline text-sm font-medium text-[#0D1B2A] hover:opacity-70">
+            (415) 691-9272
+          </a>
           <Link
             to="/login"
-            className="hidden md:inline text-sm font-medium text-[#273C46]/70 hover:text-[#0D1B2A]"
+            className="hidden md:inline text-sm font-medium text-[#273C46] hover:text-[#0D1B2A]"
           >
-            Agent login
+            Log in
           </Link>
-          {cta === 'signup' ? (
-            <Link to="/join" className="text-sm font-medium rounded-full bg-[#0D1B2A] text-white px-4 py-2 hover:opacity-90">
-              Sign up
-            </Link>
-          ) : (
-            <a href="tel:+14156919272" className="hidden sm:inline text-sm font-medium text-[#0D1B2A] hover:opacity-70">
-              (415) 691-9272
-            </a>
-          )}
+          <Link
+            to="/join"
+            className="hidden md:inline text-sm font-medium rounded-full bg-[#0D1B2A] text-white px-4 py-2 hover:opacity-90"
+          >
+            Create account
+          </Link>
           <button
             type="button"
             className="md:hidden inline-flex items-center justify-center w-10 h-10 -mr-2 text-[#0D1B2A]"
@@ -100,9 +100,16 @@ export function PublicNav({
             <Link
               to="/login"
               onClick={() => setOpen(false)}
-              className="py-3 text-base text-[#273C46]/70 font-medium"
+              className="py-3 text-base text-[#0D1B2A] font-medium border-b border-black/[0.04]"
             >
-              Agent login
+              Log in
+            </Link>
+            <Link
+              to="/join"
+              onClick={() => setOpen(false)}
+              className="mt-3 py-3 text-base text-center rounded-full bg-[#0D1B2A] text-white font-medium"
+            >
+              Create account
             </Link>
           </nav>
         </div>
