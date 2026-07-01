@@ -1,0 +1,26 @@
+# McMullen Properties — mcmullenresidential.com
+User-agent: *
+Allow: /
+
+# Keep crawlers out of the authenticated app + client portal
+Disallow: /app
+Disallow: /today
+Disallow: /crm
+Disallow: /inquiries
+Disallow: /credit-applications
+Disallow: /clients
+Disallow: /cmas
+Disallow: /analyze
+Disallow: /prospecting
+Disallow: /campaigns
+Disallow: /content
+Disallow: /site
+Disallow: /analytics
+Disallow: /settings
+Disallow: /brokerage
+Disallow: /portal
+Disallow: /onboarding
+Disallow: /login
+Disallow: /signup
+
+Sitemap: https://mcmullenresidential.com/sitemap.xml
