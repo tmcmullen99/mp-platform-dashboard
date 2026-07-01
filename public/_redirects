@@ -1,82 +1,220 @@
-# McMullen Properties — domain cutover redirect map (mcmullen.properties → Cloudflare Pages)
-# Rules are evaluated top-down; first match wins. SPA catch-all MUST stay last.
+// Shared public-site header + footer. Single source of truth so every public
+// page has the same nav and the logo always points at the public homepage
+// (/home — which renders McMullenHome regardless of auth, so it doesn't bounce
+// a logged-in agent into the dashboard the way "/" does).
 
-# ---- canonical host: www → apex ----
-https://www.mcmullen.properties/* https://mcmullen.properties/:splat 301
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Menu, X } from 'lucide-react'
+import { LogoWordmark } from '@/components/BrandLogo'
 
-# ---- migrated surfaces: permanent native mappings ----
-/portfolio              /listings                                  301
-/homes/:slug            /listings/:slug                            301
-/1515-union-st-5c       /listings/union-house-residence-5c         301
-/1515-union-st-5c-coming-soon /listings/union-house-residence-5c   301
+export type PublicNavKey = 'portfolio' | 'tools' | 'buy' | 'sell' | 'services' | 'about' | 'insight'
 
-# ---- not yet migrated: temporary fallbacks to Webflow staging mirror ----
-# (302 so search engines keep mcmullen.properties as canonical; flip each to a
-#  native route as it gets rebuilt, then delete its line.)
+const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
+  { key: 'portfolio', to: '/listings', label: 'Portfolio' },
+  { key: 'tools', to: '/tools', label: 'Tools' },
+  { key: 'buy', to: '/buy', label: 'Buy' },
+  { key: 'sell', to: '/sell', label: 'Sell' },
+  { key: 'services', to: '/services', label: 'Services' },
+  { key: 'about', to: '/meet-tim', label: 'Meet Tim' },
+  { key: 'insight', to: '/blog', label: 'Market Insight' },
+]
 
-# business tools & service pages
-/disclosure-review      https://mcmullen.webflow.io/disclosure-review      302
-/investor-hub           https://mcmullen.webflow.io/investor-hub           302
-/home-improvement       https://mcmullen.webflow.io/home-improvement       302
-/haus-of-stone          https://mcmullen.webflow.io/haus-of-stone          302
-/flips                  https://mcmullen.webflow.io/flips                  302
-/exchange-properties    https://mcmullen.webflow.io/exchange-properties    302
-/exchange-properties-multi-family https://mcmullen.webflow.io/exchange-properties-multi-family 302
-/exchange-properties-retail      https://mcmullen.webflow.io/exchange-properties-retail       302
-/exchange-properties-industrial  https://mcmullen.webflow.io/exchange-properties-industrial   302
-/equity-form            https://mcmullen.webflow.io/equity-form            302
-/property-value-review  https://mcmullen.webflow.io/property-value-review  302
-/probate-property-sales-in-bay-area https://mcmullen.webflow.io/probate-property-sales-in-bay-area 302
-/cma-generator          https://mcmullen.webflow.io/cma-generator          302
-/cma-tool-landing-page  https://mcmullen.webflow.io/cma-tool-landing-page  302
-/pool-estimator         https://mcmullen.webflow.io/pool-estimator         302
-/ai-consulting          https://mcmullen.webflow.io/ai-consulting          302
-/buyer-inquiry          https://mcmullen.webflow.io/buyer-inquiry          302
-/campbell               https://mcmullen.webflow.io/campbell               302
-/map-search             https://mcmullen.webflow.io/map-search             302
-/news                   https://mcmullen.webflow.io/news                   302
-/contact                https://mcmullen.webflow.io/contact                302
-/buildings              https://mcmullen.webflow.io/buildings              302
-/neighborhoods          https://mcmullen.webflow.io/neighborhoods          302
-/expired                https://mcmullen.webflow.io/expired                302
-/sf-condo-expired       https://mcmullen.webflow.io/sf-condo-expired       302
-/confirmation           https://mcmullen.webflow.io/confirmation           302
+export function PublicNav({
+  active,
+  cta = 'phone',
+}: {
+  active?: PublicNavKey
+  /** Right-side action: the phone number (marketing pages) or a Sign-up button (tools). */
+  cta?: 'phone' | 'signup'
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-md border-b border-black/[0.06]">
+      <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
+        <Link
+          to="/home"
+          className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity"
+          aria-label="McMullen Properties — home"
+        >
+          <LogoWordmark height={20} />
+        </Link>
 
-# client deliverables (proposals, CMAs, one-off property pages)
-/542-joost              https://mcmullen.webflow.io/542-joost              302
-/5c-launch-strategy     https://mcmullen.webflow.io/5c-launch-strategy     302
-/259-staples-cma        https://mcmullen.webflow.io/259-staples-cma        302
-/1827-kirkham           https://mcmullen.webflow.io/1827-kirkham           302
-/1955-18th-ave-cma      https://mcmullen.webflow.io/1955-18th-ave-cma      302
-/31a-cortland           https://mcmullen.webflow.io/31a-cortland           302
-/31a-cortland-cma       https://mcmullen.webflow.io/31a-cortland-cma       302
-/97-banks-cma           https://mcmullen.webflow.io/97-banks-cma           302
-/27769-edgerton-design  https://mcmullen.webflow.io/27769-edgerton-design  302
-/1728-whitham-proposal  https://mcmullen.webflow.io/1728-whitham-proposal  302
-/39622-benavente-proposal https://mcmullen.webflow.io/39622-benavente-proposal 302
-/21-n-second-st-campbell https://mcmullen.webflow.io/21-n-second-st-campbell 302
-/inez-comps             https://mcmullen.webflow.io/inez-comps             302
-/el-sombroso-proposal   https://mcmullen.webflow.io/el-sombroso-proposal   302
-/clover-ave-proposal    https://mcmullen.webflow.io/clover-ave-proposal    302
-/benavente-porposal     https://mcmullen.webflow.io/benavente-porposal     302
-/southerland-proposal   https://mcmullen.webflow.io/southerland-proposal   302
-/prospect-ave-los-gatos https://mcmullen.webflow.io/prospect-ave-los-gatos 302
-/springpath-lane        https://mcmullen.webflow.io/springpath-lane        302
+        <nav className="hidden md:flex items-center gap-7 text-sm text-[#273C46]">
+          {LINKS.map((l) => (
+            <Link
+              key={l.key}
+              to={l.to}
+              className={active === l.key ? 'text-[#0D1B2A]' : 'hover:text-[#0D1B2A] transition-colors'}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
 
-# CMS collections not yet migrated (splats)
-/blog/*                 https://mcmullen.webflow.io/blog/:splat                 302
-/building/*             https://mcmullen.webflow.io/building/:splat             302
-/cm-buildings/*         https://mcmullen.webflow.io/cm-buildings/:splat         302
-/neighborhoods/*        https://mcmullen.webflow.io/neighborhoods/:splat        302
-/cma/*                  https://mcmullen.webflow.io/cma/:splat                  302
-/properties/*           https://mcmullen.webflow.io/properties/:splat           302
-/tag/*                  https://mcmullen.webflow.io/tag/:splat                  302
-/testimonial/*          https://mcmullen.webflow.io/testimonial/:splat          302
-/agent-info/*           https://mcmullen.webflow.io/agent-info/:splat           302
-/team-and-partners/*    https://mcmullen.webflow.io/team-and-partners/:splat    302
-/status/*               https://mcmullen.webflow.io/status/:splat               302
-/architecture-style/*   https://mcmullen.webflow.io/architecture-style/:splat   302
-/property-type/*        https://mcmullen.webflow.io/property-type/:splat        302
+        <div className="flex items-center gap-3">
+          <a href="tel:+14156919272" className="hidden lg:inline text-sm font-medium text-[#0D1B2A] hover:opacity-70">
+            (415) 691-9272
+          </a>
+          <Link
+            to="/login"
+            className="hidden md:inline text-sm font-medium text-[#273C46] hover:text-[#0D1B2A]"
+          >
+            Log in
+          </Link>
+          <Link
+            to="/join"
+            className="hidden md:inline text-sm font-medium rounded-full bg-[#0D1B2A] text-white px-4 py-2 hover:opacity-90"
+          >
+            Create account
+          </Link>
+          <button
+            type="button"
+            className="md:hidden inline-flex items-center justify-center w-10 h-10 -mr-2 text-[#0D1B2A]"
+            aria-label={open ? 'Close menu' : 'Open menu'}
+            aria-expanded={open}
+            onClick={() => setOpen((v) => !v)}
+          >
+            {open ? <X size={22} /> : <Menu size={22} />}
+          </button>
+        </div>
+      </div>
 
-# ---- SPA catch-all (must remain last) ----
-/*    /index.html   200
+      {/* Mobile menu */}
+      {open && (
+        <div className="md:hidden border-t border-black/[0.06] bg-white">
+          <nav className="max-w-6xl mx-auto px-6 py-3 flex flex-col">
+            {LINKS.map((l) => (
+              <Link
+                key={l.key}
+                to={l.to}
+                onClick={() => setOpen(false)}
+                className={`py-3 text-base border-b border-black/[0.04] ${active === l.key ? 'text-[#0D1B2A] font-medium' : 'text-[#273C46]'}`}
+              >
+                {l.label}
+              </Link>
+            ))}
+            <a href="tel:+14156919272" onClick={() => setOpen(false)} className="py-3 text-base text-[#0D1B2A] font-medium">
+              (415) 691-9272
+            </a>
+            <Link
+              to="/login"
+              onClick={() => setOpen(false)}
+              className="py-3 text-base text-[#0D1B2A] font-medium border-b border-black/[0.04]"
+            >
+              Log in
+            </Link>
+            <Link
+              to="/join"
+              onClick={() => setOpen(false)}
+              className="mt-3 py-3 text-base text-center rounded-full bg-[#0D1B2A] text-white font-medium"
+            >
+              Create account
+            </Link>
+          </nav>
+        </div>
+      )}
+    </header>
+  )
+}
+
+// Footer column definitions. Kept as data so the sitemap page can reuse the
+// exact same link taxonomy (single source of truth for the site's public map).
+export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: string; external?: boolean }[] }[] = [
+  {
+    heading: 'Explore',
+    links: [
+      { to: '/listings', label: 'Portfolio' },
+      { to: '/luxury-listings', label: 'Luxury Listings' },
+      { to: '/buy', label: 'Buy' },
+      { to: '/sell', label: 'Sell' },
+      { to: '/blog', label: 'Market Insight' },
+      { to: '/meet-tim', label: 'Meet Tim' },
+    ],
+  },
+  {
+    heading: 'Services',
+    links: [
+      { to: '/services/luxury-listing', label: 'Luxury Listing' },
+      { to: '/services/1031-exchange', label: '1031 Exchange' },
+      { to: '/services/commercial', label: 'Commercial' },
+      { to: '/services/disclosure-review', label: 'Disclosure Review' },
+      { to: '/services/home-improvement', label: 'Home Improvement' },
+      { to: '/services/flips', label: 'Flips & Off-Market' },
+    ],
+  },
+  {
+    heading: 'Tools',
+    links: [
+      { to: '/tools/net-sheet', label: 'Net Sheet' },
+      { to: '/tools/cma', label: 'Home Value / CMA' },
+      { to: '/tools/comps', label: 'Comps Request' },
+      { to: '/tools/review', label: 'Review Request' },
+      { to: '/tools/off-market', label: 'Off-Market Waitlist' },
+      { to: '/cma-review', label: 'CMA Showcase' },
+    ],
+  },
+]
+
+export function PublicFooter() {
+  const year = new Date().getFullYear()
+  return (
+    <footer className="border-t border-black/[0.07] bg-white">
+      <div className="max-w-6xl mx-auto px-6 py-14 md:py-16">
+        <div className="grid gap-10 md:gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          {/* brand + contact */}
+          <div>
+            <Link
+              to="/home"
+              className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity"
+              aria-label="McMullen Properties — home"
+            >
+              <LogoWordmark height={20} />
+            </Link>
+            <p className="mt-4 text-sm leading-relaxed text-[#273C46] max-w-xs">
+              Bay Area real estate, marketed like a campaign. Buying, selling, and investing across
+              the Peninsula, Silicon Valley, and San Francisco.
+            </p>
+            <div className="mt-5 flex flex-col gap-1.5 text-sm">
+              <a href="tel:+14156919272" className="text-[#0D1B2A] font-semibold hover:opacity-70">(415) 691-9272</a>
+              <a href="mailto:tim@mcmullen.properties" className="text-[#273C46] hover:opacity-70">tim@mcmullen.properties</a>
+              <span className="text-[#273C46]">Campbell, California</span>
+            </div>
+          </div>
+
+          {/* link columns */}
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.heading}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] mb-4">
+                {col.heading}
+              </div>
+              <ul className="flex flex-col gap-2.5 text-sm">
+                {col.links.map((l) => (
+                  <li key={l.to}>
+                    <Link to={l.to} className="text-[#273C46] hover:text-[#0D1B2A] transition-colors">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* legal / license bar */}
+        <div className="mt-12 pt-8 border-t border-black/[0.07] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs text-[#273C46]">
+          <div className="leading-relaxed">
+            © {year} McMullen Properties. Tim McMullen, CA DRE #02016832 · Brokered by Real Broker.
+            <br className="hidden md:block" />
+            Equal Housing Opportunity. All information deemed reliable but not guaranteed.
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/sitemap" className="hover:text-[#0D1B2A]">Sitemap</Link>
+            <Link to="/join" className="hover:text-[#0D1B2A]">Create account</Link>
+            <Link to="/login" className="hover:text-[#0D1B2A]">Log in</Link>
+          </div>
+        </div>
+      </div>
+    </footer>
+  )
+}
