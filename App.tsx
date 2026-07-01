@@ -43,6 +43,7 @@ import CompsRequestTool from '@/pages/public/CompsRequestTool'
 import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
 import OffMarketTool from '@/pages/public/OffMarketTool'
 import LuxuryListings from '@/pages/public/LuxuryListings'
+import ServiceLuxury from '@/pages/public/ServiceLuxury'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -71,6 +72,7 @@ export default function App() {
           <Route path="/buy" element={<CorePage slug="buy" />} />
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
+          <Route path="/services/luxury-listing" element={<ServiceLuxury />} />
           <Route path="/blog" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
