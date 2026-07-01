@@ -361,16 +361,23 @@ export default function McMullenHome() {
             <a href="/buy" className="hover:text-white transition-colors">Buy</a>
             <a href="/sell" className="hover:text-white transition-colors">Sell</a>
             <a href="/services" className="hover:text-white transition-colors">Services</a>
+            <a href="/meet-tim" className="hover:text-white transition-colors">Meet Tim</a>
             <a href="/blog" className="hover:text-white transition-colors">Market Insight</a>
-            <a href="/login" className="hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }}>Agent login</a>
           </nav>
           <div className="flex items-center gap-2">
             <a
-              href={c.agent.schedule_href}
-              className="text-sm font-semibold px-5 py-2.5 rounded-full transition-transform hover:-translate-y-0.5"
+              href="/login"
+              className="hidden md:inline text-sm font-medium px-4 py-2.5 rounded-full transition-colors hover:text-white"
+              style={{ color: 'rgba(255,255,255,0.8)' }}
+            >
+              Log in
+            </a>
+            <a
+              href="/join"
+              className="hidden md:inline text-sm font-semibold px-5 py-2.5 rounded-full transition-transform hover:-translate-y-0.5"
               style={{ background: '#fff', color: NAVY }}
             >
-              Meet Tim
+              Create account
             </a>
             <button
               type="button"
@@ -394,6 +401,7 @@ export default function McMullenHome() {
                 { to: '/buy', label: 'Buy' },
                 { to: '/sell', label: 'Sell' },
                 { to: '/services', label: 'Services' },
+                { to: '/meet-tim', label: 'Meet Tim' },
                 { to: '/blog', label: 'Market Insight' },
               ].map((l) => (
                 <a
@@ -409,8 +417,11 @@ export default function McMullenHome() {
               <a href="tel:+14156919272" onClick={() => setMenuOpen(false)} className="py-3 text-base text-white font-medium">
                 (415) 691-9272
               </a>
-              <a href="/login" onClick={() => setMenuOpen(false)} className="py-3 text-base font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
-                Agent login
+              <a href="/login" onClick={() => setMenuOpen(false)} className="py-3 text-base font-medium border-b" style={{ color: 'rgba(255,255,255,0.85)', borderColor: 'rgba(255,255,255,0.06)' }}>
+                Log in
+              </a>
+              <a href="/join" onClick={() => setMenuOpen(false)} className="mt-3 py-3 text-base text-center rounded-full font-semibold" style={{ background: '#fff', color: NAVY }}>
+                Create account
               </a>
             </nav>
           </div>
