@@ -75,7 +75,9 @@ export default function App() {
           <Route path="/home" element={<McMullenHome />} />
           <Route path="/listings" element={<PortfolioIndex />} />
           <Route path="/listings/:slug" element={<PropertyDetail />} />
-          <Route path="/about" element={<CorePage slug="about" />} />
+          <Route path="/meet-tim" element={<CorePage slug="about" />} />
+          {/* Legacy /about path redirects to the renamed Meet Tim page. */}
+          <Route path="/about" element={<Navigate to="/meet-tim" replace />} />
           <Route path="/buy" element={<CorePage slug="buy" />} />
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
