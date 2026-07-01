@@ -1,16 +1,14 @@
 // Bespoke service page: Luxury Listing Marketing ($10M+).
 //
-// The real thesis (rewritten): ultra-luxury homes sell through word of mouth,
-// so we ENGINEER the word of mouth. We define the exact buyer, find real people
-// who match with open-source tools, reach them and their networks, measure
-// intent at every step, retarget everyone who clicks, and pursue every top
-// lead — all visible to the seller in real time on a private analytics
-// dashboard (the 175 Huckleberry Drive campaign is the live proof).
-//
-// Tactics are named plainly — that specificity IS the differentiator.
-// Inherits the gold-accented luxury variant of the motionsites vocabulary.
+// Thesis: ultra-luxury homes sell through word of mouth, so we ENGINEER it.
+// Expanded + interactive: the 7-phase machine is now click-to-expand (each
+// phase reveals the detail, a concrete example, and the actual tooling), and
+// the proof section embeds the LIVE 175 Huckleberry analytics dashboard
+// (interactive metro map + live counters, reading real campaign data).
 
+import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
+import LiveHuckleberryDashboard from '@/components/public/LiveHuckleberryDashboard'
 import {
   MotionStyles,
   Reveal,
@@ -32,58 +30,93 @@ import {
   Gauge,
   ArrowUpRight,
   ArrowRight,
+  Plus,
+  Minus,
 } from 'lucide-react'
 
 const HERO_IMG =
   'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site/175-huckleberry-drive/000.jpg'
 
 const GOLD = '#b8965a'
-const DASH_BG = '#0f1621'
-const DASH_PANEL = '#161f2c'
 
-// The 7-phase outreach machine — named plainly, in order.
+// The 7-phase machine — each expands to detail + a concrete example + tooling.
 const PHASES = [
   {
     icon: Target,
     tag: 'Phase 1',
     title: 'Define the buyer with precision',
-    body: 'We study who actually owns homes like yours and model the most likely buyer: where they live, what they already own, how they made their money, what else they buy. Not a demographic guess — a specific, evidenced profile of the person who writes this check.',
+    lead: 'Model exactly who buys a home like yours — not a demographic guess, an evidenced profile.',
+    detail:
+      'We study who actually owns comparable homes: where they live now, what else they own, how they built their wealth, what they buy. For a Jackson Hole trophy property, the buyer is rarely local — they are a coastal or metro high-net-worth secondary-home buyer. We build that profile from real ownership data before a single dollar of marketing is spent.',
+    example:
+      'For 175 Huckleberry, we assembled a 1,261-owner dataset of comparable luxury and second-home owners to isolate the true buyer origin.',
+    tool: 'Ownership data · DealMachine · county records',
   },
   {
     icon: Radar,
     tag: 'Phase 2',
     title: 'Find real people who match',
-    body: 'Using open-source intelligence tools, we surface actual individuals who fit that profile — and the networks around them. Because homes at this level sell through word of mouth, we build the list of people most able to buy it or to whisper it to someone who will.',
+    lead: 'Use open-source intelligence to surface actual individuals who fit the profile — and their networks.',
+    detail:
+      'With the profile defined, we locate specific, real people who match it, plus the people around them. Because homes at this level sell through word of mouth, the network matters as much as the individual — the goal is to reach everyone able to buy it or to pass it to someone who will.',
+    example:
+      'From the buyer profile we build a validated, deduplicated prospect list of named individuals and their likely networks — the people most able to buy or refer.',
+    tool: 'OSINT tooling · enrichment · list validation',
   },
   {
     icon: Mail,
     tag: 'Phase 3',
     title: 'Reach them directly',
-    body: 'We pull verified email addresses and run tailored, automated campaigns that invite each person to consider the home — or share it with their circle. This is the megaphone for word of mouth: instead of hoping the right person hears, we put it in front of them by name.',
+    lead: 'Pull verified emails and run tailored campaigns asking each person to consider it — or share it.',
+    detail:
+      'We append verified email addresses to the prospect list and run tailored, automated campaigns. Each message invites the recipient to consider the home or forward it to their circle. This is the megaphone for word of mouth: instead of hoping the right person hears, we put it in front of them by name, at scale, with a preview email reviewed before every send.',
+    example:
+      'Campaigns segment by buyer type — out-of-area luxury buyers, local move-up, investor — each with its own message and call to action.',
+    tool: 'Resend · deliverability (DMARC) · segmentation',
   },
   {
     icon: Activity,
     tag: 'Phase 4',
     title: 'Measure intent at every step',
-    body: 'Every open, click, and site visit is tracked. We layer lead-capture offers — an out-of-area market review, a disclosure review, a downloadable property-condition cheat sheet — so each response grades how serious a prospect is. Interest becomes data.',
+    lead: 'Track every open, click, and site visit; layer lead-capture offers to grade how serious each prospect is.',
+    detail:
+      'Every interaction is instrumented. On top of opens and clicks, we offer real value that doubles as an intent signal: an out-of-area market review, a disclosure review, a downloadable property-condition cheat sheet. Who requests what tells us exactly how warm each prospect is — passive interest becomes a scored pipeline.',
+    example:
+      'A viewer who downloads the condition cheat sheet and requests a market comparison is a materially hotter lead than a one-time page visit — and gets prioritized accordingly.',
+    tool: 'Session analytics · multi-step lead capture · scoring',
   },
   {
     icon: Crosshair,
     tag: 'Phase 5',
     title: 'Retarget everyone who clicks',
-    body: 'Anyone who engages gets followed across the internet with the property’s ads — on the sites they already browse. The home stays in front of warm prospects until they act, at a fraction of the waste of broad luxury advertising.',
+    lead: 'Follow every engaged prospect around the internet with the property’s ads.',
+    detail:
+      'Anyone who clicks or visits enters a retargeting audience and sees the property’s advertising on the sites they already browse. The home stays in front of warm prospects until they act — a fraction of the cost and waste of broad luxury advertising, aimed only at people who have already shown intent.',
+    example:
+      'A prospect who viewed the listing site once will keep seeing tasteful reminders of it across the web for weeks, keeping the property top of mind through a long luxury decision cycle.',
+    tool: 'Meta / Google retargeting · pixel audiences',
   },
   {
     icon: PhoneCall,
     tag: 'Phase 6',
     title: 'Pursue every top lead directly',
-    body: 'The data surfaces the hottest prospects; then it gets personal. Direct, one-to-one outreach to every high-intent lead and their agent — the human close on top of the machine that found them.',
+    lead: 'The data surfaces the hottest prospects; then it gets personal.',
+    detail:
+      'The pipeline ranks prospects by intent. The top of that list gets direct, one-to-one outreach — to the buyer and their agent. This is the human close layered on top of the machine that found them: the machine does the finding and scoring at scale, then the relationship work happens where it counts.',
+    example:
+      'Instead of cold-calling the world, outreach is concentrated on the handful of genuinely high-intent buyers the data identified.',
+    tool: 'Direct outreach · agent-to-agent · CRM',
   },
   {
     icon: Gauge,
     tag: 'Phase 7',
     title: 'Prove it in real time',
-    body: 'You watch all of it live on a private, password-protected analytics dashboard: total visits, time on site, where viewers are watching from, top metros, lead captures, and film views. No monthly summary spin — the raw performance of your listing, always on.',
+    lead: 'Watch the entire campaign perform on a private, password-protected dashboard.',
+    detail:
+      'You get your own login to a live analytics dashboard: total visits, time on site, where viewers are watching from, top metros, lead captures, and film views — updating as the campaign runs. No monthly summary spin, no black box. The raw performance of your listing, always on. The live 175 Huckleberry dashboard is embedded below.',
+    example:
+      'The Huckleberry dashboard revealed 43% of interest coming from the Bay Area — intelligence that directly reshaped where the next wave of outreach was aimed.',
+    tool: 'Live seller dashboard · always-on reporting',
   },
 ]
 
@@ -96,116 +129,69 @@ const PROOF = [
   'Live seller dashboard',
 ]
 
-const METROS = [
-  { rank: 1, name: 'Bay Area', pct: 43, views: 22 },
-  { rank: 2, name: 'Washington DC', pct: 16, views: 8 },
-  { rank: 3, name: 'Dallas–Fort Worth', pct: 14, views: 7 },
-  { rank: 4, name: 'Council Bluffs, IA', pct: 6, views: 3 },
-  { rank: 5, name: 'Boardman, Oregon', pct: 4, views: 2 },
-  { rank: 6, name: 'Rexburg, Idaho', pct: 4, views: 2 },
-]
-const BUBBLES = [
-  { x: 58, y: 96, r: 15 },
-  { x: 72, y: 60, r: 7 },
-  { x: 120, y: 78, r: 8 },
-  { x: 168, y: 96, r: 7 },
-  { x: 232, y: 82, r: 9 },
-  { x: 244, y: 74, r: 6 },
-  { x: 196, y: 128, r: 10 },
-  { x: 60, y: 128, r: 5 },
-]
-
-function DashboardMock() {
+function PhaseCard({ p, i }: { p: (typeof PHASES)[number]; i: number }) {
+  const [open, setOpen] = useState(i === 0)
+  const Icon = p.icon
   return (
-    <div
-      className="rounded-[20px] overflow-hidden"
-      style={{ background: DASH_BG, boxShadow: '0 40px 100px -50px rgba(0,0,0,0.7)', border: '1px solid rgba(255,255,255,0.06)' }}
-    >
-      <div className="flex items-center justify-between px-6 pt-6 pb-4">
-        <div className="flex items-center gap-3">
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center mp-serif text-sm font-bold"
-            style={{ background: GOLD, color: '#1a1205' }}
-          >
-            P
+    <div className="mp-lift rounded-[22px] border border-black/[0.07] bg-white overflow-hidden">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full text-left grid grid-cols-[auto_1fr_auto] items-center gap-5 p-6 md:p-7"
+      >
+        <div
+          className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+          style={{ background: 'rgba(184,150,90,0.12)' }}
+        >
+          <Icon className="w-5 h-5" style={{ color: GOLD }} />
+        </div>
+        <div>
+          <div className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: GOLD }}>
+            {p.tag}
           </div>
-          <div>
-            <div className="mp-mono text-[9px] tracking-[0.24em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              PRUGH REAL ESTATE
-            </div>
-            <div className="mp-serif text-white text-lg leading-tight">175 Huckleberry Drive</div>
-          </div>
+          <h3 className="mp-serif text-[20px] md:text-[24px] font-semibold mt-0.5" style={{ color: NAVY }}>
+            {p.title}
+          </h3>
+          <p className="text-[14px] mt-1 leading-snug" style={{ color: INK }}>
+            {p.lead}
+          </p>
         </div>
         <div
-          className="mp-mono text-[9px] tracking-[0.16em] px-2.5 py-1 rounded"
-          style={{ background: 'rgba(184,150,90,0.15)', color: GOLD }}
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors"
+          style={{ background: open ? GOLD : 'rgba(13,27,42,0.05)' }}
         >
-          ● LIVE · 30d
+          {open ? (
+            <Minus className="w-4 h-4" style={{ color: '#fff' }} />
+          ) : (
+            <Plus className="w-4 h-4" style={{ color: NAVY }} />
+          )}
         </div>
-      </div>
+      </button>
 
-      <div className="grid grid-cols-3 gap-px px-6" style={{ color: '#fff' }}>
-        {[
-          { k: 'TOTAL VISITS', v: '51', s: '51 unique' },
-          { k: 'AVG. TIME ON SITE', v: '40m 46s', s: 'median 15s' },
-          { k: 'FORM SUBMISSIONS', v: '46', s: 'call requests' },
-        ].map((s) => (
-          <div key={s.k} className="rounded-lg p-4" style={{ background: DASH_PANEL }}>
-            <div className="mp-mono text-[8.5px] tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {s.k}
-            </div>
-            <div className="mp-serif text-2xl mt-1">{s.v}</div>
-            <div className="text-[10px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-              {s.s}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-4 p-6">
-        <div className="rounded-xl p-4" style={{ background: DASH_PANEL }}>
-          <div className="text-white text-sm font-semibold">Where viewers are watching from</div>
-          <div className="text-[10px] mb-2" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            Bubble size = share of visits
-          </div>
-          <svg viewBox="0 0 320 200" className="w-full" style={{ maxHeight: 190 }}>
-            <path
-              d="M40 70 L110 52 L180 58 L250 55 L290 72 L292 96 L258 104 L250 128 L210 150 L150 156 L96 150 L70 128 L52 104 L40 88 Z"
-              fill="rgba(255,255,255,0.04)"
-              stroke="rgba(255,255,255,0.10)"
-              strokeWidth="1"
-            />
-            {BUBBLES.map((b, i) => (
-              <g key={i}>
-                <circle cx={b.x} cy={b.y} r={b.r} fill={GOLD} opacity={0.32} />
-                <circle cx={b.x} cy={b.y} r={Math.max(2, b.r * 0.4)} fill={GOLD} opacity={0.95} />
-              </g>
-            ))}
-          </svg>
-        </div>
-        <div className="rounded-xl p-4" style={{ background: DASH_PANEL }}>
-          <div className="text-white text-sm font-semibold">Top metros</div>
-          <div className="text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            By share of total site visits
-          </div>
-          <div className="flex flex-col gap-2.5">
-            {METROS.map((m) => (
-              <div key={m.rank} className="flex items-center gap-3">
-                <span className="mp-mono text-[10px] w-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  {m.rank}
-                </span>
-                <span className="text-white text-[12.5px] flex-1 truncate">{m.name}</span>
-                <div className="w-16 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${m.pct}%`, background: GOLD }} />
-                </div>
-                <span className="mp-mono text-[11px] w-8 text-right" style={{ color: GOLD }}>
-                  {m.pct}%
-                </span>
-                <span className="mp-mono text-[10px] w-12 text-right" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  {m.views} views
-                </span>
+      <div
+        className="grid transition-all duration-500 ease-out"
+        style={{ gridTemplateRows: open ? '1fr' : '0fr' }}
+      >
+        <div className="overflow-hidden">
+          <div className="px-6 md:px-7 pb-7 pl-[4.25rem] md:pl-[5rem]">
+            <p className="text-[15px] leading-relaxed" style={{ color: INK }}>
+              {p.detail}
+            </p>
+            <div className="mt-4 rounded-xl p-4" style={{ background: '#f7f8fa' }}>
+              <div className="mp-mono text-[10px] uppercase tracking-[0.16em] mb-1.5" style={{ color: GOLD }}>
+                In practice
               </div>
-            ))}
+              <p className="text-[14px] leading-relaxed" style={{ color: NAVY }}>
+                {p.example}
+              </p>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <span className="mp-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: INK }}>
+                Tools
+              </span>
+              <span className="text-[12.5px]" style={{ color: INK }}>
+                {p.tool}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -219,6 +205,7 @@ export default function ServiceLuxury() {
       <MotionStyles />
       <PublicNav active="services" />
 
+      {/* HERO */}
       <ParallaxHero image={HERO_IMG} minH="84vh" accent="gold">
         <div className="max-w-6xl mx-auto px-6 py-28">
           <div className="max-w-3xl">
@@ -249,8 +236,8 @@ export default function ServiceLuxury() {
               <PillButton href="/luxury-listings" onDark>
                 Request a private consultation <ArrowUpRight className="w-4 h-4" />
               </PillButton>
-              <PillButton href="#machine" variant="secondary" onDark>
-                See how it works
+              <PillButton href="#dashboard" variant="secondary" onDark>
+                See the live campaign data
               </PillButton>
             </div>
           </div>
@@ -261,6 +248,7 @@ export default function ServiceLuxury() {
         <Marquee items={PROOF} />
       </div>
 
+      {/* THESIS */}
       <section style={{ background: '#f7f8fa' }}>
         <div className="max-w-4xl mx-auto px-6 py-20 md:py-28 text-center">
           <Reveal>
@@ -274,7 +262,7 @@ export default function ServiceLuxury() {
             <p className="mt-7 leading-relaxed text-[17px]" style={{ color: INK }}>
               At this level, the sale almost never comes from a sign in the yard or a portal
               listing. It comes from the right person hearing about it from someone they trust. That
-              sounds like luck — but it isn&rsquo;t. It can be manufactured. The entire strategy
+              sounds like luck — but it isn&rsquo;t. It can be manufactured. The seven-phase system
               below exists to identify those few hundred people, put the home in front of them by
               name, and turn passive interest into a measurable, closeable pipeline.
             </p>
@@ -282,7 +270,8 @@ export default function ServiceLuxury() {
         </div>
       </section>
 
-      <section id="machine" className="max-w-6xl mx-auto px-6 py-20 md:py-28">
+      {/* THE MACHINE — interactive, expandable */}
+      <section id="machine" className="max-w-5xl mx-auto px-6 py-20 md:py-28">
         <Reveal>
           <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: GOLD }}>
             The outreach machine
@@ -291,98 +280,60 @@ export default function ServiceLuxury() {
             Seven phases, hand to hand.
           </h2>
           <p className="mt-5 text-[17px] leading-relaxed max-w-2xl" style={{ color: INK }}>
-            This is the opposite of &ldquo;list it and hope.&rdquo; Every phase compounds the last —
-            from defining the buyer to closing the lead the data surfaced.
+            The opposite of &ldquo;list it and hope.&rdquo; Tap any phase to see how it works, a real
+            example from a live campaign, and the tools behind it.
           </p>
         </Reveal>
 
-        <div className="mt-14 flex flex-col gap-4">
-          {PHASES.map((p, i) => {
-            const Icon = p.icon
-            return (
-              <Reveal key={p.tag} delay={0.04 * i}>
-                <div className="mp-lift grid md:grid-cols-[auto_1fr] gap-6 rounded-[22px] border border-black/[0.07] bg-white p-7 md:p-8">
-                  <div className="flex items-start gap-4">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(184,150,90,0.12)' }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: GOLD }} />
-                    </div>
-                    <div className="md:hidden">
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: GOLD }}>
-                        {p.tag}
-                      </div>
-                      <h3 className="mp-serif text-xl font-semibold mt-1" style={{ color: NAVY }}>
-                        {p.title}
-                      </h3>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="hidden md:block">
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: GOLD }}>
-                        {p.tag}
-                      </div>
-                      <h3 className="mp-serif text-[22px] font-semibold mt-1 mb-2" style={{ color: NAVY }}>
-                        {p.title}
-                      </h3>
-                    </div>
-                    <p className="text-[15px] leading-relaxed" style={{ color: INK }}>
-                      {p.body}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            )
-          })}
+        <div className="mt-12 flex flex-col gap-4">
+          {PHASES.map((p, i) => (
+            <Reveal key={p.tag} delay={0.03 * i}>
+              <PhaseCard p={p} i={i} />
+            </Reveal>
+          ))}
         </div>
       </section>
 
-      <section style={{ background: NAVY_DEEP }}>
+      {/* LIVE DASHBOARD */}
+      <section id="dashboard" style={{ background: NAVY_DEEP }}>
         <div className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="max-w-3xl">
             <Reveal>
               <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-4" style={{ color: GOLD }}>
-                The proof · always on
+                The proof · live data
               </div>
               <h2 className="mp-serif text-white text-[30px] md:text-[44px] leading-[1.08] font-semibold">
-                Watch your listing perform, in real time.
+                This is a real campaign, right now.
               </h2>
               <p className="mt-6 text-[16px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.75)' }}>
-                Every campaign gets a private, password-protected dashboard. This is the live one
-                for 175 Huckleberry Drive in Jackson Hole — real visits, real buyer origins, real
-                intent. You see exactly where demand is coming from and what the marketing is doing,
-                the moment it happens.
+                Below is the actual, live analytics for 175 Huckleberry Drive in Jackson Hole —
+                pulled straight from the campaign as you read this. Hover or tap any metro to see
+                where the buyers are. Note the story it tells: 43% of interest comes from the Bay
+                Area, not Wyoming — exactly the out-of-area buyer the strategy targeted.
               </p>
-              <ul className="mt-6 flex flex-col gap-2.5">
-                {[
-                  'Total visits, unique viewers, and time on site',
-                  'A live map of where your buyers are watching from',
-                  'Top metros ranked by share of interest',
-                  'Lead captures, call requests, and film views',
-                ].map((li) => (
-                  <li key={li} className="flex items-start gap-2.5 text-[14.5px]" style={{ color: 'rgba(255,255,255,0.85)' }}>
-                    <ArrowRight className="w-4 h-4 mt-0.5 shrink-0" style={{ color: GOLD }} />
-                    {li}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-8">
-                <PillButton href="https://175huckleberrydrive.com/analytics/" onDark>
-                  See the live dashboard <ArrowUpRight className="w-4 h-4" />
-                </PillButton>
-                <p className="mt-2.5 text-[12px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  Password-protected · sellers get their own login
-                </p>
-              </div>
-            </Reveal>
-            <Reveal delay={0.12}>
-              <DashboardMock />
             </Reveal>
           </div>
+
+          <Reveal delay={0.1}>
+            <div className="mt-10">
+              <LiveHuckleberryDashboard />
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.15}>
+            <div className="mt-8 flex flex-wrap items-center gap-4">
+              <PillButton href="https://175huckleberrydrive.com/analytics/" onDark>
+                Open the full live dashboard <ArrowUpRight className="w-4 h-4" />
+              </PillButton>
+              <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                Every seller gets their own password-protected login.
+              </span>
+            </div>
+          </Reveal>
         </div>
       </section>
 
+      {/* STATS */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-24">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {[
@@ -403,6 +354,7 @@ export default function ServiceLuxury() {
         </div>
       </section>
 
+      {/* CTA */}
       <section style={{ background: NAVY }}>
         <div className="max-w-4xl mx-auto px-6 py-24 text-center">
           <Reveal>
