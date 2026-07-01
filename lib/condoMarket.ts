@@ -73,11 +73,7 @@ export const MARKETS: MarketConfig[] = [
     cmDomain: 'sanfranciscocondomarket.com',
     blurb:
       'Ten years of closed sales across every San Francisco condo building — median price per square foot, live activity, and building-level detail.',
-    blogTags: [
-      'san-francisco', 'northside-san-francisco', 'pacific-heights', 'marina-district',
-      'russian-hill', 'nob-hill', 'south-beach', 'mission-bay', 'rincon-hill',
-      'yerba-buena', 'hayes-valley', 'richmond-district', 'cow-hollow', 'dogpatch',
-    ],
+    blogTags: ['sf'],
     available: true,
   },
   {
@@ -89,10 +85,7 @@ export const MARKETS: MarketConfig[] = [
     cmDomain: 'siliconvalleycondomarket.com',
     blurb:
       'The condo and townhome market across Silicon Valley — closed-sale trends, price per square foot, and building activity from Campbell to Palo Alto.',
-    blogTags: [
-      'campbell', 'san-jose', 'santana-row', 'palo-alto', 'mountain-view',
-      'sunnyvale', 'cupertino', 'los-gatos', 'silicon-valley', 'santa-clara',
-    ],
+    blogTags: ['sv'],
     available: true,
   },
   {
@@ -128,6 +121,32 @@ export function marketByKey(key: string): MarketConfig | undefined {
 // Resolve a market by its region URL segment (for /market/:region/:slug routes).
 export function marketByRegionSlug(regionSlug: string): MarketConfig | undefined {
   return MARKETS.find((m) => m.regionSlug === regionSlug)
+}
+
+// ---------------------------------------------------------------------------
+// Service registry — one entry per McMullen service page. `tag` is the
+// NAMESPACED blog tag used to associate feature articles with the service.
+// Namespacing ('service:') guarantees these never collide with the legacy
+// location/topic tags migrated from Webflow. Only NEW service articles carry
+// these tags; existing posts are untouched.
+// ---------------------------------------------------------------------------
+export type ServiceConfig = {
+  slug: string   // matches the route: /services/<slug>
+  name: string
+  tag: string    // namespaced blog tag, e.g. 'service:luxury-listing'
+}
+
+export const SERVICES: ServiceConfig[] = [
+  { slug: 'luxury-listing',    name: 'Luxury Listing Marketing', tag: 'service:luxury-listing' },
+  { slug: 'disclosure-review', name: 'Disclosure Review',        tag: 'service:disclosure-review' },
+  { slug: '1031-exchange',     name: '1031 Exchange',            tag: 'service:1031-exchange' },
+  { slug: 'commercial',        name: 'Commercial Real Estate',   tag: 'service:commercial' },
+  { slug: 'home-improvement',  name: 'Home Improvement',         tag: 'service:home-improvement' },
+  { slug: 'flips',             name: 'Flips & Off-Market',       tag: 'service:flips' },
+]
+
+export function serviceBySlug(slug: string): ServiceConfig | undefined {
+  return SERVICES.find((s) => s.slug === slug)
 }
 
 // ---------------------------------------------------------------------------
