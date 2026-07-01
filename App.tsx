@@ -50,7 +50,6 @@ import ServiceCommercial from '@/pages/public/ServiceCommercial'
 import ServiceImprovement from '@/pages/public/ServiceImprovement'
 import ServiceFlips from '@/pages/public/ServiceFlips'
 import Sitemap from '@/pages/public/Sitemap'
-import MarketTest from '@/pages/public/MarketTest'
 import MarketPage from '@/pages/public/MarketPage'
 import CMAReview from '@/pages/public/CMAReview'
 import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
@@ -91,7 +90,8 @@ export default function App() {
           <Route path="/services/commercial" element={<ServiceCommercial />} />
           <Route path="/services/home-improvement" element={<ServiceImprovement />} />
           <Route path="/services/flips" element={<ServiceFlips />} />
-          <Route path="/blog" element={<BlogIndex />} />
+          <Route path="/blog" element={<MarketPage />} />
+          <Route path="/insights" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
           <Route path="/t/:tenantSlug/listings/:slug" element={<PropertyDetail />} />
@@ -117,8 +117,6 @@ export default function App() {
           <Route path="/tools/off-market" element={<OffMarketTool />} />
           <Route path="/luxury-listings" element={<LuxuryListings />} />
           <Route path="/sitemap" element={<Sitemap />} />
-          <Route path="/market-test" element={<MarketTest />} />
-          <Route path="/market-insight/:market" element={<MarketPage />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
