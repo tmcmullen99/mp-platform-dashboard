@@ -44,6 +44,13 @@ import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
 import OffMarketTool from '@/pages/public/OffMarketTool'
 import LuxuryListings from '@/pages/public/LuxuryListings'
 import ServiceLuxury from '@/pages/public/ServiceLuxury'
+import ServiceDisclosure from '@/pages/public/ServiceDisclosure'
+import Service1031 from '@/pages/public/Service1031'
+import ServiceImprovement from '@/pages/public/ServiceImprovement'
+import ServiceFlips from '@/pages/public/ServiceFlips'
+import CMAReview from '@/pages/public/CMAReview'
+import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
+import DisclosureReview from '@/pages/public/DisclosureReview'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -73,6 +80,10 @@ export default function App() {
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
           <Route path="/services/luxury-listing" element={<ServiceLuxury />} />
+          <Route path="/services/disclosure-review" element={<ServiceDisclosure />} />
+          <Route path="/services/1031-exchange" element={<Service1031 />} />
+          <Route path="/services/home-improvement" element={<ServiceImprovement />} />
+          <Route path="/services/flips" element={<ServiceFlips />} />
           <Route path="/blog" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
@@ -86,6 +97,11 @@ export default function App() {
           <Route path="/account/apply" element={<CreditApplication />} />
           <Route path="/compare" element={<Compare />} />
           <Route path="/join" element={<JoinTeaser />} />
+          {/* Buyer Analysis showcase: gallery, gated disclosure viewer (before
+              the CMA :slug so "disclosure" isn't captured as a slug), CMA viewer. */}
+          <Route path="/cma-review" element={<CMAReview />} />
+          <Route path="/cma-review/disclosure/:slug" element={<DisclosureReview />} />
+          <Route path="/cma-review/:slug" element={<CMAShowcaseViewer />} />
           <Route path="/tools" element={<ToolsHub />} />
           <Route path="/tools/net-sheet" element={<NetSheetTool />} />
           <Route path="/tools/cma" element={<CMATool />} />
