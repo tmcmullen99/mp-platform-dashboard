@@ -118,22 +118,101 @@ export function PublicNav({
   )
 }
 
+// Footer column definitions. Kept as data so the sitemap page can reuse the
+// exact same link taxonomy (single source of truth for the site's public map).
+export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: string; external?: boolean }[] }[] = [
+  {
+    heading: 'Explore',
+    links: [
+      { to: '/listings', label: 'Portfolio' },
+      { to: '/luxury-listings', label: 'Luxury Listings' },
+      { to: '/buy', label: 'Buy' },
+      { to: '/sell', label: 'Sell' },
+      { to: '/blog', label: 'Market Insight' },
+      { to: '/meet-tim', label: 'Meet Tim' },
+    ],
+  },
+  {
+    heading: 'Services',
+    links: [
+      { to: '/services/luxury-listing', label: 'Luxury Listing' },
+      { to: '/services/1031-exchange', label: '1031 Exchange' },
+      { to: '/services/commercial', label: 'Commercial' },
+      { to: '/services/disclosure-review', label: 'Disclosure Review' },
+      { to: '/services/home-improvement', label: 'Home Improvement' },
+      { to: '/services/flips', label: 'Flips & Off-Market' },
+    ],
+  },
+  {
+    heading: 'Tools',
+    links: [
+      { to: '/tools/net-sheet', label: 'Net Sheet' },
+      { to: '/tools/cma', label: 'Home Value / CMA' },
+      { to: '/tools/comps', label: 'Comps Request' },
+      { to: '/tools/review', label: 'Review Request' },
+      { to: '/tools/off-market', label: 'Off-Market Waitlist' },
+      { to: '/cma-review', label: 'CMA Showcase' },
+    ],
+  },
+]
+
 export function PublicFooter() {
+  const year = new Date().getFullYear()
   return (
-    <footer className="border-t border-black/[0.07] py-12">
-      <div className="max-w-6xl mx-auto px-6 flex flex-col md:flex-row justify-between gap-4 text-sm text-[#273C46]">
-        <Link
-          to="/home"
-          className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity"
-          aria-label="McMullen Properties — home"
-        >
-          <LogoWordmark height={18} />
-        </Link>
-        <div className="flex flex-wrap gap-6">
-          <Link to="/tools" className="hover:opacity-70">Tools</Link>
-          <Link to="/blog" className="hover:opacity-70">Market Insight</Link>
-          <a href="tel:+14156919272" className="hover:opacity-70">(415) 691-9272</a>
-          <a href="mailto:tim@mcmullen.properties" className="hover:opacity-70">tim@mcmullen.properties</a>
+    <footer className="border-t border-black/[0.07] bg-white">
+      <div className="max-w-6xl mx-auto px-6 py-14 md:py-16">
+        <div className="grid gap-10 md:gap-8 md:grid-cols-[1.4fr_1fr_1fr_1fr]">
+          {/* brand + contact */}
+          <div>
+            <Link
+              to="/home"
+              className="flex items-center text-[#0D1B2A] hover:opacity-80 transition-opacity"
+              aria-label="McMullen Properties — home"
+            >
+              <LogoWordmark height={20} />
+            </Link>
+            <p className="mt-4 text-sm leading-relaxed text-[#273C46] max-w-xs">
+              Bay Area real estate, marketed like a campaign. Buying, selling, and investing across
+              the Peninsula, Silicon Valley, and San Francisco.
+            </p>
+            <div className="mt-5 flex flex-col gap-1.5 text-sm">
+              <a href="tel:+14156919272" className="text-[#0D1B2A] font-semibold hover:opacity-70">(415) 691-9272</a>
+              <a href="mailto:tim@mcmullen.properties" className="text-[#273C46] hover:opacity-70">tim@mcmullen.properties</a>
+              <span className="text-[#273C46]">Campbell, California</span>
+            </div>
+          </div>
+
+          {/* link columns */}
+          {FOOTER_COLUMNS.map((col) => (
+            <div key={col.heading}>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0D1B2A] mb-4">
+                {col.heading}
+              </div>
+              <ul className="flex flex-col gap-2.5 text-sm">
+                {col.links.map((l) => (
+                  <li key={l.to}>
+                    <Link to={l.to} className="text-[#273C46] hover:text-[#0D1B2A] transition-colors">
+                      {l.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+
+        {/* legal / license bar */}
+        <div className="mt-12 pt-8 border-t border-black/[0.07] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs text-[#273C46]">
+          <div className="leading-relaxed">
+            © {year} McMullen Properties. Tim McMullen, CA DRE #02016832 · Brokered by Real Broker.
+            <br className="hidden md:block" />
+            Equal Housing Opportunity. All information deemed reliable but not guaranteed.
+          </div>
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/sitemap" className="hover:text-[#0D1B2A]">Sitemap</Link>
+            <Link to="/join" className="hover:text-[#0D1B2A]">Create account</Link>
+            <Link to="/login" className="hover:text-[#0D1B2A]">Log in</Link>
+          </div>
         </div>
       </div>
     </footer>
