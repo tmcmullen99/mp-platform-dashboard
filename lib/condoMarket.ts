@@ -39,7 +39,12 @@ export type MarketConfig = {
   dataSlug: string
   blurb: string
   blogTags: string[]
+  available: boolean // false = shown in the selector as "coming soon" (no live feed yet)
 }
+
+// Market-agnostic blog tags — general real estate insight that can surface in
+// ANY market's feed alongside that market's own tagged posts.
+export const GENERAL_TAGS = ['investments', 'markets', 'news']
 
 export const MARKETS: MarketConfig[] = [
   {
@@ -54,6 +59,7 @@ export const MARKETS: MarketConfig[] = [
       'russian-hill', 'nob-hill', 'south-beach', 'mission-bay', 'rincon-hill',
       'yerba-buena', 'hayes-valley', 'richmond-district', 'cow-hollow', 'dogpatch',
     ],
+    available: true,
   },
   {
     key: 'sv',
@@ -66,6 +72,27 @@ export const MARKETS: MarketConfig[] = [
       'campbell', 'san-jose', 'santana-row', 'palo-alto', 'mountain-view',
       'sunnyvale', 'cupertino', 'los-gatos', 'silicon-valley', 'santa-clara',
     ],
+    available: true,
+  },
+  {
+    key: 'eichler',
+    name: 'Eichler Homes',
+    shortName: 'Eichler',
+    dataSlug: 'eichler-market',
+    blurb:
+      'The mid-century Eichler market across the Bay Area — closed sales, price per square foot, and tract-level activity. Live feed coming soon.',
+    blogTags: ['eichler', 'mid-century', 'mid-century-modern'],
+    available: false,
+  },
+  {
+    key: 'campbell',
+    name: 'Campbell Market',
+    shortName: 'Campbell',
+    dataSlug: 'campbell-market',
+    blurb:
+      'The Campbell residential market — Tim’s home turf. A dedicated data feed is on the way.',
+    blogTags: ['campbell'],
+    available: false,
   },
 ]
 
