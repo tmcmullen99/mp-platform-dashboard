@@ -7,7 +7,7 @@
 // (e.g. opened the link in another browser), we send them to sign in.
 
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -18,6 +18,9 @@ const PROVISION_URL = `${EDGE_FUNCTIONS_BASE_URL}/provision_account?token=${SITE
 
 export default function Welcome() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const nextRaw = searchParams.get('next')
+  const next = nextRaw && nextRaw.startsWith('/') && !nextRaw.startsWith('//') ? nextRaw : ''
   const { session, loading: authLoading } = useAuth()
   const [phase, setPhase] = useState<'working' | 'done' | 'unconfirmed' | 'error' | 'signin'>('working')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
@@ -56,7 +59,7 @@ export default function Welcome() {
         // the new client identity, then route to the member dashboard.
         setPhase('done')
         await supabase.auth.refreshSession()
-        setTimeout(() => navigate('/account', { replace: true }), 900)
+        setTimeout(() => navigate(next || '/account', { replace: true }), 900)
       } catch {
         setErrorMsg('Could not reach the server. Please refresh to try again.')
         setPhase('error')
