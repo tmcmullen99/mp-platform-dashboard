@@ -20,7 +20,7 @@ import {
 } from '@/components/public/motion'
 import { supabase } from '@/lib/supabase'
 import {
-  MARKETS, marketByKey, GENERAL_TAGS,
+  MARKETS, marketByKey,
   fetchHomePayload, fetchRecentSales, fetchPsfQuarterly, fetchBuildingStats,
   type HomePayload, type RecentSale, type PsfQuarter, type BuildingStat, type MarketConfig,
 } from '@/lib/condoMarket'
@@ -222,20 +222,26 @@ export default function MarketPage() {
   const [posts, setPosts] = useState<BlogCard[]>([])
   const [loaded, setLoaded] = useState(false)
   const [showArticles, setShowArticles] = useState(true)
+  // How many articles beyond the 9 interleaved ones are revealed in the
+  // "More articles" grid. Grows in batches of 6 via "Load more".
+  const [visibleExtra, setVisibleExtra] = useState(6)
 
   useEffect(() => {
     let cancelled = false
     setLoaded(false)
+    setVisibleExtra(6)
     ;(async () => {
-      // Always load this market's blog posts (market tags + general insight tags).
-      const tagSet = Array.from(new Set([...cfg.blogTags, ...GENERAL_TAGS]))
+      // Load only THIS market's articles — matched on the market's own tags,
+      // never the shared general tags (which pulled other cities' local posts,
+      // e.g. Austin, into every feed). Newest first. Higher limit so the
+      // "Load more" reveal has articles to show for deep markets like SF.
       const blogQ = supabase
         .from('blog_posts')
         .select('slug, name, card_description, image, publish_date, tags_array')
         .eq('is_published', true).neq('is_archived', true)
-        .overlaps('tags_array', tagSet)
+        .overlaps('tags_array', cfg.blogTags)
         .order('publish_date', { ascending: false, nullsFirst: false })
-        .limit(9)
+        .limit(24)
 
       if (cfg.available) {
         const [h, s, q, b, blog] = await Promise.all([
@@ -301,8 +307,13 @@ export default function MarketPage() {
 
   const latestSale = s?.latest_sale_date ?? null
 
-  // split posts into three groups to scatter through the page
+  // First 9 posts scatter through the data sections (three groups of 3).
   const g1 = posts.slice(0, 3), g2 = posts.slice(3, 6), g3 = posts.slice(6, 9)
+  // Everything past the first 9 is available in the "More articles" grid,
+  // newest-first, revealed in batches via "Load more".
+  const extraPosts = posts.slice(9)
+  const shownExtra = extraPosts.slice(0, visibleExtra)
+  const hasMore = extraPosts.length > visibleExtra
 
   function pick(key: string) {
     setParams(key === 'sf' ? {} : { m: key }, { replace: false })
@@ -512,6 +523,30 @@ export default function MarketPage() {
 
           {/* interleaved articles #3 */}
           <BlogStrip posts={g3} show={showArticles} />
+
+          {/* more articles — newest first, revealed in batches */}
+          {showArticles && extraPosts.length ? (
+            <section className="max-w-6xl mx-auto px-6 pb-8">
+              <Reveal>
+                <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-6" style={{ color: BLUE }}>
+                  More on {cfg.shortName}
+                </div>
+              </Reveal>
+              <div className="grid md:grid-cols-3 gap-6">
+                {shownExtra.map((p) => <Reveal key={p.slug}><BlogTile p={p} /></Reveal>)}
+              </div>
+              {hasMore ? (
+                <div className="mt-10 flex justify-center">
+                  <button
+                    onClick={() => setVisibleExtra((n) => n + 6)}
+                    className="rounded-full px-6 py-3 text-sm font-medium border transition-all inline-flex items-center gap-2"
+                    style={{ background: '#fff', color: NAVY, borderColor: 'rgba(0,0,0,0.12)' }}>
+                    Load more articles <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : null}
+            </section>
+          ) : null}
         </>
       ) : (
         /* coming-soon market: no live feed yet, but show its articles */
