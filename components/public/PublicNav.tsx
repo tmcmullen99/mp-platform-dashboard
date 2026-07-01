@@ -17,7 +17,7 @@ const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
   { key: 'sell', to: '/sell', label: 'Sell' },
   { key: 'services', to: '/services', label: 'Services' },
   { key: 'about', to: '/meet-tim', label: 'Meet Tim' },
-  { key: 'insight', to: '/blog', label: 'Market Insight' },
+  { key: 'insight', to: '/blog', label: 'Market' },
 ]
 
 export function PublicNav({
@@ -128,7 +128,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: stri
       { to: '/luxury-listings', label: 'Luxury Listings' },
       { to: '/buy', label: 'Buy' },
       { to: '/sell', label: 'Sell' },
-      { to: '/blog', label: 'Market Insight' },
+      { to: '/blog', label: 'Market' },
       { to: '/meet-tim', label: 'Meet Tim' },
     ],
   },
