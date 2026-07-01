@@ -33,9 +33,18 @@ type BlogCard = {
   slug: string
   name: string
   card_description: string | null
-  image: string | null
+  // blog_posts.image is a JSONB column shaped { alt, url } (occasionally null,
+  // and tolerant of a legacy plain-string form).
+  image: { url?: string | null; alt?: string | null } | string | null
   publish_date: string | null
   tags_array: string[] | null
+}
+
+// Normalize the JSONB image field to a plain URL string for <img src>.
+function imgUrl(image: BlogCard['image']): string | null {
+  if (!image) return null
+  if (typeof image === 'string') return image
+  return image.url ?? null
 }
 
 // A merged building card model: hero imagery from home_page_payload.index,
@@ -167,11 +176,12 @@ function PsfChart({ data }: { data: PsfQuarter[] }) {
 }
 
 function BlogTile({ p }: { p: BlogCard }) {
+  const src = imgUrl(p.image)
   return (
     <Link to={`/blog/${p.slug}`} className="group block rounded-[22px] overflow-hidden border border-black/[0.07] bg-white mp-lift">
       <div className="h-40 overflow-hidden bg-[#f4f7fb]">
-        {p.image ? (
-          <img src={p.image} alt={p.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
+        {src ? (
+          <img src={src} alt={p.name} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]" />
         ) : (
           <div className="w-full h-full flex items-center justify-center"><Newspaper className="w-8 h-8" style={{ color: 'rgba(79,130,185,0.4)' }} /></div>
         )}
