@@ -37,10 +37,11 @@ export default function Login() {
   const [sendingLink, setSendingLink] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Once a session exists, leave the login screen. AuthContext resolves the
-  // role; App's AuthGate then routes to portal (client) or dashboard (agent).
+  // Once a session exists, leave the login screen for the app workspace.
+  // AuthGate resolves the role: agents land on /app (dashboard), client-only
+  // users are forwarded to /portal. The public apex "/" is never an auth target.
   useEffect(() => {
-    if (session) navigate('/', { replace: true })
+    if (session) navigate('/app', { replace: true })
   }, [session, navigate])
 
   async function handlePasswordLogin(e: FormEvent) {
@@ -54,7 +55,7 @@ export default function Login() {
       })
       if (signInErr) throw signInErr
       // Session change triggers the effect above; explicit nudge as backup.
-      setTimeout(() => navigate('/', { replace: true }), 300)
+      setTimeout(() => navigate('/app', { replace: true }), 300)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed.')
       setLoading(false)
