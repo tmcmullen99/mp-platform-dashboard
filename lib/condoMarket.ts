@@ -1,363 +1,308 @@
-// The bridge page — /market/:region/:slug
+// Read-only Supabase client pointed at the Condo Market project.
 //
-// A McMullen-branded editorial page that sits BETWEEN the MR market hub and the
-// Condo Market marketplace building page. Its job is a deliberate three-act
-// hand-off:
+// This is a SECOND, deliberately isolated client. It exists only to call the
+// public aggregate RPCs (median $/sf, closed sales, quarterly trends, per-market
+// home payload) that power the Market hub. It must never touch the McMullen
+// user session:
+//   - persistSession: false  (no auth writes)
+//   - a distinct storageKey  (never collides with the main client's session)
+//   - anon key only, RLS + anon-grants restrict it to aggregate reads
 //
-//   Act 1 — Agency frame. Navy, Playfair, agent voice. This is Tim's site, and
-//           he knows this building.
-//   Act 2 — A taste of the live data. Real stats from building_page_payload
-//           (12mo sales, median $/sf, how it compares to the city) so the
-//           visitor FEELS the marketplace's value before leaving.
-//   Act 3 — Attributed hand-off. A branded module that states plainly that
-//           McMullen Properties BUILT the marketplace, sells the depth of the
-//           live feed, then sends the visitor across with intent.
-//
-// Also sets a per-page <title> + meta description containing the address, so we
-// rank on our own domain for the building's address and name (the SEO goal).
-// Follows the document.title pattern already used in BlogPost.tsx.
+// The anon key is public by design (it ships in every browser bundle and is
+// protected by row-level security). Access is limited to the aggregate
+// intelligence RPCs + home_page_payload granted to `anon` on the Condo Market
+// project (all verified anon-executable).
 
-import { useEffect, useState } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
-import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
-import { MotionStyles, Reveal, PillButton, NAVY, NAVY_DEEP, INK } from '@/components/public/motion'
-import {
-  marketByRegionSlug, fetchBuildingDetail, fetchHomePayload,
-  condoMarketBuildingUrl, marketBuildingPath,
-  type BuildingDetail, type HomeIndexBuilding, type MarketConfig,
-} from '@/lib/condoMarket'
-import {
-  Building2, MapPin, ArrowLeft, ArrowRight, Video, Phone, ExternalLink,
-  TrendingDown, TrendingUp, Activity, Database, BadgeCheck,
-} from 'lucide-react'
+import { createClient } from '@supabase/supabase-js'
 
-const BLUE = '#4f82b9'
-const CAL = 'https://calendar.app.google/Lsb5v4UTcRn3eZh36'
+const CM_URL = 'https://kfqphwerygccpzntbbif.supabase.co'
+const CM_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcXBod2VyeWdjY3B6bnRiYmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTgxODQsImV4cCI6MjA5MTk3NDE4NH0.FGQD3BMLVLD9lE8LUBUjD3SqKhsCxjdnCiGV8MMnqpg'
 
-function num(n: number | null | undefined): string {
-  return n == null || !isFinite(n) ? '—' : n.toLocaleString()
-}
-function money(n: number | null | undefined): string {
-  if (n == null || !isFinite(n)) return '—'
-  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `$${Math.round(n / 1_000)}K`
-  return `$${n}`
-}
-function fmtDate(d: string | null): string {
-  if (!d) return ''
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+export const condoMarket = createClient(CM_URL, CM_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: 'cm-readonly-noauth',
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Market registry — one entry per market the Market hub covers.
+// `dataSlug` is what the Condo Market RPCs expect (p_market_slug).
+// `blogTags` are the McMullen blog tags that map a post to this market.
+// ---------------------------------------------------------------------------
+export type MarketConfig = {
+  key: string
+  name: string
+  shortName: string
+  dataSlug: string
+  regionSlug: string // URL segment for internal building pages, e.g. 'san-francisco'
+  cmDomain: string   // Condo Market domain for outbound backlinks (no www prefix)
+  blurb: string
+  blogTags: string[]
+  available: boolean // false = shown in the selector as "coming soon" (no live feed yet)
 }
 
-export default function MarketBuilding() {
-  const { region, slug } = useParams<{ region: string; slug: string }>()
-  const cfg: MarketConfig | undefined = region ? marketByRegionSlug(region) : undefined
+// Canonical Condo Market building-page URL for a slug on a given market.
+// Verified against the Condo Market _worker.js: /building/<slug>/ (singular,
+// trailing slash) on the www host. Links to this exact form hit the canonical
+// page with zero redirect hops.
+export function condoMarketBuildingUrl(cmDomain: string, slug: string): string {
+  return `https://www.${cmDomain}/building/${slug}/`
+}
 
-  const [detail, setDetail] = useState<BuildingDetail | null>(null)
-  const [nearby, setNearby] = useState<HomeIndexBuilding[]>([])
-  const [loaded, setLoaded] = useState(false)
+// Internal McMullen building-page path — this is what goes in OUR sitemap so we
+// rank for the building's address and name on our own domain.
+export function marketBuildingPath(regionSlug: string, slug: string): string {
+  return `/market/${regionSlug}/${slug}`
+}
 
-  useEffect(() => {
-    if (!cfg || !slug) return
-    let cancelled = false
-    setLoaded(false)
-    ;(async () => {
-      const [d, home] = await Promise.all([
-        fetchBuildingDetail(slug),
-        fetchHomePayload(cfg.dataSlug),
-      ])
-      if (cancelled) return
-      setDetail(d)
-      if (d) {
-        setNearby(
-          home.index
-            .filter((b) => b.slug !== d.slug && b.neighborhood && b.neighborhood === d.neighborhood)
-            .slice(0, 6)
-        )
-      }
-      setLoaded(true)
-    })()
-    return () => { cancelled = true }
-  }, [cfg, slug])
+// Market-agnostic blog tags — general real estate insight that can surface in
+// ANY market's feed alongside that market's own tagged posts.
+export const GENERAL_TAGS = ['investments', 'markets', 'news']
 
-  // Per-page title + meta for SEO — address + name on our own domain.
-  useEffect(() => {
-    const prevTitle = document.title
-    const metaEl = document.querySelector('meta[name="description"]')
-    const prevDesc = metaEl?.getAttribute('content') ?? null
+export const MARKETS: MarketConfig[] = [
+  {
+    key: 'sf',
+    name: 'San Francisco Condos',
+    shortName: 'San Francisco',
+    dataSlug: 'san-francisco-condo-market',
+    regionSlug: 'san-francisco',
+    cmDomain: 'sanfranciscocondomarket.com',
+    blurb:
+      'Ten years of closed sales across every San Francisco condo building — median price per square foot, live activity, and building-level detail.',
+    blogTags: [
+      'san-francisco', 'northside-san-francisco', 'pacific-heights', 'marina-district',
+      'russian-hill', 'nob-hill', 'south-beach', 'mission-bay', 'rincon-hill',
+      'yerba-buena', 'hayes-valley', 'richmond-district', 'cow-hollow', 'dogpatch',
+    ],
+    available: true,
+  },
+  {
+    key: 'sv',
+    name: 'Silicon Valley Condos',
+    shortName: 'Silicon Valley',
+    dataSlug: 'silicon-valley-condo-market',
+    regionSlug: 'silicon-valley',
+    cmDomain: 'siliconvalleycondomarket.com',
+    blurb:
+      'The condo and townhome market across Silicon Valley — closed-sale trends, price per square foot, and building activity from Campbell to Palo Alto.',
+    blogTags: [
+      'campbell', 'san-jose', 'santana-row', 'palo-alto', 'mountain-view',
+      'sunnyvale', 'cupertino', 'los-gatos', 'silicon-valley', 'santa-clara',
+    ],
+    available: true,
+  },
+  {
+    key: 'eichler',
+    name: 'Eichler Homes',
+    shortName: 'Eichler',
+    dataSlug: 'eichler-market',
+    regionSlug: 'eichler',
+    cmDomain: 'eichlermarket.com',
+    blurb:
+      'The mid-century Eichler market across the Bay Area — closed sales, price per square foot, and tract-level activity. Live feed coming soon.',
+    blogTags: ['eichler', 'mid-century', 'mid-century-modern'],
+    available: false,
+  },
+  {
+    key: 'campbell',
+    name: 'Campbell Market',
+    shortName: 'Campbell',
+    dataSlug: 'campbell-market',
+    regionSlug: 'campbell',
+    cmDomain: 'siliconvalleycondomarket.com',
+    blurb:
+      'The Campbell residential market — Tim’s home turf. A dedicated data feed is on the way.',
+    blogTags: ['campbell'],
+    available: false,
+  },
+]
 
-    if (detail) {
-      document.title = `${detail.name} — ${detail.address} | McMullen Properties`
-      const desc = `${detail.name} at ${detail.address}${detail.neighborhood ? ` in ${detail.neighborhood}` : ''}. Live sales data, median price per square foot, and building activity — indexed by McMullen Properties.`
-      metaEl?.setAttribute('content', desc)
-    }
-    return () => {
-      document.title = prevTitle
-      if (metaEl && prevDesc != null) metaEl.setAttribute('content', prevDesc)
-    }
-  }, [detail])
+export function marketByKey(key: string): MarketConfig | undefined {
+  return MARKETS.find((m) => m.key === key)
+}
 
-  // Unknown region → not a real page.
-  if (region && !cfg) return <Navigate to="/blog" replace />
+// Resolve a market by its region URL segment (for /market/:region/:slug routes).
+export function marketByRegionSlug(regionSlug: string): MarketConfig | undefined {
+  return MARKETS.find((m) => m.regionSlug === regionSlug)
+}
 
-  const cmUrl = cfg && slug ? condoMarketBuildingUrl(cfg.cmDomain, slug) : '#'
-  const marketName = detail?.market_name || cfg?.shortName || 'Condo Market'
-  const st = detail?.stats ?? null
+// ---------------------------------------------------------------------------
+// Typed shapes for the RPC responses we consume.
+// ---------------------------------------------------------------------------
 
-  // Comparative insight — the single most compelling live number.
-  const vsCity = st?.psf_vs_city_pct ?? null
-  const cheaper = vsCity != null && vsCity < 0
+// Citywide monthly aggregate (SF-only; no market slug). Retained for the
+// legacy LiveMarketStatBand (Stage-1 proof component). The Market hub itself
+// now uses the market-scoped home_page_payload instead.
+export type CityMonthly = {
+  month: string
+  sales: number
+  volume: number
+  median_price: number
+  median_psf: number
+  active_buildings: number
+}
 
-  return (
-    <div className="mp-scope bg-white">
-      <MotionStyles />
-      <PublicNav active="insight" />
+export type RecentSale = {
+  building_slug: string
+  unit_address: string
+  unit_label: string
+  sale_price: number
+  sale_date: string
+  sqft: number | null
+}
 
-      {/* ===== ACT 1 — AGENCY FRAME ===== */}
-      <section style={{ background: NAVY_DEEP }}>
-        <div className="max-w-5xl mx-auto px-6 pt-16 pb-14 md:pt-20 md:pb-16">
-          <Reveal>
-            <Link to={cfg ? `/blog?m=${cfg.key}` : '/blog'} className="inline-flex items-center gap-2 text-sm mb-8" style={{ color: '#91a1ba' }}>
-              <ArrowLeft className="w-4 h-4" /> {cfg ? `${cfg.shortName} market` : 'Market'}
-            </Link>
-          </Reveal>
+export type PsfQuarter = {
+  quarter_start: string
+  median_psf: number
+  sale_count: number
+}
 
-          {detail ? (
-            <>
-              <Reveal>
-                <div className="mp-mono text-[11px] uppercase tracking-[0.24em] mb-4" style={{ color: '#91a1ba' }}>
-                  {detail.neighborhood || cfg?.shortName}{detail.year_built ? ` · Built ${detail.year_built}` : ''}
-                </div>
-                <h1 className="mp-serif text-white text-[34px] md:text-[54px] leading-[1.04] font-semibold">{detail.name}</h1>
-              </Reveal>
-              <Reveal delay={0.08}>
-                <div className="flex items-center gap-2 mt-5" style={{ color: 'rgba(255,255,255,0.82)' }}>
-                  <MapPin className="w-4 h-4 shrink-0" style={{ color: BLUE }} />
-                  <span className="text-lg">{detail.address}</span>
-                </div>
-                <p className="mt-6 max-w-2xl leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)' }}>
-                  {detail.description
-                    ? detail.description
-                    : `A ${marketName} building I track closely${detail.unit_count ? ` — ${num(detail.unit_count)} condos` : ''}${detail.neighborhood ? ` in ${detail.neighborhood}` : ''}. Here's a live snapshot of how it's trading, and where to go for the full picture.`}
-                </p>
-              </Reveal>
-            </>
-          ) : (
-            <Reveal>
-              <h1 className="mp-serif text-white text-[32px] md:text-[46px] leading-[1.05] font-semibold">
-                {loaded ? 'Building not found' : 'Loading building…'}
-              </h1>
-              {loaded ? (
-                <p className="mt-4 text-lg" style={{ color: 'rgba(255,255,255,0.78)' }}>
-                  We couldn’t find that building in the {cfg?.shortName} market. It may have been renamed or removed.
-                </p>
-              ) : null}
-            </Reveal>
-          )}
-        </div>
-      </section>
+export type BuildingStat = {
+  slug: string
+  display_name: string
+  neighborhood: string
+  latitude: number
+  longitude: number
+  unit_count: number
+  sales: number
+  volume: number
+  median_price: number | null
+  median_psf: number | null
+  last_sale: string
+}
 
-      {detail ? (
-        <>
-          {/* ===== ACT 2 — A TASTE OF THE LIVE DATA ===== */}
-          <section className="max-w-5xl mx-auto px-6 py-14 md:py-16">
-            <Reveal>
-              <div className="flex items-center gap-2 mb-2">
-                <Activity className="w-4 h-4" style={{ color: BLUE }} />
-                <span className="mp-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: BLUE }}>Live snapshot</span>
-              </div>
-              <h2 className="mp-serif text-[26px] md:text-[36px] leading-[1.08] font-semibold" style={{ color: NAVY }}>
-                What the data shows right now.
-              </h2>
-            </Reveal>
+// home_page_payload — the per-market aggregate that powers the snapshot band,
+// the coverage/value/volume cards, and building hero imagery.
+export type HomeStats = {
+  units: number
+  buildings: number
+  sales_10y: number
+  volume_10y: number
+  total_sales: number
+  neighborhoods: number
+  median_psf_36mo: number
+  latest_sale_date: string
+}
+export type HomeIndexBuilding = {
+  slug: string
+  name: string
+  address: string
+  neighborhood: string | null
+  units: number | null
+  psf: number | null
+  lat: number | null
+  lng: number | null
+  year_built: number | null
+  active_count: number
+  hero_image_url: string | null
+}
+export type HomePayload = {
+  stats: HomeStats | null
+  index: HomeIndexBuilding[]
+  market: { region?: string; tagline?: string; brand?: string; domain?: string } | null
+}
 
-            {st ? (
-              <>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mt-8">
-                  <Reveal>
-                    <div>
-                      <div className="mp-serif text-[34px] md:text-[42px] font-semibold leading-none" style={{ color: NAVY }}>
-                        {st.median_psf_12mo != null ? `$${num(st.median_psf_12mo)}` : '—'}
-                      </div>
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.14em] mt-3" style={{ color: INK }}>Median $/sf · 12mo</div>
-                    </div>
-                  </Reveal>
-                  <Reveal delay={0.05}>
-                    <div>
-                      <div className="mp-serif text-[34px] md:text-[42px] font-semibold leading-none" style={{ color: NAVY }}>{num(st.sold_12mo)}</div>
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.14em] mt-3" style={{ color: INK }}>Sold · last 12mo</div>
-                    </div>
-                  </Reveal>
-                  <Reveal delay={0.1}>
-                    <div>
-                      <div className="mp-serif text-[34px] md:text-[42px] font-semibold leading-none" style={{ color: NAVY }}>
-                        {st.median_price_12mo != null ? money(st.median_price_12mo) : '—'}
-                      </div>
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.14em] mt-3" style={{ color: INK }}>Median price · 12mo</div>
-                    </div>
-                  </Reveal>
-                  <Reveal delay={0.15}>
-                    <div>
-                      <div className="mp-serif text-[34px] md:text-[42px] font-semibold leading-none" style={{ color: NAVY }}>{num(detail.active_count)}</div>
-                      <div className="mp-mono text-[10px] uppercase tracking-[0.14em] mt-3" style={{ color: INK }}>Active now</div>
-                    </div>
-                  </Reveal>
-                </div>
+// building_page_payload — per-building detail from the Condo Market marketplace.
+// We surface a slice of this on the MR bridge page as a "taste" of the live feed
+// before handing the visitor to the full marketplace page.
+export type BuildingLastSale = { date: string | null; unit: string | null; price: number | null }
+export type BuildingStats = {
+  last_sale: BuildingLastSale | null
+  sold_12mo: number | null
+  median_psf_12mo: number | null
+  median_psf_city: number | null
+  median_psf_hood: number | null
+  psf_vs_city_pct: number | null
+  psf_vs_hood_pct: number | null
+  median_price_12mo: number | null
+}
+export type BuildingDetail = {
+  slug: string
+  name: string
+  address: string
+  neighborhood: string | null
+  year_built: number | null
+  unit_count: number | null
+  active_count: number | null
+  hero_url: string | null
+  tagline: string | null
+  description: string | null
+  market_name: string | null
+  stats: BuildingStats | null
+  is_live: boolean
+}
 
-                {/* the standout comparative insight */}
-                {vsCity != null && vsCity !== 0 ? (
-                  <Reveal delay={0.1}>
-                    <div className="mt-8 rounded-[22px] border border-black/[0.07] bg-[#f4f7fb] p-6 md:p-7 flex items-start gap-4">
-                      {cheaper
-                        ? <TrendingDown className="w-6 h-6 mt-0.5 shrink-0" style={{ color: '#3f7d5a' }} />
-                        : <TrendingUp className="w-6 h-6 mt-0.5 shrink-0" style={{ color: '#b0654a' }} />}
-                      <div>
-                        <div className="mp-serif text-xl font-semibold" style={{ color: NAVY }}>
-                          {cheaper ? 'Trades below' : 'Trades above'} the {marketName} median
-                        </div>
-                        <p className="mt-1.5 leading-relaxed" style={{ color: INK }}>
-                          At ${num(st.median_psf_12mo)}/sf, {detail.name} is about{' '}
-                          <strong style={{ color: NAVY }}>{Math.abs(vsCity)}% {cheaper ? 'below' : 'above'}</strong>{' '}
-                          the citywide median of ${num(st.median_psf_city)}/sf over the last year.
-                        </p>
-                      </div>
-                    </div>
-                  </Reveal>
-                ) : null}
+// ---------------------------------------------------------------------------
+// Fetch helpers — thin wrappers over the aggregate RPCs. All swallow errors to
+// safe empty values so the page degrades gracefully instead of throwing.
+// ---------------------------------------------------------------------------
+export async function fetchHomePayload(dataSlug: string): Promise<HomePayload> {
+  const { data, error } = await condoMarket.rpc('home_page_payload', { p_market_slug: dataSlug })
+  if (error || !data) return { stats: null, index: [], market: null }
+  const d = data as any
+  return {
+    stats: (d.stats as HomeStats) ?? null,
+    index: Array.isArray(d.index) ? (d.index as HomeIndexBuilding[]) : [],
+    market: (d.market as HomePayload['market']) ?? null,
+  }
+}
 
-                {st.last_sale && st.last_sale.price ? (
-                  <Reveal delay={0.12}>
-                    <div className="mt-4 text-sm" style={{ color: INK }}>
-                      Most recent recorded sale: unit {st.last_sale.unit} closed at{' '}
-                      <strong style={{ color: NAVY }}>{money(st.last_sale.price)}</strong> on {fmtDate(st.last_sale.date)}.
-                    </div>
-                  </Reveal>
-                ) : null}
-              </>
-            ) : (
-              <p className="mt-6 leading-relaxed" style={{ color: INK }}>
-                Live sales data for this building is being indexed. The full record is on the marketplace.
-              </p>
-            )}
-          </section>
+// Full per-building detail for the MR bridge page. Returns null if the slug
+// doesn't resolve or the building isn't live on the marketplace.
+export async function fetchBuildingDetail(slug: string): Promise<BuildingDetail | null> {
+  const { data, error } = await condoMarket.rpc('building_page_payload', { p_slug: slug })
+  if (error || !data) return null
+  const d = data as any
+  if (d.is_live !== true) return null
+  return {
+    slug: d.slug ?? slug,
+    name: d.name ?? '',
+    address: d.address ?? '',
+    neighborhood: d.neighborhood ?? null,
+    year_built: d.year_built ?? null,
+    unit_count: d.unit_count ?? null,
+    active_count: d.active_count ?? null,
+    hero_url: d.hero_url ?? null,
+    tagline: d.tagline ?? null,
+    description: d.description ?? null,
+    market_name: d.market_name ?? null,
+    stats: (d.stats as BuildingStats) ?? null,
+    is_live: true,
+  }
+}
 
-          {/* ===== ACT 3 — ATTRIBUTED HAND-OFF ===== */}
-          <section style={{ background: NAVY }}>
-            <div className="max-w-5xl mx-auto px-6 py-16 md:py-20">
-              <Reveal>
-                <div className="inline-flex items-center gap-2 rounded-full px-4 py-1.5 mb-6" style={{ background: 'rgba(145,161,186,0.14)', border: '1px solid rgba(145,161,186,0.25)' }}>
-                  <BadgeCheck className="w-4 h-4" style={{ color: '#91a1ba' }} />
-                  <span className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: '#91a1ba' }}>
-                    Built by McMullen Properties
-                  </span>
-                </div>
-              </Reveal>
-              <Reveal delay={0.05}>
-                <h2 className="mp-serif text-white text-[30px] md:text-[44px] leading-[1.06] font-semibold max-w-3xl">
-                  We built {marketName} to track every building like this one.
-                </h2>
-              </Reveal>
-              <Reveal delay={0.1}>
-                <p className="mt-6 text-lg leading-relaxed max-w-2xl" style={{ color: 'rgba(255,255,255,0.78)' }}>
-                  {marketName} is our own live marketplace — ten years of closed sales for every unit,
-                  median price-per-square-foot history, owner tenure, and real-time activity. The snapshot
-                  above is a fraction of what’s on {detail.name}’s full page.
-                </p>
-              </Reveal>
+// Citywide monthly aggregate (SF-only; no market slug). Retained for the
+// legacy LiveMarketStatBand proof component.
+export async function fetchCityMonthly(months = 36): Promise<CityMonthly[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_city_monthly', { p_months: months })
+  if (error) return []
+  return (data as CityMonthly[]) ?? []
+}
 
-              <div className="grid sm:grid-cols-3 gap-5 mt-10">
-                <Reveal delay={0.12}>
-                  <div className="rounded-[18px] p-5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Database className="w-5 h-5 mb-3" style={{ color: '#91a1ba' }} />
-                    <div className="text-white font-medium">Every unit, ten years</div>
-                    <div className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Every recorded closing, not just averages.</div>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.16}>
-                  <div className="rounded-[18px] p-5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Activity className="w-5 h-5 mb-3" style={{ color: '#91a1ba' }} />
-                    <div className="text-white font-medium">Updated continuously</div>
-                    <div className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>New sales flow in as they record.</div>
-                  </div>
-                </Reveal>
-                <Reveal delay={0.2}>
-                  <div className="rounded-[18px] p-5" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                    <Building2 className="w-5 h-5 mb-3" style={{ color: '#91a1ba' }} />
-                    <div className="text-white font-medium">Owner tenure & activity</div>
-                    <div className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.6)' }}>Who’s held, who’s selling, what’s live.</div>
-                  </div>
-                </Reveal>
-              </div>
+export async function fetchRecentSales(dataSlug: string, limit = 12): Promise<RecentSale[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_recent_sales', {
+    p_limit: limit,
+    p_market_slug: dataSlug,
+  })
+  if (error) return []
+  return (data as RecentSale[]) ?? []
+}
 
-              <Reveal delay={0.15}>
-                <div className="mt-10">
-                  <a href={cmUrl} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 rounded-full px-7 py-3.5 text-base font-medium"
-                    style={{ background: '#fff', color: NAVY }}>
-                    Open {detail.name} on {marketName} <ExternalLink className="w-4 h-4" />
-                  </a>
-                  <div className="mt-3 mp-mono text-[11px] uppercase tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                    Opens {marketName.toLowerCase().includes('condo') ? marketName : `${marketName} Condo Market`} in a new tab
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </section>
+export async function fetchPsfQuarterly(dataSlug: string): Promise<PsfQuarter[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_psf_quarterly', { p_market_slug: dataSlug })
+  if (error) return []
+  return (data as PsfQuarter[]) ?? []
+}
 
-          {/* nearby buildings — internal links keep the visitor on MR */}
-          {nearby.length ? (
-            <section className="max-w-5xl mx-auto px-6 py-14 md:py-20">
-              <Reveal>
-                <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-6" style={{ color: BLUE }}>
-                  More in {detail.neighborhood}
-                </div>
-              </Reveal>
-              <div className="grid md:grid-cols-3 gap-5">
-                {nearby.map((b, i) => (
-                  <Reveal key={b.slug} delay={0.05 * i}>
-                    <Link to={marketBuildingPath(cfg!.regionSlug, b.slug)}
-                      className="mp-lift block rounded-[22px] border border-black/[0.07] bg-white p-6 h-full">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Building2 className="w-4 h-4" style={{ color: BLUE }} />
-                        <span className="mp-mono text-[10px] uppercase tracking-[0.14em]" style={{ color: INK }}>{b.neighborhood}</span>
-                      </div>
-                      <h3 className="mp-serif text-lg font-semibold" style={{ color: NAVY }}>{b.name}</h3>
-                      <div className="text-sm mt-1.5" style={{ color: INK }}>{b.address}</div>
-                    </Link>
-                  </Reveal>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {/* agent CTA */}
-          <section style={{ background: '#f4f7fb' }}>
-            <div className="max-w-4xl mx-auto px-6 py-16 md:py-20 text-center">
-              <Reveal>
-                <h2 className="mp-serif text-[28px] md:text-[42px] leading-[1.06] font-semibold" style={{ color: NAVY }}>
-                  Buying or selling at {detail.name}?
-                </h2>
-                <p className="mt-5 text-lg leading-relaxed" style={{ color: INK }}>
-                  I know this building and this market. Let’s talk through your options on a quick call.
-                </p>
-                <div className="flex flex-wrap gap-3 justify-center mt-8">
-                  <PillButton href={CAL}><Video className="w-4 h-4" /> Schedule a video call with Tim</PillButton>
-                  <PillButton href="tel:+14156919272" variant="secondary"><Phone className="w-4 h-4" /> (415) 691-9272</PillButton>
-                </div>
-              </Reveal>
-            </div>
-          </section>
-        </>
-      ) : (
-        <section className="max-w-5xl mx-auto px-6 py-16">
-          {loaded ? (
-            <Link to={cfg ? `/blog?m=${cfg.key}` : '/blog'} className="inline-flex items-center gap-2 text-sm font-medium" style={{ color: BLUE }}>
-              Back to the {cfg?.shortName} market <ArrowRight className="w-4 h-4" />
-            </Link>
-          ) : null}
-        </section>
-      )}
-
-      <PublicFooter />
-    </div>
-  )
+export async function fetchBuildingStats(dataSlug: string, windowMonths = 12): Promise<BuildingStat[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_building_stats', {
+    p_window_months: windowMonths,
+    p_market_slug: dataSlug,
+  })
+  if (error) return []
+  return (data as BuildingStat[]) ?? []
 }
