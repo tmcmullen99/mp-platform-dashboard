@@ -6,6 +6,7 @@
 
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
+import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import {
   MotionStyles,
   Reveal,
@@ -261,6 +262,7 @@ export default function ServiceFlips() {
         </div>
       </section>
 
+      <ServiceArticleFeed />
       <PublicFooter />
     </div>
   )
