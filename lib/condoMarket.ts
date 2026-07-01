@@ -104,6 +104,19 @@ export function marketByKey(key: string): MarketConfig | undefined {
 // ---------------------------------------------------------------------------
 // Typed shapes for the RPC responses we consume.
 // ---------------------------------------------------------------------------
+
+// Citywide monthly aggregate (SF-only; no market slug). Retained for the
+// legacy LiveMarketStatBand (Stage-1 proof component). The Market hub itself
+// now uses the market-scoped home_page_payload instead.
+export type CityMonthly = {
+  month: string
+  sales: number
+  volume: number
+  median_price: number
+  median_psf: number
+  active_buildings: number
+}
+
 export type RecentSale = {
   building_slug: string
   unit_address: string
@@ -177,6 +190,14 @@ export async function fetchHomePayload(dataSlug: string): Promise<HomePayload> {
     index: Array.isArray(d.index) ? (d.index as HomeIndexBuilding[]) : [],
     market: (d.market as HomePayload['market']) ?? null,
   }
+}
+
+// Citywide monthly aggregate (SF-only; no market slug). Retained for the
+// legacy LiveMarketStatBand proof component.
+export async function fetchCityMonthly(months = 36): Promise<CityMonthly[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_city_monthly', { p_months: months })
+  if (error) return []
+  return (data as CityMonthly[]) ?? []
 }
 
 export async function fetchRecentSales(dataSlug: string, limit = 12): Promise<RecentSale[]> {
