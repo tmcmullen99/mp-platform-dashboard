@@ -50,6 +50,7 @@ import ServiceCommercial from '@/pages/public/ServiceCommercial'
 import ServiceImprovement from '@/pages/public/ServiceImprovement'
 import ServiceFlips from '@/pages/public/ServiceFlips'
 import Sitemap from '@/pages/public/Sitemap'
+import MarketTest from '@/pages/public/MarketTest'
 import CMAReview from '@/pages/public/CMAReview'
 import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
 import DisclosureReview from '@/pages/public/DisclosureReview'
@@ -115,6 +116,7 @@ export default function App() {
           <Route path="/tools/off-market" element={<OffMarketTool />} />
           <Route path="/luxury-listings" element={<LuxuryListings />} />
           <Route path="/sitemap" element={<Sitemap />} />
+          <Route path="/market-test" element={<MarketTest />} />
 
           {/* ---- App (auth) ---- */}
           <Route path="/login" element={<Login />} />
