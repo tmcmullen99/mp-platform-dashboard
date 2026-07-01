@@ -1,16 +1,17 @@
 // Read-only Supabase client pointed at the Condo Market project.
 //
 // This is a SECOND, deliberately isolated client. It exists only to call the
-// public aggregate `intelligence_*` RPCs (median $/sf, closed sales, quarterly
-// trends) that power the Market Insight pages. It must never touch the McMullen
+// public aggregate RPCs (median $/sf, closed sales, quarterly trends, per-market
+// home payload) that power the Market hub. It must never touch the McMullen
 // user session:
 //   - persistSession: false  (no auth writes)
 //   - a distinct storageKey  (never collides with the main client's session)
 //   - anon key only, RLS + anon-grants restrict it to aggregate reads
 //
 // The anon key is public by design (it ships in every browser bundle and is
-// protected by row-level security). Access is limited to the five aggregate
-// intelligence RPCs granted to `anon` on the Condo Market project.
+// protected by row-level security). Access is limited to the aggregate
+// intelligence RPCs + home_page_payload granted to `anon` on the Condo Market
+// project (all verified anon-executable).
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -28,7 +29,7 @@ export const condoMarket = createClient(CM_URL, CM_ANON_KEY, {
 })
 
 // ---------------------------------------------------------------------------
-// Market registry — one entry per market the Market Insight hub covers.
+// Market registry — one entry per market the Market hub covers.
 // `dataSlug` is what the Condo Market RPCs expect (p_market_slug).
 // `blogTags` are the McMullen blog tags that map a post to this market.
 // ---------------------------------------------------------------------------
@@ -103,22 +104,13 @@ export function marketByKey(key: string): MarketConfig | undefined {
 // ---------------------------------------------------------------------------
 // Typed shapes for the RPC responses we consume.
 // ---------------------------------------------------------------------------
-export type CityMonthly = {
-  month: string
-  sales: number
-  volume: number
-  median_price: number
-  median_psf: number
-  active_buildings: number
-}
-
 export type RecentSale = {
   building_slug: string
   unit_address: string
   unit_label: string
   sale_price: number
   sale_date: string
-  sqft: number
+  sqft: number | null
 }
 
 export type PsfQuarter = {
@@ -136,18 +128,55 @@ export type BuildingStat = {
   unit_count: number
   sales: number
   volume: number
-  median_price: number
-  median_psf: number
+  median_price: number | null
+  median_psf: number | null
   last_sale: string
 }
 
+// home_page_payload — the per-market aggregate that powers the snapshot band,
+// the coverage/value/volume cards, and building hero imagery.
+export type HomeStats = {
+  units: number
+  buildings: number
+  sales_10y: number
+  volume_10y: number
+  total_sales: number
+  neighborhoods: number
+  median_psf_36mo: number
+  latest_sale_date: string
+}
+export type HomeIndexBuilding = {
+  slug: string
+  name: string
+  address: string
+  neighborhood: string | null
+  units: number | null
+  psf: number | null
+  lat: number | null
+  lng: number | null
+  year_built: number | null
+  active_count: number
+  hero_image_url: string | null
+}
+export type HomePayload = {
+  stats: HomeStats | null
+  index: HomeIndexBuilding[]
+  market: { region?: string; tagline?: string; brand?: string } | null
+}
+
 // ---------------------------------------------------------------------------
-// Fetch helpers — thin wrappers over the aggregate RPCs.
+// Fetch helpers — thin wrappers over the aggregate RPCs. All swallow errors to
+// safe empty values so the page degrades gracefully instead of throwing.
 // ---------------------------------------------------------------------------
-export async function fetchCityMonthly(months = 36): Promise<CityMonthly[]> {
-  const { data, error } = await condoMarket.rpc('intelligence_city_monthly', { p_months: months })
-  if (error) return []
-  return (data as CityMonthly[]) ?? []
+export async function fetchHomePayload(dataSlug: string): Promise<HomePayload> {
+  const { data, error } = await condoMarket.rpc('home_page_payload', { p_market_slug: dataSlug })
+  if (error || !data) return { stats: null, index: [], market: null }
+  const d = data as any
+  return {
+    stats: (d.stats as HomeStats) ?? null,
+    index: Array.isArray(d.index) ? (d.index as HomeIndexBuilding[]) : [],
+    market: (d.market as HomePayload['market']) ?? null,
+  }
 }
 
 export async function fetchRecentSales(dataSlug: string, limit = 12): Promise<RecentSale[]> {
