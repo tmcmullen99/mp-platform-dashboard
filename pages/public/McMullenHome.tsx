@@ -362,6 +362,7 @@ export default function McMullenHome() {
             <a href="/sell" className="hover:text-white transition-colors">Sell</a>
             <a href="/services" className="hover:text-white transition-colors">Services</a>
             <a href="/blog" className="hover:text-white transition-colors">Market Insight</a>
+            <a href="/login" className="hover:text-white transition-colors" style={{ color: 'rgba(255,255,255,0.5)' }}>Agent login</a>
           </nav>
           <div className="flex items-center gap-2">
             <a
@@ -407,6 +408,9 @@ export default function McMullenHome() {
               ))}
               <a href="tel:+14156919272" onClick={() => setMenuOpen(false)} className="py-3 text-base text-white font-medium">
                 (415) 691-9272
+              </a>
+              <a href="/login" onClick={() => setMenuOpen(false)} className="py-3 text-base font-medium" style={{ color: 'rgba(255,255,255,0.6)' }}>
+                Agent login
               </a>
             </nav>
           </div>
