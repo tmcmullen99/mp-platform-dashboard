@@ -51,6 +51,7 @@ import ServiceImprovement from '@/pages/public/ServiceImprovement'
 import ServiceFlips from '@/pages/public/ServiceFlips'
 import Sitemap from '@/pages/public/Sitemap'
 import MarketPage from '@/pages/public/MarketPage'
+import MarketBuilding from '@/pages/public/MarketBuilding'
 import CMAReview from '@/pages/public/CMAReview'
 import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
 import DisclosureReview from '@/pages/public/DisclosureReview'
@@ -91,6 +92,7 @@ export default function App() {
           <Route path="/services/home-improvement" element={<ServiceImprovement />} />
           <Route path="/services/flips" element={<ServiceFlips />} />
           <Route path="/blog" element={<MarketPage />} />
+          <Route path="/market/:region/:slug" element={<MarketBuilding />} />
           <Route path="/insights" element={<BlogIndex />} />
           <Route path="/blog/:slug" element={<BlogPost />} />
           <Route path="/t/:tenantSlug" element={<TenantHome />} />
