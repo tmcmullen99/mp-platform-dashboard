@@ -1,0 +1,148 @@
+// Read-only Supabase client pointed at the Condo Market project.
+//
+// This is a SECOND, deliberately isolated client. It exists only to call the
+// public aggregate `intelligence_*` RPCs (median $/sf, closed sales, quarterly
+// trends) that power the Market Insight pages. It must never touch the McMullen
+// user session:
+//   - persistSession: false  (no auth writes)
+//   - a distinct storageKey  (never collides with the main client's session)
+//   - anon key only, RLS + anon-grants restrict it to aggregate reads
+//
+// The anon key is public by design (it ships in every browser bundle and is
+// protected by row-level security). Access is limited to the five aggregate
+// intelligence RPCs granted to `anon` on the Condo Market project.
+
+import { createClient } from '@supabase/supabase-js'
+
+const CM_URL = 'https://kfqphwerygccpzntbbif.supabase.co'
+const CM_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtmcXBod2VyeWdjY3B6bnRiYmlmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzOTgxODQsImV4cCI6MjA5MTk3NDE4NH0.FGQD3BMLVLD9lE8LUBUjD3SqKhsCxjdnCiGV8MMnqpg'
+
+export const condoMarket = createClient(CM_URL, CM_ANON_KEY, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false,
+    detectSessionInUrl: false,
+    storageKey: 'cm-readonly-noauth',
+  },
+})
+
+// ---------------------------------------------------------------------------
+// Market registry — one entry per market the Market Insight hub covers.
+// `dataSlug` is what the Condo Market RPCs expect (p_market_slug).
+// `blogTags` are the McMullen blog tags that map a post to this market.
+// ---------------------------------------------------------------------------
+export type MarketConfig = {
+  key: string
+  name: string
+  shortName: string
+  dataSlug: string
+  blurb: string
+  blogTags: string[]
+}
+
+export const MARKETS: MarketConfig[] = [
+  {
+    key: 'sf',
+    name: 'San Francisco Condos',
+    shortName: 'San Francisco',
+    dataSlug: 'san-francisco-condo-market',
+    blurb:
+      'Ten years of closed sales across every San Francisco condo building — median price per square foot, live activity, and building-level detail.',
+    blogTags: [
+      'san-francisco', 'northside-san-francisco', 'pacific-heights', 'marina-district',
+      'russian-hill', 'nob-hill', 'south-beach', 'mission-bay', 'rincon-hill',
+      'yerba-buena', 'hayes-valley', 'richmond-district', 'cow-hollow', 'dogpatch',
+    ],
+  },
+  {
+    key: 'sv',
+    name: 'Silicon Valley Condos',
+    shortName: 'Silicon Valley',
+    dataSlug: 'silicon-valley-condo-market',
+    blurb:
+      'The condo and townhome market across Silicon Valley — closed-sale trends, price per square foot, and building activity from Campbell to Palo Alto.',
+    blogTags: [
+      'campbell', 'san-jose', 'santana-row', 'palo-alto', 'mountain-view',
+      'sunnyvale', 'cupertino', 'los-gatos', 'silicon-valley', 'santa-clara',
+    ],
+  },
+]
+
+export function marketByKey(key: string): MarketConfig | undefined {
+  return MARKETS.find((m) => m.key === key)
+}
+
+// ---------------------------------------------------------------------------
+// Typed shapes for the RPC responses we consume.
+// ---------------------------------------------------------------------------
+export type CityMonthly = {
+  month: string
+  sales: number
+  volume: number
+  median_price: number
+  median_psf: number
+  active_buildings: number
+}
+
+export type RecentSale = {
+  building_slug: string
+  unit_address: string
+  unit_label: string
+  sale_price: number
+  sale_date: string
+  sqft: number
+}
+
+export type PsfQuarter = {
+  quarter_start: string
+  median_psf: number
+  sale_count: number
+}
+
+export type BuildingStat = {
+  slug: string
+  display_name: string
+  neighborhood: string
+  latitude: number
+  longitude: number
+  unit_count: number
+  sales: number
+  volume: number
+  median_price: number
+  median_psf: number
+  last_sale: string
+}
+
+// ---------------------------------------------------------------------------
+// Fetch helpers — thin wrappers over the aggregate RPCs.
+// ---------------------------------------------------------------------------
+export async function fetchCityMonthly(months = 36): Promise<CityMonthly[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_city_monthly', { p_months: months })
+  if (error) return []
+  return (data as CityMonthly[]) ?? []
+}
+
+export async function fetchRecentSales(dataSlug: string, limit = 12): Promise<RecentSale[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_recent_sales', {
+    p_limit: limit,
+    p_market_slug: dataSlug,
+  })
+  if (error) return []
+  return (data as RecentSale[]) ?? []
+}
+
+export async function fetchPsfQuarterly(dataSlug: string): Promise<PsfQuarter[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_psf_quarterly', { p_market_slug: dataSlug })
+  if (error) return []
+  return (data as PsfQuarter[]) ?? []
+}
+
+export async function fetchBuildingStats(dataSlug: string, windowMonths = 12): Promise<BuildingStat[]> {
+  const { data, error } = await condoMarket.rpc('intelligence_building_stats', {
+    p_window_months: windowMonths,
+    p_market_slug: dataSlug,
+  })
+  if (error) return []
+  return (data as BuildingStat[]) ?? []
+}
