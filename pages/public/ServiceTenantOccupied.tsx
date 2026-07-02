@@ -35,7 +35,7 @@ import {
 } from 'lucide-react'
 
 const HERO_IMG =
-  'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site/175-huckleberry-drive/000.jpg'
+  'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site/sf-skyline-dusk.webp'
 
 const ACCENT = LOGO_BLUE
 
