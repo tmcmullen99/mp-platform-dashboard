@@ -143,6 +143,7 @@ export const SERVICES: ServiceConfig[] = [
   { slug: 'commercial',        name: 'Commercial Real Estate',   tag: 'service:commercial' },
   { slug: 'home-improvement',  name: 'Home Improvement',         tag: 'service:home-improvement' },
   { slug: 'flips',             name: 'Flips & Off-Market',       tag: 'service:flips' },
+  { slug: 'sell-with-tenants', name: 'Sell Tenant-Occupied',     tag: 'service:sell-with-tenants' },
 ]
 
 export function serviceBySlug(slug: string): ServiceConfig | undefined {
