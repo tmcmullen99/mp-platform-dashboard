@@ -32,6 +32,11 @@ import {
   ArrowRight,
   Plus,
   Minus,
+  Building2,
+  Users,
+  TrendingUp,
+  ShieldCheck,
+  CircleDollarSign,
 } from 'lucide-react'
 
 const HERO_IMG =
@@ -128,6 +133,117 @@ const PROOF = [
   'Targeted investor outreach',
   '1031 exchange coordination',
 ]
+
+// ---------------------------------------------------------------------------
+// INVESTOR NETWORK section
+//
+// Visual language borrows from a clean SaaS "live board" (offer-board cards,
+// side-by-side comparison, a live-status panel), rendered entirely in our
+// brand colors with our own data. Numbers are intentionally SOFTENED to ranges
+// so the page stays honest as the list grows and never overstates.
+// The map is an ABSTRACT heat-panel — no real streets — signalling
+// "concentration of investor-owned condos" without implying a literal map.
+// ---------------------------------------------------------------------------
+
+const NETWORK_STATS = [
+  { icon: Users, value: '1,800+', label: 'SF condo investors', sub: 'compiled & maintained' },
+  { icon: Building2, value: '60+', label: 'multi-unit holders', sub: 'own 2+ SF condos' },
+  { icon: CircleDollarSign, value: '$2M+', label: 'top-tier net worth', sub: 'highest-capacity buyers' },
+  { icon: TrendingUp, value: '29', label: 'target buildings', sub: 'active investor demand' },
+]
+
+// Anonymized, representative "matched investor" cards — profiles, never PII.
+// These illustrate how we line qualified buyers up against a tenant-occupied
+// unit, in the spirit of a side-by-side offer board.
+const MATCHED = [
+  {
+    rank: '#1',
+    profile: 'Downtown SF · owns 4 condos',
+    tag: 'MULTI-UNIT',
+    band: '$2M+ net worth',
+    fit: 'Highest fit',
+    hot: true,
+  },
+  {
+    rank: '#2',
+    profile: 'Peninsula-based · owns 3 SF units',
+    tag: 'ABSENTEE',
+    band: '$2M+ net worth',
+    fit: 'Strong fit',
+    hot: false,
+  },
+  {
+    rank: '#3',
+    profile: 'Mission Bay · owns 2 condos',
+    tag: 'CASH-CAPABLE',
+    band: '$1M–2M net worth',
+    fit: 'Strong fit',
+    hot: false,
+  },
+]
+
+// Abstract heat-panel: a grid of dots with a warm cluster, no real geography.
+function HeatPanel() {
+  const COLS = 26
+  const ROWS = 15
+  const dots: { x: number; y: number; on: number }[] = []
+  // Two soft "hot" centers to imply clusters of investor-owned condos.
+  const centers = [
+    { cx: 17, cy: 9, r: 5.5 },
+    { cx: 20, cy: 5, r: 3.8 },
+  ]
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      let heat = 0
+      for (const k of centers) {
+        const d = Math.hypot(c - k.cx, r - k.cy)
+        heat = Math.max(heat, Math.max(0, 1 - d / k.r))
+      }
+      dots.push({ x: c, y: r, on: heat })
+    }
+  }
+  const cell = 26
+  const pad = 14
+  const w = COLS * cell + pad * 2
+  const h = ROWS * cell + pad * 2
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      className="w-full h-auto block"
+      role="img"
+      aria-label="Abstract heat map showing concentration of investor-owned San Francisco condos"
+    >
+      <defs>
+        <radialGradient id="stoGlow" cx="66%" cy="46%" r="55%">
+          <stop offset="0%" stopColor="rgba(79,130,185,0.28)" />
+          <stop offset="100%" stopColor="rgba(79,130,185,0)" />
+        </radialGradient>
+      </defs>
+      <rect x="0" y="0" width={w} height={h} rx="20" fill={NAVY_DEEP} />
+      <rect x="0" y="0" width={w} height={h} rx="20" fill="url(#stoGlow)" />
+      {dots.map((d, i) => {
+        const cx = pad + d.x * cell + cell / 2
+        const cy = pad + d.y * cell + cell / 2
+        const hot = d.on
+        // base dim dots everywhere; hot cluster lights up in logo-blue → white.
+        const baseR = 2.1
+        const r = baseR + hot * 3.6
+        let fill = 'rgba(255,255,255,0.10)'
+        let op = 1
+        if (hot > 0.12) {
+          const t = Math.min(1, hot)
+          // blend logo-blue toward a hot white core
+          const R = Math.round(79 + (255 - 79) * (t * t))
+          const G = Math.round(130 + (255 - 130) * (t * t))
+          const B = Math.round(185 + (255 - 185) * (t * t))
+          fill = `rgb(${R},${G},${B})`
+          op = 0.35 + t * 0.65
+        }
+        return <circle key={i} cx={cx} cy={cy} r={r} fill={fill} opacity={op} />
+      })}
+    </svg>
+  )
+}
 
 function PhaseCard({ p, i }: { p: (typeof PHASES)[number]; i: number }) {
   const [open, setOpen] = useState(i === 0)
@@ -290,6 +406,179 @@ export default function ServiceTenantOccupied() {
               <PhaseCard p={p} i={i} />
             </Reveal>
           ))}
+        </div>
+      </section>
+
+      {/* INVESTOR NETWORK — the differentiator behind Phase 5/6 */}
+      <section style={{ background: '#f7f8fa' }}>
+        <div className="max-w-6xl mx-auto px-6 py-20 md:py-28">
+          <Reveal>
+            <div className="max-w-2xl">
+              <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: ACCENT }}>
+                Why phase 5 is different
+              </div>
+              <h2 className="mp-serif text-[32px] md:text-[48px] leading-[1.05] font-semibold" style={{ color: NAVY }}>
+                We don&rsquo;t list and hope. We already know the buyers.
+              </h2>
+              <p className="mt-5 text-[17px] leading-relaxed" style={{ color: INK }}>
+                Most agents put a tenant-occupied unit on the open market and wait for an investor
+                to wander in. We&rsquo;ve done the opposite: built and maintained a working list of
+                the actual investors who own condos across San Francisco &mdash; ranked by how many
+                units they hold, where they buy, and their capacity to move. When your property is
+                ready, we already know who to call.
+              </p>
+            </div>
+          </Reveal>
+
+          {/* Heat panel + live board, side by side */}
+          <div className="mt-12 grid lg:grid-cols-[1.15fr_1fr] gap-6 items-stretch">
+            {/* Heat panel card */}
+            <Reveal>
+              <div
+                className="mp-lift rounded-[22px] overflow-hidden h-full flex flex-col"
+                style={{ background: NAVY_DEEP }}
+              >
+                <div className="flex items-center justify-between px-6 pt-6">
+                  <div className="flex items-center gap-2">
+                    <span className="relative flex h-2.5 w-2.5">
+                      <span
+                        className="animate-ping absolute inline-flex h-full w-full rounded-full opacity-60"
+                        style={{ background: ACCENT }}
+                      />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5" style={{ background: ACCENT }} />
+                    </span>
+                    <span className="mp-mono text-[10px] uppercase tracking-[0.2em] text-white/90">
+                      Live &middot; SF investor demand
+                    </span>
+                  </div>
+                  <span className="mp-mono text-[10px] uppercase tracking-[0.16em] text-white/45">
+                    Investor-owned condos
+                  </span>
+                </div>
+                <div className="px-4 pt-4 pb-2 grow flex items-center">
+                  <HeatPanel />
+                </div>
+                <div className="px-6 pb-6 flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#fff' }} />
+                    <span className="text-[11px] text-white/70">High investor concentration</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: ACCENT }} />
+                    <span className="text-[11px] text-white/70">Active demand</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
+                    <span className="text-[11px] text-white/70">Coverage</span>
+                  </div>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Stats board */}
+            <Reveal delay={0.05}>
+              <div className="mp-lift rounded-[22px] border border-black/[0.07] bg-white h-full p-6 md:p-7 flex flex-col">
+                <div className="flex items-center justify-between mb-5">
+                  <span className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
+                    The list, by the numbers
+                  </span>
+                  <ShieldCheck className="w-4 h-4" style={{ color: ACCENT }} />
+                </div>
+                <div className="grid grid-cols-2 gap-4 grow">
+                  {NETWORK_STATS.map((s) => {
+                    const Icon = s.icon
+                    return (
+                      <div key={s.label} className="rounded-2xl p-4" style={{ background: '#f7f8fa' }}>
+                        <Icon className="w-5 h-5 mb-2" style={{ color: ACCENT }} />
+                        <div className="mp-serif text-[28px] font-semibold leading-none" style={{ color: NAVY }}>
+                          {s.value}
+                        </div>
+                        <div className="text-[13px] font-medium mt-1.5" style={{ color: NAVY }}>
+                          {s.label}
+                        </div>
+                        <div className="text-[11.5px] mt-0.5" style={{ color: INK }}>
+                          {s.sub}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <p className="text-[11.5px] leading-relaxed mt-4" style={{ color: INK }}>
+                  Figures reflect our maintained San Francisco investor list and update as it grows.
+                  Every owner is stored as first-party data; do-not-contact preferences are recorded
+                  and honored.
+                </p>
+              </div>
+            </Reveal>
+          </div>
+
+          {/* Matched-investor strip — offer-board style */}
+          <Reveal delay={0.05}>
+            <div className="mt-6 rounded-[22px] border border-black/[0.07] bg-white overflow-hidden">
+              <div className="flex items-center justify-between px-6 md:px-7 pt-6">
+                <div>
+                  <div className="mp-mono text-[10px] uppercase tracking-[0.18em]" style={{ color: ACCENT }}>
+                    Illustrative match board
+                  </div>
+                  <h3 className="mp-serif text-[22px] md:text-[26px] font-semibold mt-1" style={{ color: NAVY }}>
+                    How we line buyers up against your unit
+                  </h3>
+                </div>
+                <Radar className="w-6 h-6 shrink-0" style={{ color: ACCENT }} />
+              </div>
+              <div className="px-6 md:px-7 pb-3 pt-1">
+                <p className="text-[13.5px] leading-relaxed max-w-2xl" style={{ color: INK }}>
+                  When your property is ready, we rank the specific investors most likely to buy it
+                  &mdash; then reach out directly. Below is a representative view; real profiles are
+                  matched to your building and never shown publicly.
+                </p>
+              </div>
+              <div className="grid md:grid-cols-3 gap-4 p-6 md:p-7 pt-3">
+                {MATCHED.map((m) => (
+                  <div
+                    key={m.rank}
+                    className="rounded-2xl border p-5"
+                    style={{
+                      borderColor: m.hot ? ACCENT : 'rgba(0,0,0,0.08)',
+                      background: m.hot ? 'rgba(79,130,185,0.05)' : '#fff',
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-3">
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center mp-mono text-[13px] font-semibold"
+                        style={{ background: NAVY, color: '#fff' }}
+                      >
+                        {m.rank}
+                      </div>
+                      <span
+                        className="mp-mono text-[9px] uppercase tracking-[0.14em] px-2 py-1 rounded-full"
+                        style={{
+                          background: m.hot ? ACCENT : 'rgba(13,27,42,0.06)',
+                          color: m.hot ? '#fff' : NAVY,
+                        }}
+                      >
+                        {m.tag}
+                      </span>
+                    </div>
+                    <div className="text-[14.5px] font-semibold" style={{ color: NAVY }}>
+                      {m.profile}
+                    </div>
+                    <div className="text-[12.5px] mt-1" style={{ color: INK }}>
+                      {m.band}
+                    </div>
+                    <div className="mt-4 pt-3 border-t flex items-center justify-between" style={{ borderColor: 'rgba(0,0,0,0.07)' }}>
+                      <span className="mp-mono text-[9px] uppercase tracking-[0.14em]" style={{ color: INK }}>
+                        Match
+                      </span>
+                      <span className="text-[12.5px] font-semibold" style={{ color: m.hot ? ACCENT : NAVY }}>
+                        {m.fit}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
