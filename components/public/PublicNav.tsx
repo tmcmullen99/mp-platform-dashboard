@@ -137,6 +137,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: stri
       { to: '/services/disclosure-review', label: 'Disclosure Review' },
       { to: '/services/home-improvement', label: 'Home Improvement' },
       { to: '/services/flips', label: 'Flips & Off-Market' },
+      { to: '/services/sell-with-tenants', label: 'Sell Tenant-Occupied' },
     ],
   },
   {
