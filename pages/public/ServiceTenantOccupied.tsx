@@ -10,6 +10,7 @@
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
+import SFInvestorMap from '@/components/public/SFInvestorMap'
 import {
   MotionStyles,
   Reveal,
@@ -181,69 +182,6 @@ const MATCHED = [
     hot: false,
   },
 ]
-
-// Abstract heat-panel: a grid of dots with a warm cluster, no real geography.
-function HeatPanel() {
-  const COLS = 26
-  const ROWS = 15
-  const dots: { x: number; y: number; on: number }[] = []
-  // Two soft "hot" centers to imply clusters of investor-owned condos.
-  const centers = [
-    { cx: 17, cy: 9, r: 5.5 },
-    { cx: 20, cy: 5, r: 3.8 },
-  ]
-  for (let r = 0; r < ROWS; r++) {
-    for (let c = 0; c < COLS; c++) {
-      let heat = 0
-      for (const k of centers) {
-        const d = Math.hypot(c - k.cx, r - k.cy)
-        heat = Math.max(heat, Math.max(0, 1 - d / k.r))
-      }
-      dots.push({ x: c, y: r, on: heat })
-    }
-  }
-  const cell = 26
-  const pad = 14
-  const w = COLS * cell + pad * 2
-  const h = ROWS * cell + pad * 2
-  return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      className="w-full h-auto block"
-      role="img"
-      aria-label="Abstract heat map showing concentration of investor-owned San Francisco condos"
-    >
-      <defs>
-        <radialGradient id="stoGlow" cx="66%" cy="46%" r="55%">
-          <stop offset="0%" stopColor="rgba(79,130,185,0.28)" />
-          <stop offset="100%" stopColor="rgba(79,130,185,0)" />
-        </radialGradient>
-      </defs>
-      <rect x="0" y="0" width={w} height={h} rx="20" fill={NAVY_DEEP} />
-      <rect x="0" y="0" width={w} height={h} rx="20" fill="url(#stoGlow)" />
-      {dots.map((d, i) => {
-        const cx = pad + d.x * cell + cell / 2
-        const cy = pad + d.y * cell + cell / 2
-        const hot = d.on
-        // base dim dots everywhere; hot cluster lights up in logo-blue → white.
-        const baseR = 2.1
-        const r = baseR + hot * 3.6
-        let fill = 'rgba(255,255,255,0.10)'
-        let op = 1
-        if (hot > 0.12) {
-          const t = Math.min(1, hot)
-          // blend logo-blue toward a hot white core
-          const R = Math.round(79 + (255 - 79) * (t * t))
-          const G = Math.round(130 + (255 - 130) * (t * t))
-          const B = Math.round(185 + (255 - 185) * (t * t))
-          fill = `rgb(${R},${G},${B})`
-          op = 0.35 + t * 0.65
-        }
-        return <circle key={i} cx={cx} cy={cy} r={r} fill={fill} opacity={op} />
-      })}
-    </svg>
-  )
-}
 
 function PhaseCard({ p, i }: { p: (typeof PHASES)[number]; i: number }) {
   const [open, setOpen] = useState(i === 0)
@@ -455,22 +393,21 @@ export default function ServiceTenantOccupied() {
                     Investor-owned condos
                   </span>
                 </div>
-                <div className="px-4 pt-4 pb-2 grow flex items-center">
-                  <HeatPanel />
+                <div className="px-4 pt-4 pb-2 grow">
+                  <SFInvestorMap />
                 </div>
                 <div className="px-6 pb-6 flex items-center gap-4 flex-wrap">
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: '#fff' }} />
-                    <span className="text-[11px] text-white/70">High investor concentration</span>
+                    <span className="text-[11px] text-white/70">Multi-unit &amp; high-value owners</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full" style={{ background: ACCENT }} />
-                    <span className="text-[11px] text-white/70">Active demand</span>
+                    <span className="text-[11px] text-white/70">Investor-owned condos</span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ background: 'rgba(255,255,255,0.15)' }} />
-                    <span className="text-[11px] text-white/70">Coverage</span>
-                  </div>
+                  <span className="text-[10px] text-white/40 ml-auto">
+                    Representative &middot; SoMa · Mission Bay · Downtown
+                  </span>
                 </div>
               </div>
             </Reveal>
