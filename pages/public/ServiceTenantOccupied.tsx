@@ -149,7 +149,7 @@ const PROOF = [
 const NETWORK_STATS = [
   { icon: Users, value: '1,800+', label: 'SF condo investors', sub: 'compiled & maintained' },
   { icon: Building2, value: '60+', label: 'multi-unit holders', sub: 'own 2+ SF condos' },
-  { icon: CircleDollarSign, value: '$2M+', label: 'top-tier net worth', sub: 'highest-capacity buyers' },
+  { icon: CircleDollarSign, value: '$10M+', label: 'top-tier net worth', sub: 'highest-capacity buyers' },
   { icon: TrendingUp, value: '29', label: 'target buildings', sub: 'active investor demand' },
 ]
 
@@ -161,7 +161,7 @@ const MATCHED = [
     rank: '#1',
     profile: 'Downtown SF · owns 4 condos',
     tag: 'MULTI-UNIT',
-    band: '$2M+ net worth',
+    band: '$10M+ net worth',
     fit: 'Highest fit',
     hot: true,
   },
@@ -169,7 +169,7 @@ const MATCHED = [
     rank: '#2',
     profile: 'Peninsula-based · owns 3 SF units',
     tag: 'ABSENTEE',
-    band: '$2M+ net worth',
+    band: '$10M+ net worth',
     fit: 'Strong fit',
     hot: false,
   },
@@ -177,7 +177,7 @@ const MATCHED = [
     rank: '#3',
     profile: 'Mission Bay · owns 2 condos',
     tag: 'CASH-CAPABLE',
-    band: '$1M–2M net worth',
+    band: '$5M–10M net worth',
     fit: 'Strong fit',
     hot: false,
   },
