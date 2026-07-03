@@ -10,6 +10,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { CountUp } from '@/components/public/motion'
+import { OUTREACH_PINS, OUTREACH_TOTALS } from '@/lib/huckleberryOutreach'
+
+const SLATE = '#6b8cae' // cool tone for the "outreach targets" layer (distinct from GOLD viewers)
 
 const GOLD = '#b8965a'
 const DASH_BG = '#0f1621'
@@ -82,10 +85,22 @@ function project(lng: number, lat: number): { x: number; y: number } | null {
   return { x, y }
 }
 
-export default function LiveHuckleberryDashboard() {
+// `showOutreachLayer` is OPT-IN and defaults to false. The public service-page
+// embeds (Luxury, Disclosure) must NOT pass it — it exposes the Top-100 owner
+// names/metros and belongs only behind the password-gated /analytics view.
+export default function LiveHuckleberryDashboard({
+  showOutreachLayer = false,
+}: {
+  showOutreachLayer?: boolean
+}) {
   const [data, setData] = useState<Analytics>(FALLBACK)
   const [live, setLive] = useState(false)
   const [active, setActive] = useState<number>(0) // index of focused metro
+  // Which map layer is showing. Only reachable when showOutreachLayer is true.
+  const [layer, setLayer] = useState<'viewers' | 'outreach'>('viewers')
+  const [outreachActive, setOutreachActive] = useState<number>(0)
+  // Live aggregate sent-count (safe RPC — totals only, no recipient data).
+  const [sent, setSent] = useState<{ total: number; circles: number } | null>(null)
   const mounted = useRef(true)
 
   useEffect(() => {
@@ -103,9 +118,30 @@ export default function LiveHuckleberryDashboard() {
     }
   }, [])
 
+  // Only fetch the outreach sent-count when the gated layer is enabled.
+  useEffect(() => {
+    if (!showOutreachLayer) return
+    let on = true
+    ;(async () => {
+      const { data: rpc, error } = await supabase.rpc('huckleberry_outreach_summary')
+      if (!on) return
+      if (!error && rpc && rpc[0]) {
+        setSent({ total: Number(rpc[0].total_sends) || 0, circles: Number(rpc[0].circles_touched) || 0 })
+      }
+    })()
+    return () => {
+      on = false
+    }
+  }, [showOutreachLayer])
+
   const metros = data.metros || []
   const maxViews = Math.max(1, ...metros.map((m) => m.views))
   const focused = metros[active] || metros[0]
+
+  // Outreach layer derived state (gated).
+  const showingOutreach = showOutreachLayer && layer === 'outreach'
+  const maxOwners = Math.max(1, ...OUTREACH_PINS.map((p) => p.owners))
+  const focusedPin = OUTREACH_PINS[outreachActive] || OUTREACH_PINS[0]
 
   return (
     <div
@@ -146,7 +182,13 @@ export default function LiveHuckleberryDashboard() {
           { k: 'TOTAL VISITS', v: data.total_visits, s: `${data.unique_visitors} unique` },
           { k: 'AVG. TIME ON SITE', v: data.avg_minutes, suffix: 'm', s: `median ${data.median_seconds}s` },
           { k: 'BUYER METROS', v: metros.length, s: `${data.countries} countries` },
-          { k: 'TOP MARKET', raw: `${focused?.pct ?? 0}%`, s: focused?.name ?? '—' },
+          showOutreachLayer
+            ? {
+                k: 'OUTREACH SENT',
+                v: sent?.total ?? OUTREACH_TOTALS.neighborsTargeted,
+                s: `to ${sent?.circles ?? OUTREACH_TOTALS.ownerCirclesTouched} owner circles`,
+              }
+            : { k: 'TOP MARKET', raw: `${focused?.pct ?? 0}%`, s: focused?.name ?? '—' },
         ].map((s) => (
           <div key={s.k} className="rounded-lg p-4" style={{ background: DASH_PANEL }}>
             <div className="mp-mono text-[8.5px] tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.4)' }}>
@@ -166,11 +208,38 @@ export default function LiveHuckleberryDashboard() {
       <div className="grid lg:grid-cols-[1.4fr_1fr] gap-4 p-6">
         {/* MAP */}
         <div className="rounded-xl p-4" style={{ background: DASH_PANEL }}>
-          <div className="flex items-center justify-between">
-            <div className="text-white text-sm font-semibold">Where buyers are watching from</div>
-            <div className="mp-mono text-[9px] tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
-              HOVER OR TAP A BUBBLE
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-white text-sm font-semibold">
+              {showingOutreach ? 'National outreach targets' : 'Where buyers are watching from'}
             </div>
+            {showOutreachLayer ? (
+              <div className="flex items-center gap-1 rounded-md p-0.5" style={{ background: 'rgba(255,255,255,0.06)' }}>
+                <button
+                  onClick={() => setLayer('viewers')}
+                  className="mp-mono text-[9px] tracking-[0.12em] px-2 py-1 rounded"
+                  style={{
+                    background: layer === 'viewers' ? GOLD : 'transparent',
+                    color: layer === 'viewers' ? '#1a1205' : 'rgba(255,255,255,0.55)',
+                  }}
+                >
+                  BUYERS WATCHING
+                </button>
+                <button
+                  onClick={() => setLayer('outreach')}
+                  className="mp-mono text-[9px] tracking-[0.12em] px-2 py-1 rounded"
+                  style={{
+                    background: layer === 'outreach' ? SLATE : 'transparent',
+                    color: layer === 'outreach' ? '#0a1220' : 'rgba(255,255,255,0.55)',
+                  }}
+                >
+                  OUTREACH TARGETS
+                </button>
+              </div>
+            ) : (
+              <div className="mp-mono text-[9px] tracking-[0.14em]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                HOVER OR TAP A BUBBLE
+              </div>
+            )}
           </div>
 
           <svg viewBox="0 0 975 610" className="w-full mt-2" style={{ maxHeight: 340 }}>
@@ -182,7 +251,8 @@ export default function LiveHuckleberryDashboard() {
               strokeWidth="1"
             />
             {/* connective lines from focused metro to others (subtle network feel) */}
-            {focused?.lat != null &&
+            {!showingOutreach &&
+              focused?.lat != null &&
               focused?.lng != null &&
               metros.map((m, i) => {
                 if (i === active || m.lat == null || m.lng == null) return null
@@ -202,70 +272,143 @@ export default function LiveHuckleberryDashboard() {
                   />
                 )
               })}
-            {/* bubbles */}
-            {metros.map((m, i) => {
-              if (m.lat == null || m.lng == null) return null
-              const pt = project(m.lng, m.lat)
-              if (!pt) return null
-              const { x, y } = pt
-              const r = 10 + (m.views / maxViews) * 34
-              const isActive = i === active
-              return (
-                <g
-                  key={m.name}
-                  style={{ cursor: 'pointer' }}
-                  onMouseEnter={() => setActive(i)}
-                  onClick={() => setActive(i)}
-                >
-                  <circle cx={x} cy={y} r={r} fill={GOLD} opacity={isActive ? 0.5 : 0.28} />
-                  <circle cx={x} cy={y} r={Math.max(4, r * 0.34)} fill={GOLD} opacity={0.95} />
-                  {isActive && (
-                    <circle cx={x} cy={y} r={r + 5} fill="none" stroke={GOLD} strokeWidth="1.5" opacity={0.8} />
-                  )}
-                </g>
-              )
-            })}
+            {/* viewer bubbles (gold) */}
+            {!showingOutreach &&
+              metros.map((m, i) => {
+                if (m.lat == null || m.lng == null) return null
+                const pt = project(m.lng, m.lat)
+                if (!pt) return null
+                const { x, y } = pt
+                const r = 10 + (m.views / maxViews) * 34
+                const isActive = i === active
+                return (
+                  <g
+                    key={m.name}
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => setActive(i)}
+                  >
+                    <circle cx={x} cy={y} r={r} fill={GOLD} opacity={isActive ? 0.5 : 0.28} />
+                    <circle cx={x} cy={y} r={Math.max(4, r * 0.34)} fill={GOLD} opacity={0.95} />
+                    {isActive && (
+                      <circle cx={x} cy={y} r={r + 5} fill="none" stroke={GOLD} strokeWidth="1.5" opacity={0.8} />
+                    )}
+                  </g>
+                )
+              })}
+            {/* outreach target pins (slate, hollow rings — visually distinct from viewers) */}
+            {showingOutreach &&
+              OUTREACH_PINS.map((p, i) => {
+                const r = 7 + (p.owners / maxOwners) * 20
+                const isActive = i === outreachActive
+                return (
+                  <g
+                    key={p.metro}
+                    style={{ cursor: 'pointer' }}
+                    onMouseEnter={() => setOutreachActive(i)}
+                    onClick={() => setOutreachActive(i)}
+                  >
+                    <circle
+                      cx={p.x}
+                      cy={p.y}
+                      r={r}
+                      fill={SLATE}
+                      fillOpacity={isActive ? 0.22 : 0.12}
+                      stroke={SLATE}
+                      strokeWidth={isActive ? 2 : 1.25}
+                      strokeOpacity={isActive ? 1 : 0.75}
+                    />
+                    <circle cx={p.x} cy={p.y} r={2.5} fill={SLATE} opacity={0.95} />
+                    {isActive && (
+                      <circle cx={p.x} cy={p.y} r={r + 5} fill="none" stroke={SLATE} strokeWidth="1" opacity={0.6} />
+                    )}
+                  </g>
+                )
+              })}
           </svg>
 
-          {/* focused metro readout */}
-          {focused && (
-            <div className="mt-1 flex items-baseline justify-between px-1">
-              <div className="text-white text-sm font-semibold">{focused.name}</div>
-              <div className="mp-mono text-xs" style={{ color: GOLD }}>
-                {focused.views} visits · {focused.pct}% of all traffic
-              </div>
-            </div>
-          )}
+          {/* focused readout */}
+          {showingOutreach
+            ? focusedPin && (
+                <div className="mt-1 flex items-baseline justify-between px-1">
+                  <div className="text-white text-sm font-semibold">{focusedPin.metro}</div>
+                  <div className="mp-mono text-xs" style={{ color: SLATE }}>
+                    {focusedPin.owners} owner{focusedPin.owners > 1 ? 's' : ''} · {focusedPin.neighbors} neighbor
+                    {focusedPin.neighbors === 1 ? '' : 's'} emailed
+                  </div>
+                </div>
+              )
+            : focused && (
+                <div className="mt-1 flex items-baseline justify-between px-1">
+                  <div className="text-white text-sm font-semibold">{focused.name}</div>
+                  <div className="mp-mono text-xs" style={{ color: GOLD }}>
+                    {focused.views} visits · {focused.pct}% of all traffic
+                  </div>
+                </div>
+              )}
         </div>
 
-        {/* METRO LIST */}
+        {/* SIDE LIST */}
         <div className="rounded-xl p-4" style={{ background: DASH_PANEL }}>
-          <div className="text-white text-sm font-semibold">Top metros</div>
-          <div className="text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
-            By share of total site visits
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {metros.map((m, i) => (
-              <button
-                key={m.name}
-                onMouseEnter={() => setActive(i)}
-                onClick={() => setActive(i)}
-                className="flex items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors"
-                style={{ background: i === active ? 'rgba(184,150,90,0.12)' : 'transparent' }}
-              >
-                <span className="mp-mono text-[10px] w-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
-                  {i + 1}
-                </span>
-                <span className="text-white text-[12.5px] flex-1 truncate">{m.name}</span>
-                <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
-                  <div className="h-full rounded-full" style={{ width: `${m.pct}%`, background: GOLD }} />
-                </div>
-                <span className="mp-mono text-[11px] w-8 text-right" style={{ color: GOLD }}>
-                  {m.pct}%
-                </span>
-              </button>
-            ))}
-          </div>
+          {showingOutreach ? (
+            <>
+              <div className="text-white text-sm font-semibold">Top-100 owner metros</div>
+              <div className="text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                Where the owners whose neighbors we&rsquo;re emailing live
+              </div>
+              <div className="flex flex-col gap-1.5 max-h-[300px] overflow-y-auto pr-1">
+                {OUTREACH_PINS.map((p, i) => (
+                  <button
+                    key={p.metro}
+                    onMouseEnter={() => setOutreachActive(i)}
+                    onClick={() => setOutreachActive(i)}
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors"
+                    style={{ background: i === outreachActive ? 'rgba(107,140,174,0.14)' : 'transparent' }}
+                  >
+                    <span className="mp-mono text-[10px] w-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="text-white text-[12.5px] flex-1 truncate">{p.metro}</span>
+                    <span className="mp-mono text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                      {p.owners}o
+                    </span>
+                    <span className="mp-mono text-[11px] w-8 text-right" style={{ color: SLATE }}>
+                      {p.neighbors}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="text-white text-sm font-semibold">Top metros</div>
+              <div className="text-[10px] mb-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+                By share of total site visits
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {metros.map((m, i) => (
+                  <button
+                    key={m.name}
+                    onMouseEnter={() => setActive(i)}
+                    onClick={() => setActive(i)}
+                    className="flex items-center gap-3 rounded-md px-2 py-1.5 text-left transition-colors"
+                    style={{ background: i === active ? 'rgba(184,150,90,0.12)' : 'transparent' }}
+                  >
+                    <span className="mp-mono text-[10px] w-3" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="text-white text-[12.5px] flex-1 truncate">{m.name}</span>
+                    <div className="w-14 h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+                      <div className="h-full rounded-full" style={{ width: `${m.pct}%`, background: GOLD }} />
+                    </div>
+                    <span className="mp-mono text-[11px] w-8 text-right" style={{ color: GOLD }}>
+                      {m.pct}%
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
