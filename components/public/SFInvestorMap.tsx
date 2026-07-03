@@ -99,6 +99,8 @@ function loadLeaflet(): Promise<void> {
 export default function SFInvestorMap() {
   const elRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<any>(null)
+  const timeouts = useRef<number[]>([])
+  const resizeHandler = useRef<(() => void) | null>(null)
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
@@ -151,9 +153,30 @@ export default function SFInvestorMap() {
         map.on('focus', () => map.scrollWheelZoom.enable())
         map.on('blur', () => map.scrollWheelZoom.disable())
 
-        // Fit to the plotted cluster with a little padding.
         const bounds = L.latLngBounds(POINTS.map((p) => [p[0], p[1]]))
-        map.fitBounds(bounds, { padding: [28, 28], maxZoom: 15 })
+
+        // Leaflet often initializes before the panel has its final width (the
+        // parent uses flex + a reveal animation), which makes it request only a
+        // partial tile grid — the classic "half-rendered map" bug. Force it to
+        // re-measure once the layout settles, then fit the cluster. We do this
+        // a few times to catch the container's final size and the reveal.
+        const settle = () => {
+          if (cancelled || !mapRef.current) return
+          map.invalidateSize(false)
+          map.fitBounds(bounds, { padding: [30, 30], maxZoom: 15 })
+        }
+        settle()
+        const t1 = window.setTimeout(settle, 150)
+        const t2 = window.setTimeout(settle, 500)
+        const t3 = window.setTimeout(settle, 1200)
+        timeouts.current.push(t1, t2, t3)
+
+        // Also re-measure whenever the window resizes.
+        const onResize = () => {
+          if (mapRef.current) mapRef.current.invalidateSize(false)
+        }
+        window.addEventListener('resize', onResize)
+        resizeHandler.current = onResize
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -161,6 +184,12 @@ export default function SFInvestorMap() {
 
     return () => {
       cancelled = true
+      timeouts.current.forEach((t) => window.clearTimeout(t))
+      timeouts.current = []
+      if (resizeHandler.current) {
+        window.removeEventListener('resize', resizeHandler.current)
+        resizeHandler.current = null
+      }
       if (mapRef.current) {
         mapRef.current.remove()
         mapRef.current = null
@@ -169,11 +198,17 @@ export default function SFInvestorMap() {
   }, [])
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full" style={{ height: 380, maxHeight: 380 }}>
+      {/* Scoped guard: force the Leaflet element to fill exactly this 380px box
+          and never expand to the viewport, regardless of global CSS load order. */}
+      <style>{`
+        .sf-invmap-box { height: 380px !important; max-height: 380px !important; }
+        .sf-invmap-box .leaflet-container { height: 380px !important; width: 100% !important; }
+      `}</style>
       <div
         ref={elRef}
-        className="w-full rounded-[14px] overflow-hidden"
-        style={{ height: 380, background: '#0b1420' }}
+        className="sf-invmap-box w-full rounded-[14px] overflow-hidden"
+        style={{ height: 380, maxHeight: 380, display: 'block', background: '#0b1420' }}
         aria-label="Map of San Francisco showing concentration of investor-owned condos in SoMa, Mission Bay, and downtown"
       />
       {failed && (
