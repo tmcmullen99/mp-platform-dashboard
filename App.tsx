@@ -56,6 +56,7 @@ import MarketBuilding from '@/pages/public/MarketBuilding'
 import CMAReview from '@/pages/public/CMAReview'
 import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
 import DisclosureReview from '@/pages/public/DisclosureReview'
+import DeliverableViewer from '@/pages/public/DeliverableViewer'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -113,6 +114,9 @@ export default function App() {
           <Route path="/cma-review" element={<CMAReview />} />
           <Route path="/cma-review/disclosure/:slug" element={<DisclosureReview />} />
           <Route path="/cma-review/:slug" element={<CMAShowcaseViewer />} />
+          {/* Private buyer deliverables (CMA / cheat sheet) by row UUID — linked
+              only from client accounts; renders serve_page HTML in an iframe. */}
+          <Route path="/view/:kind/:id" element={<DeliverableViewer />} />
           <Route path="/tools" element={<ToolsHub />} />
           <Route path="/tools/net-sheet" element={<NetSheetTool />} />
           <Route path="/tools/cma" element={<CMATool />} />
