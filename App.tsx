@@ -57,6 +57,7 @@ import CMAReview from '@/pages/public/CMAReview'
 import CMAShowcaseViewer from '@/pages/public/CMAShowcaseViewer'
 import DisclosureReview from '@/pages/public/DisclosureReview'
 import DeliverableViewer from '@/pages/public/DeliverableViewer'
+import WelcomeClient from '@/pages/public/WelcomeClient'
 import AccountDashboard from '@/pages/account/AccountDashboard'
 import CreditApplication from '@/pages/account/CreditApplication'
 import {
@@ -105,6 +106,10 @@ export default function App() {
           <Route path="/m/:tenantSlug/:listingId" element={<PublicMakeMeMoveDetail />} />
           {/* Self-signup: post-confirmation provisioning + member dashboard */}
           <Route path="/welcome" element={<Welcome />} />
+          {/* P9.6 — invited-client landing: set a password before entering the
+              portal. Must live in the public block so the AuthGate's client
+              catch-all doesn't bounce authenticated invitees to /portal. */}
+          <Route path="/welcome-client" element={<WelcomeClient />} />
           <Route path="/account" element={<AccountDashboard />} />
           <Route path="/account/apply" element={<CreditApplication />} />
           <Route path="/compare" element={<Compare />} />
