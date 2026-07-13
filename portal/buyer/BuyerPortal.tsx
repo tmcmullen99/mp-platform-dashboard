@@ -10,6 +10,7 @@ import BuyerHome from './BuyerHome'
 import InterestedProperties from './InterestedProperties'
 import PropertyDetail from './PropertyDetail'
 import BuyerSchedule from './BuyerSchedule'
+import CMAViewer from '@/components/CMAViewer'
 
 const NAV: PortalNavItem[] = [
   { to: '/portal', label: 'Home', icon: LayoutDashboard, exact: true },
@@ -31,6 +32,9 @@ export default function BuyerPortal({
         <Route path="interested" element={<InterestedProperties />} />
         <Route path="property/:id" element={<PropertyDetail />} />
         <Route path="schedule" element={<BuyerSchedule />} />
+        {/* P9.5 — market-analysis deep link from PropertyDetail. The seller
+            portal already had this route; buyers were bounced to /portal. */}
+        <Route path="cmas/:slug" element={<CMAViewer embedded />} />
         <Route path="*" element={<Navigate to="/portal" replace />} />
       </Routes>
     </PortalShell>
