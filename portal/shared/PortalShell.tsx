@@ -6,7 +6,7 @@
 //
 // Nav items are passed in by the seller/buyer portal so this file stays
 // presentational and the two experiences own their own tab sets.
-import { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { NavLink, Link } from 'react-router-dom'
 import { LogOut, ArrowLeftRight, type LucideIcon } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
@@ -39,6 +39,7 @@ export default function PortalShell({
   children: ReactNode
 }) {
   const { clientProfile, currentBranding, signOut } = useAuth()
+  const [tourReady, setTourReady] = useState(false)
   const brokerage = currentBranding?.brokerage_affiliation || 'McMullen Properties'
 
   return (
@@ -101,8 +102,10 @@ export default function PortalShell({
 
       <main className="max-w-6xl mx-auto px-6 md:px-8 py-10 md:py-14">{children}</main>
 
-      <ClientOnboarding />
-      <FirstLoginTour side={tourSide} />
+      {/* P9.6 sequencing: calendar gate first, tour only after it settles —
+          the two dialogs were previously racing and stacking on first login. */}
+      <ClientOnboarding onSettled={() => setTourReady(true)} />
+      {tourReady && <FirstLoginTour side={tourSide} />}
     </div>
   )
 }
