@@ -26,12 +26,16 @@ export default function PortalShell({
   nav,
   activeSide,
   onSwitchSide,
+  tourSide,
   children,
 }: {
   nav: PortalNavItem[]
   // When the client is 'both', activeSide is 'buyer'|'seller' and the switch shows.
   activeSide?: 'buyer' | 'seller' | null
   onSwitchSide?: () => void
+  // P9.6 — which first-login tour script to run (independent of the switch UI,
+  // since single-mode portals never pass activeSide).
+  tourSide?: 'buyer' | 'seller' | null
   children: ReactNode
 }) {
   const { clientProfile, currentBranding, signOut } = useAuth()
@@ -98,7 +102,7 @@ export default function PortalShell({
       <main className="max-w-6xl mx-auto px-6 md:px-8 py-10 md:py-14">{children}</main>
 
       <ClientOnboarding />
-      <FirstLoginTour />
+      <FirstLoginTour side={tourSide} />
     </div>
   )
 }
