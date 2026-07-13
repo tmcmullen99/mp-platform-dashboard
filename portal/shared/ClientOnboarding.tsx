@@ -19,7 +19,10 @@ import { PrimaryButton, GhostButton } from './ui'
 
 const SEEN_KEY = 'mp_calendar_onboarding_seen'
 
-export default function ClientOnboarding() {
+// P9.6 — onSettled fires once this gate is out of the way (either it decided
+// not to show, or the client dismissed/saved). PortalShell uses it to hold the
+// first-login tour back so the two dialogs never stack.
+export default function ClientOnboarding({ onSettled }: { onSettled?: () => void }) {
   const { isClient, clientProfile, memberOnboardedAt } = useAuth()
   const [open, setOpen] = useState(false)
   const [choice, setChoice] = useState<CalendarProvider | null>(null)
@@ -39,11 +42,14 @@ export default function ClientOnboarding() {
       const t = setTimeout(() => setOpen(true), 400)
       return () => clearTimeout(t)
     }
-  }, [isClient, memberOnboardedAt, clientProfile])
+    // Gate not needed for this member — release the tour immediately.
+    onSettled?.()
+  }, [isClient, memberOnboardedAt, clientProfile, onSettled])
 
   function dismiss() {
     sessionStorage.setItem(SEEN_KEY, '1')
     setOpen(false)
+    onSettled?.()
   }
 
   async function save() {
