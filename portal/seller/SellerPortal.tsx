@@ -39,7 +39,7 @@ export default function SellerPortal({
   onSwitchSide?: () => void
 }) {
   return (
-    <PortalShell nav={NAV} activeSide={activeSide} onSwitchSide={onSwitchSide}>
+    <PortalShell nav={NAV} activeSide={activeSide} onSwitchSide={onSwitchSide} tourSide="seller">
       <Routes>
         <Route index element={<SellerHome />} />
         <Route path="listing" element={<SellerListing />} />
