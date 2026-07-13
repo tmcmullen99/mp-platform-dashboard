@@ -15,7 +15,7 @@ import CMAViewer from '@/components/CMAViewer'
 const NAV: PortalNavItem[] = [
   { to: '/portal', label: 'Home', icon: LayoutDashboard, exact: true },
   { to: '/portal/interested', label: 'Interested Properties', icon: Heart, dataTour: 'listing' },
-  { to: '/portal/schedule', label: 'Schedule', icon: Calendar },
+  { to: '/portal/schedule', label: 'Schedule', icon: Calendar, dataTour: 'schedule' },
 ]
 
 export default function BuyerPortal({
@@ -26,7 +26,7 @@ export default function BuyerPortal({
   onSwitchSide?: () => void
 }) {
   return (
-    <PortalShell nav={NAV} activeSide={activeSide} onSwitchSide={onSwitchSide}>
+    <PortalShell nav={NAV} activeSide={activeSide} onSwitchSide={onSwitchSide} tourSide="buyer">
       <Routes>
         <Route index element={<BuyerHome />} />
         <Route path="interested" element={<InterestedProperties />} />
