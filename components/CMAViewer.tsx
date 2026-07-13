@@ -9,10 +9,19 @@
 // P9.4 Sprint H — Renames the print button text to "Download PDF" (the browser
 //                 print dialog has Save as PDF; this matches user intent).
 // P9.4 Sprint I — Adds an Edit button (agent-only) linking to /cmas/:slug/edit.
+// P9.5 — HTML-first CMAs. Rows whose cma_html column is populated (full
+//        self-contained landing pages authored outside the structured editor)
+//        now render that document in a sandboxed iframe instead of the sparse
+//        CMATemplate. The iframe auto-sizes to its content (same pattern as
+//        CMAShowcaseViewer); its scripts (Leaflet map, cost calculator,
+//        sortable tables) run isolated from the app session. Action bar in
+//        this mode: Back · Open full page (branded /view/cma/:id) · Delete.
+//        Edit and window.print() are hidden — the structured editor has no
+//        content for these rows and printing would capture dashboard chrome.
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { Loader2, ChevronLeft, Printer, Trash2, Pencil } from 'lucide-react'
+import { Loader2, ChevronLeft, Printer, Trash2, Pencil, ExternalLink } from 'lucide-react'
 import { supabase, CMASubject, CMAComp } from '@/lib/supabase'
 import type { CMARow } from '@/lib/cma-types'
 import { useAuth } from '@/contexts/AuthContext'
@@ -46,6 +55,9 @@ function rowToSettings(row: CommissionSettingsRow): CommissionSettings {
   }
 }
 
+// P9.5 — cma_html column (returned by SELECT *, not yet in the shared type)
+type CMARowWithHtml = CMARow & { cma_html?: string | null }
+
 type Props = {
   // If true, render without dashboard chrome (used in portal)
   embedded?: boolean
@@ -55,10 +67,11 @@ export default function CMAViewer({ embedded = false }: Props) {
   const { slug } = useParams<{ slug: string }>()
   const navigate = useNavigate()
   const { currentBranding, isAgent } = useAuth()
-  const [cma, setCma] = useState<CMARow | null>(null)
+  const [cma, setCma] = useState<CMARowWithHtml | null>(null)
   const [settings, setSettings] = useState<CommissionSettings | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const frameRef = useRef<HTMLIFrameElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -71,7 +84,7 @@ export default function CMAViewer({ embedded = false }: Props) {
         .maybeSingle()
       if (cancelled) return
       if (e) setError(e.message)
-      const cmaRow = (cmaData as CMARow) || null
+      const cmaRow = (cmaData as CMARowWithHtml) || null
       setCma(cmaRow)
 
       if (cmaRow?.tenant_id) {
@@ -91,6 +104,42 @@ export default function CMAViewer({ embedded = false }: Props) {
     }
   }, [slug])
 
+  // P9.5 — auto-size the html-mode iframe to its content so the dashboard
+  // page scrolls as one document. Re-measures as fonts/map tiles settle.
+  useEffect(() => {
+    if (!cma?.cma_html) return
+    const frame = frameRef.current
+    if (!frame) return
+    const resize = () => {
+      try {
+        const doc = frame.contentDocument
+        if (doc) frame.style.height = doc.body.scrollHeight + 'px'
+      } catch {
+        /* sandboxed without allow-same-origin — fall back to CSS min-height */
+      }
+    }
+    frame.addEventListener('load', () => {
+      resize()
+      setTimeout(resize, 300)
+      setTimeout(resize, 1200)
+      setTimeout(resize, 3000)
+    })
+    const onWinResize = () => resize()
+    window.addEventListener('resize', onWinResize)
+    return () => window.removeEventListener('resize', onWinResize)
+  }, [cma?.cma_html])
+
+  async function handleDelete() {
+    if (!cma) return
+    if (!confirm(`Delete this CMA?\n\nThis cannot be undone.`)) return
+    const { error: delErr } = await supabase.from('cmas').delete().eq('id', cma.id)
+    if (delErr) {
+      alert('Delete failed: ' + delErr.message)
+      return
+    }
+    navigate(isAgent ? '/clients' : '/portal')
+  }
+
   if (loading) {
     return (
       <div className="p-12 flex items-center gap-2 text-ink-500 text-sm">
@@ -104,6 +153,51 @@ export default function CMAViewer({ embedded = false }: Props) {
       <div className="p-12 max-w-3xl">
         <p className="text-ink-600 mb-4">{error || 'CMA not found.'}</p>
         <BackLink isAgent={isAgent} />
+      </div>
+    )
+  }
+
+  // ---- P9.5: HTML-first CMA — render the stored document, not the template ----
+  if (cma.cma_html) {
+    const fullPageUrl = `/view/cma/${cma.id}`
+    return (
+      <div className={embedded ? '' : 'px-6 pt-6 pb-0 md:px-12 md:pt-10'}>
+        <div className="flex items-center justify-between mb-4 print:hidden">
+          <BackLink isAgent={isAgent} />
+          <div className="flex items-center gap-3">
+            <a
+              href={fullPageUrl}
+              target="_blank"
+              rel="noopener"
+              className="text-2xs uppercase tracking-widest text-ink-600 hover:text-ink-900 flex items-center gap-1.5 px-3 py-2 border border-ink-200"
+            >
+              <ExternalLink className="w-3 h-3" />
+              Open full page
+            </a>
+            {isAgent && !embedded && (
+              <button
+                onClick={handleDelete}
+                className="text-2xs uppercase tracking-widest text-red-600 hover:text-red-700 flex items-center gap-1.5 px-3 py-2 border border-red-200"
+              >
+                <Trash2 className="w-3 h-3" />
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+        <iframe
+          ref={frameRef}
+          title={cma.name || 'Comparative Market Analysis'}
+          srcDoc={cma.cma_html}
+          sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
+          style={{
+            display: 'block',
+            width: '100%',
+            minHeight: '85vh',
+            border: '1px solid rgba(13,27,42,.08)',
+            background: '#faf7f1',
+          }}
+        />
       </div>
     )
   }
@@ -134,17 +228,6 @@ export default function CMAViewer({ embedded = false }: Props) {
   const comps = (cma.comps_data || []) as CMAComp[]
   const listingType = cma.listing_type ?? 'regular'
   const cmaType = cma.cma_type ?? 'sell'
-
-  async function handleDelete() {
-    if (!cma) return
-    if (!confirm(`Delete this CMA?\n\nThis cannot be undone.`)) return
-    const { error } = await supabase.from('cmas').delete().eq('id', cma.id)
-    if (error) {
-      alert('Delete failed: ' + error.message)
-      return
-    }
-    navigate(isAgent ? '/clients' : '/portal')
-  }
 
   return (
     <div className={embedded ? '' : 'p-12 max-w-5xl'}>
