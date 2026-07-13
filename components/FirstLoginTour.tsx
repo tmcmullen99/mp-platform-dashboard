@@ -29,14 +29,47 @@ const PAD = 8 // spotlight padding around target
 const CARD_W = 340
 const CARD_GAP = 16 // gap between cutout and tooltip
 
-export default function FirstLoginTour() {
+// P9.6 — side-aware scripts. The seller script was written for listings;
+// buyers now get a home-search script (interested properties -> schedule).
+export default function FirstLoginTour({ side }: { side?: 'buyer' | 'seller' | null }) {
   const { isClient, memberOnboardedAt, memberDisplayName, markOnboarded } = useAuth()
 
-  const steps: Step[] = [
+  const welcomeTitle = memberDisplayName
+    ? `Welcome, ${memberDisplayName.split(' ')[0]}.`
+    : 'Welcome.'
+
+  const buyerSteps: Step[] = [
     {
       key: 'welcome',
       target: null,
-      title: memberDisplayName ? `Welcome, ${memberDisplayName.split(' ')[0]}.` : 'Welcome.',
+      title: welcomeTitle,
+      body: 'This is your private home-search portal — every property you are considering, the analysis behind it, and your tour schedule, all in one place. Here is a quick look around.',
+    },
+    {
+      key: 'listing',
+      target: 'listing',
+      title: 'Your properties',
+      body: 'Every home you are tracking lives here. Open one to see its details, your agent\u2019s full market analysis, and the disclosure review — the honest read on condition and price.',
+    },
+    {
+      key: 'schedule',
+      target: 'schedule',
+      title: 'See it in person',
+      body: 'Request a tour in one tap. Your agent confirms the time and it lands on your calendar automatically.',
+    },
+    {
+      key: 'tools',
+      target: 'tools',
+      title: 'Everything in one place',
+      body: 'Move between your properties, analyses, and schedule from here — and message your agent any time. Whatever you need is one click away.',
+    },
+  ]
+
+  const sellerSteps: Step[] = [
+    {
+      key: 'welcome',
+      target: null,
+      title: welcomeTitle,
       body: 'This is your private portal — a single place to follow your sale in real time. Here is a quick tour of what you will find.',
     },
     {
@@ -58,6 +91,8 @@ export default function FirstLoginTour() {
       body: 'Every document tied to your sale is organized and at hand — nothing to dig for, nothing lost in email.',
     },
   ]
+
+  const steps: Step[] = side === 'buyer' ? buyerSteps : sellerSteps
 
   const [active, setActive] = useState(false)
   const [i, setI] = useState(0)
