@@ -110,16 +110,38 @@ export default function FirstLoginTour({ side }: { side?: 'buyer' | 'seller' | n
   }, [isClient, memberOnboardedAt])
 
   const step = steps[i]
+  // Key measurement off the target STRING, not the step object: the steps
+  // arrays are rebuilt every render, so `step` has a fresh identity each time.
+  // Depending on the object gave `measure` (and every effect keyed on it) a new
+  // identity per render -> the layout effect ran after EVERY render -> setRect
+  // received a brand-new DOMRect each time (Object.is never bails on those) ->
+  // infinite update loop -> "Maximum update depth exceeded" -> blank page the
+  // moment a step's data-tour anchor actually existed in the DOM.
+  const targetKey = step?.target ?? null
 
-  // Measure the current target.
+  // Measure the current target. setRect is value-compared so an equivalent
+  // rect returns the previous object and never triggers a render — loop-proof
+  // even under scroll/resize thrash or future dependency mistakes.
   const measure = useCallback(() => {
-    if (!step?.target) {
-      setRect(null)
-      return
-    }
-    const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
-    setRect(el ? el.getBoundingClientRect() : null)
-  }, [step])
+    const el = targetKey
+      ? document.querySelector<HTMLElement>(`[data-tour="${targetKey}"]`)
+      : null
+    const next = el ? el.getBoundingClientRect() : null
+    setRect((prev) => {
+      if (!prev && !next) return prev
+      if (
+        prev &&
+        next &&
+        prev.x === next.x &&
+        prev.y === next.y &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev
+      }
+      return next
+    })
+  }, [targetKey])
 
   useLayoutEffect(() => {
     if (!active) return
@@ -137,12 +159,13 @@ export default function FirstLoginTour({ side }: { side?: 'buyer' | 'seller' | n
     }
   }, [active, measure])
 
-  // Ensure target is in view when a step activates.
+  // Ensure target is in view when a step activates. Keyed on the target
+  // string for the same identity reason as `measure` above.
   useEffect(() => {
-    if (!active || !step?.target) return
-    const el = document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`)
+    if (!active || !targetKey) return
+    const el = document.querySelector<HTMLElement>(`[data-tour="${targetKey}"]`)
     el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-  }, [active, i, step])
+  }, [active, i, targetKey])
 
   const finish = useCallback(async () => {
     setActive(false)
