@@ -433,6 +433,89 @@ export default function MeetTim() {
         </div>
       </section>
 
+      {/* ----------------------- NEIGHBOR AUTOMATION ------------------------ */}
+      <section id="automation" className="py-16 md:py-24 scroll-mt-20">
+        <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
+          <SectionHeader
+            eyebrow="The machine behind every marketplace"
+            lead="When a home sells,"
+            accent="the neighborhood knows."
+            sub="Every McMullen marketplace watches its city's market in real time — and reports it to the people who live in it."
+          />
+
+          <div className="grid lg:grid-cols-2 gap-12 items-center mt-12">
+            <Reveal>
+              <p className="text-sm md:text-base text-white/50 leading-relaxed">
+                When a home sells, the system finds it on the city record, identifies the
+                homeowners around it — the same street, or in a condo market, the same building —
+                verifies every address, and stages a neighborhood announcement: the home's own
+                photo, the actual sale price, and a link to its complete record.
+              </p>
+              <p className="text-sm md:text-base text-white/50 leading-relaxed mt-4">
+                Then it stops and asks. <span className="text-white/90">Nothing sends until Tim
+                personally approves it.</span> Approved announcements go out under engineered
+                restraint — validated addresses only, hard daily limits, closest neighbors first,
+                and an unsubscribe honored across every McMullen market, permanently.
+              </p>
+              <p className="mt2-serif text-xl md:text-2xl text-white mt-6">
+                The result isn't marketing mail. It's the market, reported to the people who live
+                in it.
+              </p>
+              <div className="flex flex-wrap gap-x-10 gap-y-6 mt-10">
+                <div>
+                  <div className="mt2-serif text-3xl text-white">3</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
+                </div>
+                <div>
+                  <div className="mt2-serif text-3xl text-white">20,500+</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">homes indexed</div>
+                </div>
+                <div>
+                  <div className="mt2-serif text-3xl text-white">2×</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">daily sale detection</div>
+                </div>
+                <div>
+                  <div className="mt2-serif text-3xl text-white">100%</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">human-approved sends</div>
+                </div>
+              </div>
+              <p className="text-[10px] text-white/25 mt-6 uppercase tracking-[0.2em]">As of July 2026</p>
+            </Reveal>
+
+            <Reveal delay={0.1}>
+              {/* Radius diagram: street variant + condo variant */}
+              <div className="rounded-[2rem] bg-[#141414] border border-white/10 p-8 md:p-10">
+                <svg viewBox="0 0 520 300" className="w-full h-auto" role="img" aria-label="Diagram: a sold home at the center of a neighbor radius, and a condo tower where the radius is the building">
+                  {/* street variant */}
+                  <circle cx="150" cy="150" r="110" fill="none" stroke="#4E85BF" strokeOpacity="0.25" strokeDasharray="4 6" />
+                  <circle cx="150" cy="150" r="70" fill="none" stroke="#4E85BF" strokeOpacity="0.4" strokeDasharray="4 6" />
+                  {[[150,150,1],[95,110,0],[205,105,0],[85,180,0],[210,190,0],[150,80,0],[150,222,0],[60,145,0],[240,150,0]].map(([x,y,c],i)=> (
+                    <rect key={i} x={Number(x)-11} y={Number(y)-9} width="22" height="18" rx="3"
+                      fill={c? '#4E85BF' : '#1f1f1f'} stroke={c? '#89AACC' : 'rgba(255,255,255,0.25)'} strokeWidth="1.2" />
+                  ))}
+                  <text x="150" y="286" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="12" letterSpacing="2">SAME STREET</text>
+                  {/* condo variant */}
+                  <rect x="370" y="52" width="80" height="196" rx="6" fill="#1f1f1f" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                  {Array.from({length:6}).map((_,r)=> Array.from({length:3}).map((_,cIdx)=> {
+                    const sold = r===3 && cIdx===1
+                    return <rect key={`${r}-${cIdx}`} x={380+cIdx*21} y={64+r*29} width="16" height="20" rx="2"
+                      fill={sold? '#4E85BF' : 'rgba(255,255,255,0.06)'} stroke={sold? '#89AACC' : 'rgba(255,255,255,0.18)'} strokeWidth="1" />
+                  }))}
+                  <rect x="366" y="48" width="88" height="204" rx="8" fill="none" stroke="#4E85BF" strokeOpacity="0.35" strokeDasharray="4 6" />
+                  <text x="410" y="286" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="12" letterSpacing="2">SAME BUILDING</text>
+                </svg>
+                <div className="grid grid-cols-2 gap-4 mt-8 text-[12px] text-white/45 leading-relaxed">
+                  <div><span className="text-white/80">1 · Detect.</span> Sales surface from the city record, twice daily.</div>
+                  <div><span className="text-white/80">2 · Verify.</span> Neighbors located on the parcel record; every address validated.</div>
+                  <div><span className="text-white/80">3 · Approve.</span> One-click human gate — nothing sends without it.</div>
+                  <div><span className="text-white/80">4 · Report.</span> Real photo, real price, link to the permanent record.</div>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
       {/* --------------------------- SIGNATURE SALES ------------------------ */}
       <section id="sales" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
