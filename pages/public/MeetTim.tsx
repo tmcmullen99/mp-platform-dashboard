@@ -594,7 +594,7 @@ export default function MeetTim() {
               </p>
               <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-8 sm:gap-x-10 gap-y-5 sm:gap-y-6 mt-8 md:mt-10">
                 <div>
-                  <div className="mt2-serif text-3xl text-white">3</div>
+                  <div className="mt2-serif text-3xl text-white">6</div>
                   <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
                 </div>
                 <div>
