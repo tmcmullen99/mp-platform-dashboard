@@ -7,9 +7,9 @@
 // build is unaffected.
 //
 // EDIT ME: the MARKETPLACES array below is the single source of truth for
-// the marquee and the showcase grid. Drop each site's real hero-image URL
-// into `image`. Until then (or if an image 404s) the card auto-falls-back
-// to a branded gradient monogram — nothing ever looks broken.
+// the marquee and the showcase grid. Images live in the repo at
+// public/meet-tim/*.jpg (Tim's live-site screenshots, web-optimized); if one
+// ever fails to load the card auto-falls-back to a branded gradient monogram.
 
 import { useEffect, useRef, useState } from 'react'
 import { ArrowUpRight, ChevronRight } from 'lucide-react'
@@ -34,54 +34,54 @@ const MARKETPLACES: Marketplace[] = [
     name: 'San Francisco Condo Market',
     tagline: 'Building-by-building owner marketplace for the city',
     url: 'https://sanfranciscocondomarket.com',
-    image: 'https://sanfranciscocondomarket.com/og/share.jpg',
+    image: '/meet-tim/condo-sf.jpg',
     gradient: ['#1a1f2e', '#1d4ed8'],
-    stat: '150 buildings · 12,000+ units',
+    stat: '142 buildings · 12,183 units',
     monogram: 'SF',
   },
   {
     name: 'Silicon Valley Condo Market',
     tagline: 'The same engine, pointed at the Valley',
     url: 'https://siliconvalleycondomarket.com', // VERIFY domain before ship
-    image: 'https://siliconvalleycondomarket.com/og/share.jpg',
+    image: '/meet-tim/condo-sv.jpg',
     gradient: ['#1d4ed8', '#91a1ba'],
-    stat: 'Owner dashboards · Make-Me-Move',
+    stat: '97 buildings · 6,011 units',
     monogram: 'SV',
   },
   {
     name: 'Eichler Market',
     tagline: 'A marketplace for an architecture, not a zip code',
     url: 'https://eichlermarket.com',
-    image: 'https://eichlermarket.com/og/share.jpg',
+    image: '/meet-tim/eichler.jpg',
     gradient: ['#1f7a4d', '#1a1f2e'],
-    stat: '1,700+ Eichlers · 54 tracts',
+    stat: '1,768 homes · 54 tracts',
     monogram: 'EM',
   },
   {
     name: 'Campbell Real Estate Market',
     tagline: 'The complete public record of a city’s housing',
     url: 'https://campbellrealestatemarket.com',
-    image: 'https://campbellrealestatemarket.com/og/share.jpg',
+    image: '/meet-tim/campbell.jpg',
     gradient: ['#91a1ba', '#1a1f2e'],
-    stat: 'Every home · every street · every sale',
+    stat: '6,609 homes · 105 tracts',
     monogram: 'CB',
   },
   {
     name: 'Los Gatos Real Estate Market',
     tagline: 'Neighborhood intelligence, published',
     url: 'https://losgatosrealestatemarket.com',
-    image: 'https://losgatosrealestatemarket.com/og/share.jpg',
+    image: '/meet-tim/los-gatos.jpg',
     gradient: ['#1a1f2e', '#1f7a4d'],
-    stat: 'Street ledgers · live sales feed',
+    stat: '7,989 homes · 129 tracts',
     monogram: 'LG',
   },
   {
     name: 'Saratoga Real Estate Market',
     tagline: 'Dataset to live production in one working day',
     url: 'https://saratogarealestatemarket.com',
-    image: 'https://saratogarealestatemarket.com/og/share.jpg',
+    image: '/meet-tim/saratoga.jpg',
     gradient: ['#1d4ed8', '#1a1f2e'],
-    stat: '5,973 homes · 92 neighborhoods',
+    stat: '5,973 homes · 92 tracts',
     monogram: 'SG',
   },
 ]
