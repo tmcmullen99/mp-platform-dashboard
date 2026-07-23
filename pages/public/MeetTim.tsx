@@ -229,6 +229,144 @@ function SectionHeader({
   )
 }
 
+/* -------------------------- neighborhood signal --------------------------- */
+// Animated radius diagram from the Claude Design iteration. Pure rAF + refs —
+// zero new deps. One fix vs. the design draft: elements are queried from a
+// wrapper ref (the original nextElementSibling lookup grabbed the label div,
+// which silently skipped the building-side animation).
+
+const NS_CYCLE = 6.4, NS_HOLD = 4.6, NS_FADE_END = 5.7
+const nsClamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v))
+const nsLerp = (a: number, b: number, t: number) => a + (b - a) * t
+const nsEaseOut = (t: number) => 1 - Math.pow(1 - t, 3)
+const nsHexToRgb = (hex: string): [number, number, number] => {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex)
+  return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [78, 133, 191]
+}
+
+const NS_ROOF = 12, NS_BODY = 28, NS_W = 44
+const nsStreetCfg: { x: number; ry: number; cx: number; cy: number }[] = []
+;[40, 156].forEach(hx =>
+  [34, 78, 122, 166].forEach(ry =>
+    nsStreetCfg.push({ x: hx, ry, cx: hx + NS_W / 2, cy: ry + NS_ROOF + NS_BODY / 2 })),
+)
+const nsMkHouse = (h: { x: number; ry: number }) => ({
+  x: h.x,
+  bodyY: h.ry + NS_ROOF,
+  roof: `${h.x},${h.ry + NS_ROOF} ${h.x + NS_W / 2},${h.ry} ${h.x + NS_W},${h.ry + NS_ROOF}`,
+})
+const nsSoldHouse = nsStreetCfg[1]
+const nsStreetSource = nsMkHouse(nsSoldHouse)
+const nsStreetOthers = nsStreetCfg.filter((_, i) => i !== 1)
+const nsSd = nsStreetOthers.map(h => Math.hypot(h.cx - nsSoldHouse.cx, h.cy - nsSoldHouse.cy))
+const nsSMin = Math.min(...nsSd), nsSMax = Math.max(...nsSd)
+const NS_STREET = nsStreetOthers.map((h, i) => ({ ...nsMkHouse(h), t0: 0.6 + ((nsSd[i] - nsSMin) / (nsSMax - nsSMin)) * 1.9 }))
+
+const NS_COLS = [52, 74, 96], NS_ROWS = [44, 71, 98, 125, 152, 179]
+const NS_SRC_R = 3, NS_SRC_C = 1
+const nsBRaw: { x: number; y: number; d: number }[] = []
+let nsBMax = 0
+NS_ROWS.forEach((_, r) => NS_COLS.forEach((cx, c) => {
+  if (r === NS_SRC_R && c === NS_SRC_C) return
+  const d = Math.hypot(r - NS_SRC_R, c - NS_SRC_C)
+  nsBMax = Math.max(nsBMax, d)
+  nsBRaw.push({ x: cx, y: NS_ROWS[r], d })
+}))
+const NS_BUILDING = nsBRaw.map(u => ({ x: u.x, y: u.y, t0: 0.6 + (u.d / nsBMax) * 2.2 }))
+
+function NeighborhoodSignal({ accent = '#4E85BF', speed = 1 }: { accent?: string; speed?: number }) {
+  const wrap = useRef<HTMLDivElement | null>(null)
+  useEffect(() => {
+    const rootEl = wrap.current
+    if (!rootEl) return
+    const els = [...rootEl.querySelectorAll<SVGElement>('[data-neighbor],[data-source]')]
+    const pulses = [...rootEl.querySelectorAll<SVGElement>('[data-pulse]')]
+
+    const paint = (el: SVGElement, level: number, pop: number, sold: boolean, rgb: number[]) => {
+      const [r, g, b] = rgb
+      const big = el.dataset.big === '1'
+      const nMax = big ? 0.9 : 0.62, sMx = big ? 0.88 : 0.78
+      const fillA = sold ? 0.15 + level * sMx : 0.06 + level * nMax
+      el.style.fill = `rgba(${sold ? '110,150,210' : `${r},${g},${b}`}, ${fillA})`
+      el.style.stroke = `rgba(${Math.round(nsLerp(255, r, level))},${Math.round(nsLerp(255, g, level))},${Math.round(nsLerp(255, b, level))}, ${0.18 + level * 0.8})`
+      const glow = level * (big ? 7 : 5) + pop * 10
+      el.style.filter = glow > 0.4 ? `drop-shadow(0 0 ${glow}px rgba(${r},${g},${b}, ${0.45 * level + 0.5 * pop}))` : 'none'
+      el.style.transform = `scale(${1 + pop * 0.26})`
+    }
+
+    const start = performance.now()
+    let raf = 0
+    const loop = (now: number) => {
+      const rgb = nsHexToRgb(accent)
+      const tp = (((now - start) / 1000) * speed) % NS_CYCLE
+      const fade = tp > NS_HOLD ? nsClamp((tp - NS_HOLD) / (NS_FADE_END - NS_HOLD), 0, 1) : 0
+      els.forEach(el => {
+        const sold = el.dataset.source === '1'
+        let level = 0, pop = 0
+        if (sold) {
+          level = nsEaseOut(nsClamp(tp / 0.45, 0, 1)) * (1 - fade)
+          pop = tp < 0.5 ? Math.sin(nsClamp(tp / 0.5, 0, 1) * Math.PI) * 0.65 : 0
+        } else {
+          const t0 = +el.dataset.t0!
+          if (tp >= t0) {
+            const local = tp - t0
+            level = nsEaseOut(nsClamp(local / 0.3, 0, 1)) * (1 - fade)
+            pop = local < 0.5 ? Math.sin((local / 0.5) * Math.PI) : 0
+          }
+        }
+        paint(el, level, pop, sold, rgb)
+      })
+      pulses.forEach(el => {
+        const delay = +el.dataset.delay! || 0
+        const tpp = tp - delay
+        if (tpp >= 0 && tpp <= 1.4) {
+          const p = tpp / 1.4
+          el.style.opacity = String(0.5 * (1 - p))
+          el.style.transform = `scale(${nsLerp(0.5, 3.2, nsEaseOut(p))})`
+        } else el.style.opacity = '0'
+      })
+      raf = requestAnimationFrame(loop)
+    }
+    raf = requestAnimationFrame(loop)
+    return () => cancelAnimationFrame(raf)
+  }, [accent, speed])
+
+  const nStyle = { fill: 'rgba(255,255,255,0.045)', stroke: 'rgba(255,255,255,0.18)', strokeWidth: 1.2, transformBox: 'fill-box' as const, transformOrigin: 'center' }
+  const sStyle = { fill: 'rgba(94,133,200,0.15)', stroke: '#89AACC', strokeWidth: 1.4, transformBox: 'fill-box' as const, transformOrigin: 'center' }
+  const pStyle = { fill: 'none', stroke: '#89AACC', strokeWidth: 1.5, opacity: 0, transformBox: 'fill-box' as const, transformOrigin: 'center' }
+
+  return (
+    <div ref={wrap} className="flex justify-center items-end gap-6 flex-wrap">
+      <div className="text-center" style={{ flex: '1 1 220px', maxWidth: 280 }}>
+        <svg viewBox="0 0 240 250" className="w-full h-auto" style={{ overflow: 'visible' }}>
+          <rect x="106" y="12" width="28" height="220" rx="5" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
+          <line x1="120" y1="20" x2="120" y2="224" stroke="rgba(255,255,255,0.14)" strokeWidth="1.5" strokeDasharray="6 9" />
+          {[0, 0.3].map(d => <circle key={d} data-pulse data-delay={d} cx="62" cy="104" r="22" style={pStyle} />)}
+          {NS_STREET.map((h, i) => (
+            <g key={i} data-neighbor data-big="1" data-t0={h.t0} style={nStyle}>
+              <polygon points={h.roof} /><rect x={h.x} y={h.bodyY} width="44" height="28" rx="3" />
+            </g>
+          ))}
+          <g data-source="1" data-big="1" style={sStyle}>
+            <polygon points={nsStreetSource.roof} /><rect x={nsStreetSource.x} y={nsStreetSource.bodyY} width="44" height="28" rx="3" />
+          </g>
+        </svg>
+        <div className="text-[11px] uppercase tracking-[0.22em] text-white/45 mt-2">Same street</div>
+      </div>
+
+      <div className="text-center" style={{ flex: '1 1 160px', maxWidth: 200 }}>
+        <svg viewBox="0 0 160 250" className="w-full h-auto" style={{ overflow: 'visible' }}>
+          <rect x="40" y="30" width="80" height="180" rx="8" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+          {[0, 0.3].map(d => <rect key={d} data-pulse data-delay={d} x="74" y="125" width="16" height="20" rx="3" style={pStyle} />)}
+          {NS_BUILDING.map((u, i) => <rect key={i} data-neighbor data-t0={u.t0} x={u.x} y={u.y} width="16" height="20" rx="3" style={nStyle} />)}
+          <rect data-source="1" x="74" y="125" width="16" height="20" rx="3" style={sStyle} />
+        </svg>
+        <div className="text-[11px] uppercase tracking-[0.22em] text-white/45 mt-2">Same building</div>
+      </div>
+    </div>
+  )
+}
+
 /* ------------------------------ loading screen ---------------------------- */
 
 function LoadingScreen({ onComplete }: { onComplete: () => void }) {
@@ -440,7 +578,7 @@ export default function MeetTim() {
             eyebrow="The machine behind every marketplace"
             lead="When a home sells,"
             accent="the neighborhood knows."
-            sub="Every marketplace watches its city's market in real time — and reports it to the people who live in it."
+            sub="Every McMullen marketplace watches its city's market in real time — and reports it to the people who live in it."
           />
 
           <div className="grid lg:grid-cols-2 gap-12 items-center mt-12">
@@ -448,16 +586,22 @@ export default function MeetTim() {
               <p className="text-sm md:text-base text-white/50 leading-relaxed">
                 When a home sells, the system finds it on the city record, identifies the
                 homeowners around it — the same street, or in a condo market, the same building —
-                verifies every address, and sends a neighborhood announcement: — validated addresses only, hard daily limits, closest neighbors first,
-                and a constantly growing list of active buyers in every market.
+                verifies every address, and stages a neighborhood announcement: the home's own
+                photo, the actual sale price, and a link to its complete record.
+              </p>
+              <p className="text-sm md:text-base text-white/50 leading-relaxed mt-4">
+                Then it stops and asks. <span className="text-white/90">Nothing sends until Tim
+                personally approves it.</span> Approved announcements go out under engineered
+                restraint — validated addresses only, hard daily limits, closest neighbors first,
+                and an unsubscribe honored across every McMullen market, permanently.
               </p>
               <p className="mt2-serif text-xl md:text-2xl text-white mt-6">
                 The result isn't marketing mail. It's the market, reported to the people who live
-                in it, operated by McMullen Properties.
+                in it.
               </p>
               <div className="flex flex-wrap gap-x-10 gap-y-6 mt-10">
                 <div>
-                  <div className="mt2-serif text-3xl text-white">6</div>
+                  <div className="mt2-serif text-3xl text-white">3</div>
                   <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
                 </div>
                 <div>
@@ -477,27 +621,9 @@ export default function MeetTim() {
             </Reveal>
 
             <Reveal delay={0.1}>
-              {/* Radius diagram: street variant + condo variant */}
+              {/* Animated radius diagram: street variant + condo variant */}
               <div className="rounded-[2rem] bg-[#141414] border border-white/10 p-8 md:p-10">
-                <svg viewBox="0 0 520 300" className="w-full h-auto" role="img" aria-label="Diagram: a sold home at the center of a neighbor radius, and a condo tower where the radius is the building">
-                  {/* street variant */}
-                  <circle cx="150" cy="150" r="110" fill="none" stroke="#4E85BF" strokeOpacity="0.25" strokeDasharray="4 6" />
-                  <circle cx="150" cy="150" r="70" fill="none" stroke="#4E85BF" strokeOpacity="0.4" strokeDasharray="4 6" />
-                  {[[150,150,1],[95,110,0],[205,105,0],[85,180,0],[210,190,0],[150,80,0],[150,222,0],[60,145,0],[240,150,0]].map(([x,y,c],i)=> (
-                    <rect key={i} x={Number(x)-11} y={Number(y)-9} width="22" height="18" rx="3"
-                      fill={c? '#4E85BF' : '#1f1f1f'} stroke={c? '#89AACC' : 'rgba(255,255,255,0.25)'} strokeWidth="1.2" />
-                  ))}
-                  <text x="150" y="286" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="12" letterSpacing="2">SAME STREET</text>
-                  {/* condo variant */}
-                  <rect x="370" y="52" width="80" height="196" rx="6" fill="#1f1f1f" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
-                  {Array.from({length:6}).map((_,r)=> Array.from({length:3}).map((_,cIdx)=> {
-                    const sold = r===3 && cIdx===1
-                    return <rect key={`${r}-${cIdx}`} x={380+cIdx*21} y={64+r*29} width="16" height="20" rx="2"
-                      fill={sold? '#4E85BF' : 'rgba(255,255,255,0.06)'} stroke={sold? '#89AACC' : 'rgba(255,255,255,0.18)'} strokeWidth="1" />
-                  }))}
-                  <rect x="366" y="48" width="88" height="204" rx="8" fill="none" stroke="#4E85BF" strokeOpacity="0.35" strokeDasharray="4 6" />
-                  <text x="410" y="286" textAnchor="middle" fill="rgba(255,255,255,0.45)" fontSize="12" letterSpacing="2">SAME BUILDING</text>
-                </svg>
+                <NeighborhoodSignal />
                 <div className="grid grid-cols-2 gap-4 mt-8 text-[12px] text-white/45 leading-relaxed">
                   <div><span className="text-white/80">1 · Detect.</span> Sales surface from the city record, twice daily.</div>
                   <div><span className="text-white/80">2 · Verify.</span> Neighbors located on the parcel record; every address validated.</div>
