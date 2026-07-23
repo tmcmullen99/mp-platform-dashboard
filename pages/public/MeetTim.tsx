@@ -311,7 +311,7 @@ export default function MeetTim() {
           </a>
           <span className="hidden sm:block w-px h-5 bg-white/10 mx-1" />
           <a
-            href="mailto:tim@mcmullen.properties"
+            href="tel:+14156919272"
             className="text-xs sm:text-sm rounded-full px-4 py-1.5 sm:py-2 text-white bg-white/5 border border-white/10 hover:border-white/30 transition-colors"
           >
             Say hi ↗
@@ -342,8 +342,8 @@ export default function MeetTim() {
             Tim McMullen
           </h1>
           <p className="mt2-blur text-lg md:text-2xl text-white/80 mb-4" style={{ animationDelay: '.45s' }}>
-            The <RotatingRole /> who built systems to{' '}
-            <span className="mt2-serif">empower clients</span> &amp; decrease their costs.
+            The <RotatingRole /> obsessed with building systems that make buying &amp; selling real
+            estate <span className="mt2-serif">better for clients</span>.
           </p>
           <p className="mt2-blur text-sm md:text-base text-white/45 max-w-md mx-auto mb-12" style={{ animationDelay: '.55s' }}>
             Six live marketplaces, a platform that does the analytical work agents used to gatekeep,
@@ -564,6 +564,57 @@ export default function MeetTim() {
                   <div className="mt2-serif text-3xl text-white">PAC-12</div>
                   <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">conference</div>
                 </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ---------------------------- WORK WITH TIM ------------------------- */}
+      <section id="work-with-tim" className="py-16 md:py-24 scroll-mt-20">
+        <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
+          <div className="rounded-[2.5rem] bg-[#141414] border border-white/10 p-8 md:p-14 grid lg:grid-cols-[minmax(0,380px)_1fr] gap-10 md:gap-14 items-center">
+            <Reveal>
+              <div className="relative rounded-[2rem] overflow-hidden border border-white/10 aspect-square max-w-[380px] mx-auto lg:mx-0">
+                <img
+                  src="/meet-tim/tim-headshot.jpg"
+                  alt="Tim McMullen"
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
+              <div className="flex items-center gap-3 mb-5">
+                <span className="w-8 h-px bg-white/15" />
+                <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">Work with Tim</span>
+              </div>
+              <h2 className="text-3xl md:text-5xl leading-tight text-white/95">
+                One agent. <span className="mt2-serif text-white">The whole machine.</span>
+              </h2>
+              <p className="text-sm md:text-base text-white/50 mt-5 leading-relaxed max-w-xl">
+                Every marketplace, dataset, and system on this page works for you the moment we
+                start. Do the analysis with the tools — then hire Tim for the licensed work that
+                actually needs a professional: strategy, negotiation, and the transaction itself.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 mt-9">
+                <a
+                  href="tel:+14156919272"
+                  className="inline-flex items-center gap-3 rounded-full bg-white text-[#0a0a0a] pl-2 pr-6 py-2 text-sm font-medium hover:scale-105 transition-transform"
+                >
+                  <img
+                    src="/meet-tim/tim-headshot.jpg"
+                    alt=""
+                    className="w-10 h-10 rounded-full object-cover"
+                  />
+                  Start a chat with Tim
+                </a>
+                <a
+                  href="mailto:tim@mcmullen.properties"
+                  className="inline-flex items-center justify-center rounded-full text-sm px-7 py-3.5 border-2 border-white/15 text-white hover:border-white/40 hover:scale-105 transition-all"
+                >
+                  tim@mcmullen.properties
+                </a>
               </div>
             </Reveal>
           </div>
