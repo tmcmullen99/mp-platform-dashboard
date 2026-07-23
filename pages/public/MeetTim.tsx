@@ -523,26 +523,30 @@ export default function MeetTim() {
       {/* ------------------------------ FOOTBALL ---------------------------- */}
       <section className="py-16 md:py-24">
         <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
-          <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 min-h-[520px] flex items-end">
-            <img
-              src={OSU_IMAGE}
-              alt="Tim McMullen punting for Oregon State University"
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-black/20" />
-            <Reveal className="relative z-10 p-8 md:p-14 max-w-2xl">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <Reveal>
+              <div className="relative rounded-[2.5rem] overflow-hidden border border-white/10 aspect-[4/5] max-h-[560px]">
+                <img
+                  src={OSU_IMAGE}
+                  alt="Tim McMullen punting for Oregon State University"
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              </div>
+            </Reveal>
+            <Reveal delay={0.1}>
               <div className="flex items-center gap-3 mb-5">
-                <span className="w-8 h-px bg-white/25" />
-                <span className="text-[11px] uppercase tracking-[0.3em] text-white/60">
+                <span className="w-8 h-px bg-white/15" />
+                <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">
                   Oregon State University · Division I football
                 </span>
               </div>
-              <h2 className="text-3xl md:text-5xl leading-tight text-white">
+              <h2 className="text-3xl md:text-5xl leading-tight text-white/95">
                 8,000+ miles away from home.{' '}
-                <span className="mt2-serif">Here to compete, here to win.</span>
+                <span className="mt2-serif text-white">Here to compete, here to win.</span>
               </h2>
-              <p className="text-sm md:text-base text-white/60 mt-5 leading-relaxed max-w-xl">
+              <p className="text-sm md:text-base text-white/50 mt-5 leading-relaxed max-w-xl">
                 At 19, Tim left Melbourne, Australia to punt in the PAC-12 — four seasons at the
                 highest level of collegiate athletics. When you've performed in front of 50,000
                 people, a real estate negotiation feels a little less intimidating.
@@ -550,15 +554,15 @@ export default function MeetTim() {
               <div className="flex gap-10 mt-8">
                 <div>
                   <div className="mt2-serif text-3xl text-white">4</div>
-                  <div className="text-[11px] text-white/50 mt-1 uppercase tracking-[0.15em]">seasons</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">seasons</div>
                 </div>
                 <div>
                   <div className="mt2-serif text-3xl text-white">8,000+</div>
-                  <div className="text-[11px] text-white/50 mt-1 uppercase tracking-[0.15em]">miles from home</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">miles from home</div>
                 </div>
                 <div>
                   <div className="mt2-serif text-3xl text-white">PAC-12</div>
-                  <div className="text-[11px] text-white/50 mt-1 uppercase tracking-[0.15em]">conference</div>
+                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">conference</div>
                 </div>
               </div>
             </Reveal>
