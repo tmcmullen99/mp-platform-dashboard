@@ -137,6 +137,22 @@ const FS_IMAGES = [
   { src: '/meet-tim/fs-entrance.webp', alt: 'Residence entrance on Mission Street', span: '' },
 ]
 
+type BtsItem = { type: 'img' | 'video'; src: string }
+
+const FS_BTS: BtsItem[] = [
+  { type: 'img', src: '/meet-tim/fs-bts-01.jpg' },
+  { type: 'video', src: '/meet-tim/fs-bts-clip-8396.mp4' },
+  { type: 'img', src: '/meet-tim/fs-bts-02.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-03.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-04.jpg' },
+  { type: 'video', src: '/meet-tim/fs-bts-clip-8402.mp4' },
+  { type: 'img', src: '/meet-tim/fs-bts-05.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-06.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-07.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-08.jpg' },
+  { type: 'img', src: '/meet-tim/fs-bts-09.jpg' },
+]
+
 const OSU_IMAGE =
   'https://cdn.prod.website-files.com/65a1ca4354f63bd7376b5027/69a1025b9df366f2a09cbd93_tim%20oregon%20state.jpg'
 
@@ -286,6 +302,8 @@ export default function MeetTim() {
         .mt2-scroll-line { animation: mt2-scroll 1.5s ease-in-out infinite; }
         @keyframes mt2-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
         .mt2-marquee { animation: mt2-marquee 40s linear infinite; }
+        .mt2-marquee-slow { animation: mt2-marquee 60s linear infinite; }
+        .mt2-marquee-wrap:hover .mt2-marquee-slow { animation-play-state: paused; }
         .mt2 ::selection { background: #4E85BF; color: #fff; }
       `}</style>
 
@@ -516,6 +534,45 @@ export default function MeetTim() {
                 </Reveal>
               ))}
             </div>
+          </div>
+
+          {/* Behind the scenes marquee */}
+          <Reveal className="mt-16 md:mt-20">
+            <div className="flex items-center gap-3 mb-8">
+              <span className="w-8 h-px bg-white/15" />
+              <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">
+                Behind the scenes · On the launch team
+              </span>
+            </div>
+          </Reveal>
+        </div>
+        <div
+          className="mt2-marquee-wrap relative overflow-hidden"
+          style={{
+            maskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+            WebkitMaskImage: 'linear-gradient(to right, transparent, black 6%, black 94%, transparent)',
+          }}
+        >
+          <div className="mt2-marquee-slow flex w-max gap-5 px-5">
+            {[...FS_BTS, ...FS_BTS].map((item, i) => (
+              <div
+                key={`${item.src}-${i}`}
+                className="relative h-[260px] md:h-[340px] rounded-2xl overflow-hidden border border-white/10 shrink-0"
+              >
+                {item.type === 'video' ? (
+                  <video
+                    src={item.src}
+                    autoPlay
+                    muted
+                    loop
+                    playsInline
+                    className="h-full w-auto object-cover"
+                  />
+                ) : (
+                  <img src={item.src} alt="Four Seasons launch — behind the scenes" loading="lazy" className="h-full w-auto object-cover" />
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </section>
