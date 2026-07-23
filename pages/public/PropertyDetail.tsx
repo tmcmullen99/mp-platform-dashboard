@@ -115,6 +115,7 @@ function stageLabel(stage: string | null): string | null {
     case 'active': return 'For Sale'
     case 'pending': return 'Pending'
     case 'sold': return 'Sold'
+    case 'off_market': return 'Off Market'
     default: return null
   }
 }
