@@ -586,18 +586,11 @@ export default function MeetTim() {
               <p className="text-sm md:text-base text-white/50 leading-relaxed">
                 When a home sells, the system finds it on the city record, identifies the
                 homeowners around it — the same street, or in a condo market, the same building —
-                verifies every address, and stages a neighborhood announcement: the home's own
-                photo, the actual sale price, and a link to its complete record.
-              </p>
-              <p className="text-sm md:text-base text-white/50 leading-relaxed mt-4">
-                Then it stops and asks. <span className="text-white/90">Nothing sends until Tim
-                personally approves it.</span> Approved announcements go out under engineered
-                restraint — validated addresses only, hard daily limits, closest neighbors first,
-                and an unsubscribe honored across every McMullen market, permanently.
+                verifies every address, and stages a neighborhood announcement: — validated addresses only, closest neighbors first, and a constantly growing list of buyers for a home in your neighborhood.
               </p>
               <p className="mt2-serif text-xl md:text-2xl text-white mt-6">
                 The result isn't marketing mail. It's the market, reported to the people who live
-                in it.
+                in it, tracked by interested buyers, operated by McMullen Properties.
               </p>
               <div className="flex flex-wrap gap-x-10 gap-y-6 mt-10">
                 <div>
