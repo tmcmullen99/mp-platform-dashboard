@@ -440,7 +440,7 @@ export default function MeetTim() {
             eyebrow="The machine behind every marketplace"
             lead="When a home sells,"
             accent="the neighborhood knows."
-            sub="Every McMullen marketplace watches its city's market in real time — and reports it to the people who live in it."
+            sub="Every marketplace watches its city's market in real time — and reports it to the people who live in it."
           />
 
           <div className="grid lg:grid-cols-2 gap-12 items-center mt-12">
@@ -448,22 +448,16 @@ export default function MeetTim() {
               <p className="text-sm md:text-base text-white/50 leading-relaxed">
                 When a home sells, the system finds it on the city record, identifies the
                 homeowners around it — the same street, or in a condo market, the same building —
-                verifies every address, and stages a neighborhood announcement: the home's own
-                photo, the actual sale price, and a link to its complete record.
-              </p>
-              <p className="text-sm md:text-base text-white/50 leading-relaxed mt-4">
-                Then it stops and asks. <span className="text-white/90">Nothing sends until Tim
-                personally approves it.</span> Approved announcements go out under engineered
-                restraint — validated addresses only, hard daily limits, closest neighbors first,
-                and an unsubscribe honored across every McMullen market, permanently.
+                verifies every address, and sends a neighborhood announcement: — validated addresses only, hard daily limits, closest neighbors first,
+                and a constantly growing list of active buyers in every market.
               </p>
               <p className="mt2-serif text-xl md:text-2xl text-white mt-6">
                 The result isn't marketing mail. It's the market, reported to the people who live
-                in it.
+                in it, operated by McMullen Properties.
               </p>
               <div className="flex flex-wrap gap-x-10 gap-y-6 mt-10">
                 <div>
-                  <div className="mt2-serif text-3xl text-white">3</div>
+                  <div className="mt2-serif text-3xl text-white">6</div>
                   <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
                 </div>
                 <div>
