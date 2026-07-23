@@ -336,8 +336,8 @@ function NeighborhoodSignal({ accent = '#4E85BF', speed = 1 }: { accent?: string
   const pStyle = { fill: 'none', stroke: '#89AACC', strokeWidth: 1.5, opacity: 0, transformBox: 'fill-box' as const, transformOrigin: 'center' }
 
   return (
-    <div ref={wrap} className="flex justify-center items-end gap-6 flex-wrap">
-      <div className="text-center" style={{ flex: '1 1 220px', maxWidth: 280 }}>
+    <div ref={wrap} className="flex justify-center items-end gap-4 md:gap-6 flex-nowrap">
+      <div className="text-center min-w-0" style={{ flex: '3 1 0%', maxWidth: 280 }}>
         <svg viewBox="0 0 240 250" className="w-full h-auto" style={{ overflow: 'visible' }}>
           <rect x="106" y="12" width="28" height="220" rx="5" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
           <line x1="120" y1="20" x2="120" y2="224" stroke="rgba(255,255,255,0.14)" strokeWidth="1.5" strokeDasharray="6 9" />
@@ -354,7 +354,7 @@ function NeighborhoodSignal({ accent = '#4E85BF', speed = 1 }: { accent?: string
         <div className="text-[11px] uppercase tracking-[0.22em] text-white/45 mt-2">Same street</div>
       </div>
 
-      <div className="text-center" style={{ flex: '1 1 160px', maxWidth: 200 }}>
+      <div className="text-center min-w-0" style={{ flex: '2 1 0%', maxWidth: 200 }}>
         <svg viewBox="0 0 160 250" className="w-full h-auto" style={{ overflow: 'visible' }}>
           <rect x="40" y="30" width="80" height="180" rx="8" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
           {[0, 0.3].map(d => <rect key={d} data-pulse data-delay={d} x="74" y="125" width="16" height="20" rx="3" style={pStyle} />)}
@@ -581,18 +581,18 @@ export default function MeetTim() {
             sub="Every McMullen marketplace watches its city's market in real time — and reports it to the people who live in it."
           />
 
-          <div className="grid lg:grid-cols-2 gap-12 items-center mt-12">
-            <Reveal>
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mt-10 lg:mt-12">
+            <Reveal className="order-2 lg:order-1">
               <p className="text-sm md:text-base text-white/50 leading-relaxed">
                 When a home sells, the system finds it on the city record, identifies the
                 homeowners around it — the same street, or in a condo market, the same building —
                 verifies every address, and stages a neighborhood announcement: — validated addresses only, closest neighbors first, and a constantly growing list of buyers for a home in your neighborhood.
               </p>
-              <p className="mt2-serif text-xl md:text-2xl text-white mt-6">
+              <p className="mt2-serif text-lg md:text-2xl text-white mt-5 md:mt-6">
                 The result isn't marketing mail. It's the market, reported to the people who live
                 in it, tracked by interested buyers, operated by McMullen Properties.
               </p>
-              <div className="flex flex-wrap gap-x-10 gap-y-6 mt-10">
+              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-8 sm:gap-x-10 gap-y-5 sm:gap-y-6 mt-8 md:mt-10">
                 <div>
                   <div className="mt2-serif text-3xl text-white">3</div>
                   <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
@@ -613,11 +613,11 @@ export default function MeetTim() {
               <p className="text-[10px] text-white/25 mt-6 uppercase tracking-[0.2em]">As of July 2026</p>
             </Reveal>
 
-            <Reveal delay={0.1}>
+            <Reveal delay={0.1} className="order-1 lg:order-2">
               {/* Animated radius diagram: street variant + condo variant */}
-              <div className="rounded-[2rem] bg-[#141414] border border-white/10 p-8 md:p-10">
+              <div className="rounded-[2rem] bg-[#141414] border border-white/10 p-5 md:p-10">
                 <NeighborhoodSignal />
-                <div className="grid grid-cols-2 gap-4 mt-8 text-[12px] text-white/45 leading-relaxed">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-6 md:mt-8 text-[11px] sm:text-[12px] text-white/45 leading-relaxed">
                   <div><span className="text-white/80">1 · Detect.</span> Sales surface from the city record, twice daily.</div>
                   <div><span className="text-white/80">2 · Verify.</span> Neighbors located on the parcel record; every address validated.</div>
                   <div><span className="text-white/80">3 · Approve.</span> One-click human gate — nothing sends without it.</div>
