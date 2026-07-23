@@ -111,6 +111,60 @@ const PILLARS: { title: string; blurb: string }[] = [
   },
 ]
 
+type TopSale = {
+  name: string
+  meta: string
+  blurb: string
+  href: string
+  image: string
+}
+
+const STORAGE = 'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site'
+
+const TOP_SALES: TopSale[] = [
+  {
+    name: 'McKinney Lodge',
+    meta: '$31,000,000 · Homewood, Tahoe',
+    blurb:
+      '4250 West Lake Blvd — new-construction lakefront manor. Direct-to-buyer marketing targeting high-net-worth individuals with Tahoe affiliations.',
+    href: '/listings/4250-west-lake-blvd',
+    image: `${STORAGE}/4250-west-lake-blvd/000.jpg`,
+  },
+  {
+    name: '859 Boar Terrace',
+    meta: '$28,000,000 · Fremont',
+    blurb: 'A landmark East Bay estate sale.',
+    href: '/listings/859-boar-terrace',
+    image: `${STORAGE}/859-boar-terrace/000.jpg`,
+  },
+  {
+    name: 'Eureka Tower Penthouse',
+    meta: '$17,000,000 · Melbourne, Australia',
+    blurb:
+      "Australia's premier penthouse, listed with innovative direct marketing to high-net-worth buyers abroad.",
+    href: '/listings/eureka-tower-penthouse',
+    image: `${STORAGE}/eureka-tower-penthouse/000.jpg`,
+  },
+  {
+    name: '11195 Hooper Lane',
+    meta: '$12,000,000 · Los Altos Hills',
+    blurb: 'Silicon Valley luxury estate in the hills above the Valley.',
+    href: '/listings/11195-hooper-lane',
+    image: `${STORAGE}/11195-hooper-lane/000.jpg`,
+  },
+  {
+    name: '175 Huckleberry Drive',
+    meta: '$9,950,000 · Jackson Hole',
+    blurb:
+      'New 5-bed residence on 3.81 acres in Fairways Estates with unobstructed Grand Teton views — marketed with a 1,300-household owned-audience campaign.',
+    href: '/listings/175-huckleberry-drive',
+    image: `${STORAGE}/175-huckleberry-drive/000.jpg`,
+  },
+]
+
+const OSU_IMAGE =
+  'https://cdn.prod.website-files.com/65a1ca4354f63bd7376b5027/69a1025b9df366f2a09cbd93_tim%20oregon%20state.jpg'
+
 /* --------------------------- reveal utilities ---------------------------- */
 
 function useInView<T extends HTMLElement>() {
@@ -282,6 +336,9 @@ export default function MeetTim() {
               <a href="#marketplaces" className="px-4 py-2 text-[12px] font-semibold text-slate-500 hover:text-[#0a1b33] transition-colors">
                 Marketplaces
               </a>
+              <a href="#sales" className="px-4 py-2 text-[12px] font-semibold text-slate-500 hover:text-[#0a1b33] transition-colors">
+                Top sales
+              </a>
               <a href="#platform" className="px-4 py-2 text-[12px] font-semibold text-slate-500 hover:text-[#0a1b33] transition-colors">
                 Platform
               </a>
@@ -368,6 +425,121 @@ export default function MeetTim() {
             ))}
           </div>
         </Reveal>
+      </section>
+
+      {/* -------------------------- TOP SALES ------------------------------ */}
+      <section id="sales" className="max-w-[1200px] mx-auto px-6 md:px-8 py-12 scroll-mt-24">
+        <Reveal>
+          <p className="text-2xs uppercase tracking-widest text-ink-400 font-semibold">Career top sales</p>
+          <h2 className="font-display text-3xl md:text-[40px] tracking-tight text-ink mt-3 max-w-2xl">
+            Signature transactions
+          </h2>
+          <p className="text-[15px] text-ink-500 mt-4 max-w-2xl leading-relaxed">
+            From lakefront Tahoe estates to Melbourne penthouses — a track record of marketing and
+            selling extraordinary properties.
+          </p>
+        </Reveal>
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+          {TOP_SALES.map((t, i) => (
+            <Reveal key={t.name} delay={0.06 * i}>
+              <a
+                href={t.href}
+                className="group block rounded-3xl bg-white border border-slate-200/60 shadow-sm hover:shadow-[0_24px_60px_-20px_rgba(26,31,46,0.18)] hover:border-slate-300 transition-all overflow-hidden h-full"
+              >
+                <div className="relative h-44 overflow-hidden">
+                  <img
+                    src={t.image}
+                    alt={t.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-t from-ink/70 to-transparent" />
+                </div>
+                <div className="p-6">
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="font-display text-lg text-ink tracking-tight">{t.name}</h3>
+                    <ArrowUpRight size={18} className="text-ink-300 group-hover:text-ink transition-colors shrink-0 mt-1" />
+                  </div>
+                  <p className="text-2xs uppercase tracking-widest text-ink-400 font-semibold mt-2">{t.meta}</p>
+                  <p className="text-[13px] text-ink-500 mt-3 leading-relaxed">{t.blurb}</p>
+                </div>
+              </a>
+            </Reveal>
+          ))}
+        </div>
+      </section>
+
+      {/* ------------------------- FOUR SEASONS ---------------------------- */}
+      <section className="max-w-[1200px] mx-auto px-6 md:px-8 py-12">
+        <Reveal>
+          <div className="rounded-[40px] bg-ink text-white px-8 md:px-14 py-14 grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <p className="text-2xs uppercase tracking-widest text-white/50 font-semibold">
+                Launch team · 706 Mission St, San Francisco
+              </p>
+              <h2 className="font-display text-3xl md:text-[40px] tracking-tight mt-3">
+                Four Seasons Private Residences
+              </h2>
+              <p className="text-[15px] text-white/70 mt-5 leading-relaxed">
+                Sales executive on the launch team of San Francisco's $1.2B Four Seasons Private
+                Residences at 706 Mission Street — negotiating a record $3,000-per-square-foot sale
+                and writing $18M in contracts in a single week.
+              </p>
+            </div>
+            <div className="grid grid-cols-3 gap-8">
+              <div>
+                <div className="font-display text-3xl md:text-4xl tracking-tight">$1.2B</div>
+                <div className="text-[12px] text-white/60 mt-2 leading-relaxed">development</div>
+              </div>
+              <div>
+                <div className="font-display text-3xl md:text-4xl tracking-tight">$3,000</div>
+                <div className="text-[12px] text-white/60 mt-2 leading-relaxed">per-sq-ft record sale</div>
+              </div>
+              <div>
+                <div className="font-display text-3xl md:text-4xl tracking-tight">$18M</div>
+                <div className="text-[12px] text-white/60 mt-2 leading-relaxed">in contracts, one week</div>
+              </div>
+            </div>
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ------------------------ OREGON STATE ----------------------------- */}
+      <section className="max-w-[1200px] mx-auto px-6 md:px-8 py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <Reveal>
+            <div className="rounded-[40px] overflow-hidden border border-slate-200/60 shadow-sm">
+              <img src={OSU_IMAGE} alt="Tim McMullen punting for Oregon State" loading="lazy" className="w-full h-full object-cover" />
+            </div>
+          </Reveal>
+          <Reveal delay={0.1}>
+            <p className="text-2xs uppercase tracking-widest text-ink-400 font-semibold">Division I athlete</p>
+            <h2 className="font-display text-3xl md:text-[40px] tracking-tight text-ink mt-3">
+              Oregon State University football
+            </h2>
+            <p className="text-[15px] text-ink-500 mt-5 leading-relaxed">
+              At 19, Tim left Melbourne, Australia to chase a dream 8,000 miles from home — competing
+              at the highest level of collegiate athletics in the PAC-12 as a punter. Those years
+              taught discipline, resilience, and what it means to perform under pressure. When
+              you've punted in front of 50,000 people, a real estate negotiation feels a little
+              less intimidating.
+            </p>
+            <div className="grid grid-cols-3 gap-8 mt-8">
+              <div>
+                <div className="font-display text-3xl tracking-tight text-ink">4</div>
+                <div className="text-[12px] text-ink-400 mt-1">seasons</div>
+              </div>
+              <div>
+                <div className="font-display text-3xl tracking-tight text-ink">8,000</div>
+                <div className="text-[12px] text-ink-400 mt-1">miles from home</div>
+              </div>
+              <div>
+                <div className="font-display text-3xl tracking-tight text-ink">PAC-12</div>
+                <div className="text-[12px] text-ink-400 mt-1">conference</div>
+              </div>
+            </div>
+          </Reveal>
+        </div>
       </section>
 
       {/* --------------------------- PLATFORM ------------------------------ */}
