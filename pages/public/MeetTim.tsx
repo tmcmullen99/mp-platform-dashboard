@@ -329,7 +329,7 @@ export default function MeetTim() {
           </a>
           <span className="hidden sm:block w-px h-5 bg-white/10 mx-1" />
           <a
-            href="tel:+14156919272"
+            href="sms:+14156919272"
             className="text-xs sm:text-sm rounded-full px-4 py-1.5 sm:py-2 text-white bg-white/5 border border-white/10 hover:border-white/30 transition-colors"
           >
             Say hi ↗
@@ -656,7 +656,7 @@ export default function MeetTim() {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 mt-9">
                 <a
-                  href="tel:+14156919272"
+                  href="sms:+14156919272"
                   className="inline-flex items-center gap-3 rounded-full bg-white text-[#0a0a0a] pl-2 pr-6 py-2 text-sm font-medium hover:scale-105 transition-transform"
                 >
                   <img
