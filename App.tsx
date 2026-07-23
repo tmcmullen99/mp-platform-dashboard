@@ -23,6 +23,7 @@ import TenantHome from '@/pages/public/TenantHome'
 import PortfolioIndex from '@/pages/public/PortfolioIndex'
 import PropertyDetail from '@/pages/public/PropertyDetail'
 import CorePage from '@/pages/public/CorePage'
+import MeetTim from '@/pages/public/MeetTim'
 import BlogIndex from '@/pages/public/BlogIndex'
 import BlogPost from '@/pages/public/BlogPost'
 import PublicMakeMeMove from '@/pages/public/PublicMakeMeMove'
@@ -82,7 +83,7 @@ export default function App() {
           <Route path="/home" element={<McMullenHome />} />
           <Route path="/listings" element={<PortfolioIndex />} />
           <Route path="/listings/:slug" element={<PropertyDetail />} />
-          <Route path="/meet-tim" element={<CorePage slug="about" />} />
+          <Route path="/meet-tim" element={<MeetTim />} />
           {/* Legacy /about path redirects to the renamed Meet Tim page. */}
           <Route path="/about" element={<Navigate to="/meet-tim" replace />} />
           <Route path="/buy" element={<CorePage slug="buy" />} />
