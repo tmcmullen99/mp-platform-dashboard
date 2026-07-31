@@ -43,6 +43,10 @@ export type MarketConfig = {
   blurb: string
   blogTags: string[]
   available: boolean // false = shown in the selector as "coming soon" (no live feed yet)
+  // true = this market's live data is the South Bay city-market engine
+  // (static JSON via lib/southBay.ts), NOT the Condo Market RPCs. The page
+  // renders <SouthBayIntel/> for these instead of the condo data sections.
+  southBay?: boolean
 }
 
 // Canonical Condo Market building-page URL for a slug on a given market.
@@ -101,16 +105,17 @@ export const MARKETS: MarketConfig[] = [
     available: false,
   },
   {
-    key: 'campbell',
-    name: 'Campbell Market',
-    shortName: 'Campbell',
-    dataSlug: 'campbell-market',
-    regionSlug: 'campbell',
-    cmDomain: 'siliconvalleycondomarket.com',
+    key: 'southbay',
+    name: 'South Bay Cities',
+    shortName: 'the South Bay',
+    dataSlug: 'south-bay',
+    regionSlug: 'south-bay',
+    cmDomain: 'campbellrealestatemarket.com',
     blurb:
-      'The Campbell residential market — Tim’s home turf. A dedicated data feed is on the way.',
-    blogTags: ['campbell'],
-    available: false,
+      'Campbell, Los Gatos and Saratoga — the complete recorded-sale history of three South Bay cities, every home and every street, computed identically in each so the comparison means something.',
+    blogTags: ['campbell', 'los-gatos', 'saratoga', 'south-bay'],
+    available: true,
+    southBay: true,
   },
 ]
 
