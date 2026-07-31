@@ -26,6 +26,7 @@ import {
   type HomePayload, type RecentSale, type PsfQuarter, type BuildingStat, type MarketConfig,
   type HomeIndexBuilding,
 } from '@/lib/condoMarket'
+import SouthBayIntel from '@/components/public/SouthBayIntel'
 import { Building2, Video, Phone, Newspaper, Eye, EyeOff, Lock, ArrowRight, MapPin, ChevronDown, ExternalLink } from 'lucide-react'
 
 const BLUE = '#4f82b9'
@@ -248,7 +249,7 @@ export default function MarketPage() {
         .order('publish_date', { ascending: false, nullsFirst: false })
         .limit(24)
 
-      if (cfg.available) {
+      if (cfg.available && !cfg.southBay) {
         const [h, s, q, b, blog] = await Promise.all([
           fetchHomePayload(cfg.dataSlug),
           fetchRecentSales(cfg.dataSlug, 8),
@@ -407,7 +408,15 @@ export default function MarketPage() {
         </Reveal>
       </section>
 
-      {cfg.available ? (
+      {cfg.southBay ? (
+        <>
+          <div style={{ background: NAVY_DEEP }} className="mt-8">
+            <Marquee items={['Every home indexed', 'Every recorded sale', 'Median $/sf trend', '10 years of history', 'Three cities, one method']} />
+          </div>
+          <SouthBayIntel />
+          {showArticles ? <BlogStrip posts={posts.slice(0, 9)} show={true} /> : null}
+        </>
+      ) : cfg.available ? (
         <>
           <div style={{ background: NAVY_DEEP }} className="mt-8">
             <Marquee items={['Live closed sales', 'Median $/sf trend', 'Building-level detail', '10 years of history', 'Updated continuously']} />
