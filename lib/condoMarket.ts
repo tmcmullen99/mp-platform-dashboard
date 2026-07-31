@@ -119,6 +119,74 @@ export const MARKETS: MarketConfig[] = [
   },
 ]
 
+// ---------------------------------------------------------------------------
+// Outbound market directory — every marketplace McMullen Properties operates,
+// with a deep link to that market's own intelligence page.
+//
+// HOST CANONICALISATION (verified, do not "tidy"):
+//   * condo engine (SF / Silicon Valley) canonicalises to the WWW host
+//     (sanfranciscocondomarket.com/index.html -> rel=canonical on www)
+//   * city engine (Campbell / Los Gatos / Saratoga) canonicalises to the APEX
+//     host (verified in campbellrealestatemarket.com/sitemap.xml)
+// Linking to the wrong form costs a 301 hop on every click.
+//
+// PATHS (each verified against that repo, never guessed):
+//   * condo engine  -> /intelligence/   (SF repo ships intelligence/index.html)
+//   * city engine   -> /intelligence/   (present in campbellrealestatemarket.com/sitemap.xml)
+//   * Eichler       -> /communities/    Eichler Market has NO /intelligence/ route;
+//     its routes are active-listings, communities, community, homes, methodology.
+//     /communities/ is its tract-level data browse ("1,298 Eichler homes across
+//     28 Silicon Valley tracts"), so that is the honest equivalent. Eichler also
+//     canonicalises to the APEX host, not www.
+// ---------------------------------------------------------------------------
+export type MarketLink = {
+  key: string
+  name: string
+  domain: string
+  www: boolean      // true = canonical host is www.<domain>
+  path: string      // VERIFIED deep-link path on that deployment
+  cta: string       // label for the link
+  engine: 'condo' | 'city'
+  line: string
+}
+
+export const MARKET_LINKS: MarketLink[] = [
+  { key: 'sf', name: 'San Francisco Condo Market', domain: 'sanfranciscocondomarket.com', www: true, engine: 'condo',
+    path: '/intelligence/', cta: 'Market intelligence',
+    line: 'Every condo building in the city, ten years of closed sales.' },
+  { key: 'sv', name: 'Silicon Valley Condo Market', domain: 'siliconvalleycondomarket.com', www: true, engine: 'condo',
+    path: '/intelligence/', cta: 'Market intelligence',
+    line: 'The same engine, pointed at the Valley.' },
+  { key: 'eichler', name: 'Eichler Market', domain: 'eichlermarket.com', www: false, engine: 'condo',
+    path: '/communities/', cta: 'Browse the tracts',
+    line: '1,700+ Eichlers across Silicon Valley tracts, mapped and priced.' },
+  { key: 'campbell', name: 'The Campbell Market', domain: 'campbellrealestatemarket.com', www: false, engine: 'city',
+    path: '/intelligence/', cta: 'Market intelligence',
+    line: 'Every home, every street, every recorded sale in Campbell.' },
+  { key: 'los-gatos', name: 'The Los Gatos Market', domain: 'losgatosrealestatemarket.com', www: false, engine: 'city',
+    path: '/intelligence/', cta: 'Market intelligence',
+    line: 'Neighborhood-level intelligence across 95030/95032/95033.' },
+  { key: 'saratoga', name: 'The Saratoga Market', domain: 'saratogarealestatemarket.com', www: false, engine: 'city',
+    path: '/intelligence/', cta: 'Market intelligence',
+    line: 'The complete public record of Saratoga real estate.' },
+]
+
+/** Canonical origin for a market site, with no redirect hop. */
+export function marketOrigin(m: MarketLink): string {
+  return `https://${m.www ? 'www.' : ''}${m.domain}`
+}
+
+/** Deep link to a market's own intelligence page, or its homepage if we have
+ *  not verified that the deployment has one. */
+export function marketIntelUrl(m: MarketLink): string {
+  return `${marketOrigin(m)}${m.path}`
+}
+
+/** Look up the outbound link record for a hub market key. */
+export function marketLinkByKey(key: string): MarketLink | undefined {
+  return MARKET_LINKS.find((m) => m.key === key)
+}
+
 export function marketByKey(key: string): MarketConfig | undefined {
   return MARKETS.find((m) => m.key === key)
 }
