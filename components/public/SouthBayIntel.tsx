@@ -348,15 +348,26 @@ export default function SouthBayIntel() {
             </h3>
           </div>
           {single && (
-            <a
-              href={`https://${single.domain}/`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 mp-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
-              style={{ color: NAVY }}
-            >
-              All {single.name} sales <ArrowUpRight size={14} />
-            </a>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <a
+                href={`https://${single.domain}/intelligence/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mp-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
+                style={{ color: NAVY }}
+              >
+                {single.name} market intelligence <ArrowUpRight size={14} />
+              </a>
+              <a
+                href={`https://${single.domain}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mp-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
+                style={{ color: INK }}
+              >
+                All {single.name} sales <ArrowUpRight size={14} />
+              </a>
+            </div>
           )}
         </div>
 
@@ -385,6 +396,23 @@ export default function SouthBayIntel() {
             )
           })}
         </div>
+
+        {sel === 'all' && (
+          <div className="mt-6 flex flex-wrap gap-x-5 gap-y-2">
+            {SOUTH_BAY_KEYS.map((k) => (
+              <a
+                key={k}
+                href={`https://${SOUTH_BAY_META[k].domain}/intelligence/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 mp-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
+                style={{ color: NAVY }}
+              >
+                {SOUTH_BAY_META[k].name} intelligence <ArrowUpRight size={14} />
+              </a>
+            ))}
+          </div>
+        )}
 
         {data && (
           <p className="mp-mono text-[10px] uppercase tracking-[0.16em] mt-6" style={{ color: INK }}>
