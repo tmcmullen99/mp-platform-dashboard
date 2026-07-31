@@ -1,1 +1,397 @@
-{"generated":"2026-07-31","method":"Median sale price per square foot by quarter, derived from recorded sales in each city's parcel record. Medians, never averages. Identical method in every market.","markets":{"campbell":{"totals":{"homes_indexed":6609,"sales_on_record":4890,"streets":498,"sales_12mo":119,"median_ppsf_12mo":1049,"median_price_12mo":1800000,"latest_sale":"2026-07-02"},"quarters":[{"q":"2016 Q1","ppsf":542,"price":1025000,"n":33},{"q":"2016 Q2","ppsf":601,"price":1045000,"n":46},{"q":"2016 Q3","ppsf":644,"price":1050000,"n":43},{"q":"2016 Q4","ppsf":585,"price":1144500,"n":54},{"q":"2017 Q1","ppsf":622,"price":1155000,"n":31},{"q":"2017 Q2","ppsf":674,"price":1200000,"n":85},{"q":"2017 Q3","ppsf":683,"price":1199000,"n":56},{"q":"2017 Q4","ppsf":699,"price":1350000,"n":58},{"q":"2018 Q1","ppsf":788,"price":1415000,"n":33},{"q":"2018 Q2","ppsf":752,"price":1500000,"n":71},{"q":"2018 Q3","ppsf":702,"price":1310000,"n":51},{"q":"2018 Q4","ppsf":713,"price":1297500,"n":34},{"q":"2019 Q1","ppsf":674,"price":1355000,"n":39},{"q":"2019 Q2","ppsf":680,"price":1253500,"n":56},{"q":"2019 Q3","ppsf":763,"price":1360000,"n":37},{"q":"2019 Q4","ppsf":717,"price":1228000,"n":43},{"q":"2020 Q1","ppsf":752,"price":1340000,"n":49},{"q":"2020 Q2","ppsf":712,"price":1350000,"n":44},{"q":"2020 Q3","ppsf":726,"price":1300000,"n":60},{"q":"2020 Q4","ppsf":743,"price":1350000,"n":76},{"q":"2021 Q1","ppsf":780,"price":1355000,"n":78},{"q":"2021 Q2","ppsf":834,"price":1550000,"n":104},{"q":"2021 Q3","ppsf":799,"price":1387500,"n":84},{"q":"2021 Q4","ppsf":892,"price":1607500,"n":80},{"q":"2022 Q1","ppsf":948,"price":1692000,"n":35},{"q":"2022 Q2","ppsf":1099,"price":2000000,"n":68},{"q":"2022 Q3","ppsf":1002,"price":1675000,"n":53},{"q":"2022 Q4","ppsf":921,"price":1500000,"n":35},{"q":"2023 Q1","ppsf":966,"price":1510000,"n":25},{"q":"2023 Q2","ppsf":990,"price":1830000,"n":43},{"q":"2023 Q3","ppsf":954,"price":1720000,"n":33},{"q":"2023 Q4","ppsf":974,"price":1707500,"n":34},{"q":"2024 Q1","ppsf":973,"price":1800000,"n":29},{"q":"2024 Q2","ppsf":1040,"price":1850000,"n":53},{"q":"2024 Q3","ppsf":1062,"price":1650000,"n":45},{"q":"2024 Q4","ppsf":1039,"price":1725000,"n":52},{"q":"2025 Q1","ppsf":1309,"price":1540000,"n":20},{"q":"2025 Q2","ppsf":1085,"price":1823500,"n":47},{"q":"2025 Q3","ppsf":1145,"price":1855000,"n":44},{"q":"2025 Q4","ppsf":907,"price":1375000,"n":23},{"q":"2026 Q1","ppsf":1052,"price":1701000,"n":29},{"q":"2026 Q2","ppsf":983,"price":1800000,"n":32},{"q":"2026 Q3","ppsf":1484,"price":2450000,"n":3,"thin":true}],"feed":[{"a":"1602 Sheffield Ave","s":"1602-sheffield-ave","p":2500000,"sf":2386,"ppsf":1048,"d":"2026-07-02","b":5,"ba":3.0},{"a":"399 Castro Ct","s":"399-castro-ct","p":1950000,"sf":1248,"ppsf":1562,"d":"2026-07-02","b":3,"ba":2.0},{"a":"1676 Ebbetts Dr","s":"1676-ebbetts-dr","p":2450000,"sf":1651,"ppsf":1484,"d":"2026-07-01","b":3,"ba":2.0},{"a":"363 E Latimer Ave Apt 1","s":"363-e-latimer-ave-apt-1","p":689000,"sf":810,"ppsf":851,"d":"2026-06-30","b":2,"ba":1.0},{"a":"421 Manchester Ave","s":"421-manchester-ave","p":1601500,"sf":1615,"ppsf":992,"d":"2026-06-30","b":3,"ba":1.0},{"a":"958 W Hacienda Ave","s":"958-w-hacienda-ave","p":1975000,"sf":2056,"ppsf":961,"d":"2026-06-24","b":0,"ba":null},{"a":"199 Shelley Ave","s":"199-shelley-ave","p":965000,"sf":1280,"ppsf":754,"d":"2026-06-22","b":2,"ba":2.0},{"a":"715 Cambrian Dr","s":"715-cambrian-dr","p":2800000,"sf":1525,"ppsf":1836,"d":"2026-06-18","b":3,"ba":2.0},{"a":"1072 Arroyo Seco Dr","s":"1072-arroyo-seco-dr","p":1750000,"sf":2322,"ppsf":754,"d":"2026-06-16","b":0,"ba":null},{"a":"404 Shamrock Dr","s":"404-shamrock-dr","p":2256000,"sf":1659,"ppsf":1360,"d":"2026-06-12","b":3,"ba":1.0},{"a":"1130 Normandy Dr","s":"1130-normandy-dr","p":1680000,"sf":1235,"ppsf":1360,"d":"2026-06-11","b":2,"ba":1.0},{"a":"640 Craig Ave","s":"640-craig-ave","p":1935000,"sf":1676,"ppsf":1155,"d":"2026-06-08","b":4,"ba":2.0},{"a":"137 Redding Rd Apt B","s":"137-redding-rd-apt-b","p":1055000,"sf":1344,"ppsf":785,"d":"2026-06-02","b":2,"ba":2.0},{"a":"1185 Normandy Dr","s":"1185-normandy-dr","p":2876000,"sf":2199,"ppsf":1308,"d":"2026-06-01","b":4,"ba":3.0},{"a":"155 W Rosemary Ln","s":"155-w-rosemary-ln","p":2400000,"sf":2288,"ppsf":1049,"d":"2026-05-29","b":3,"ba":2.0}],"name":"Campbell","domain":"campbellrealestatemarket.com"},"los-gatos":{"totals":{"homes_indexed":7989,"sales_on_record":5699,"streets":913,"sales_12mo":200,"median_ppsf_12mo":1165,"median_price_12mo":2355000,"latest_sale":"2026-07-14"},"quarters":[{"q":"2016 Q1","ppsf":564,"price":1272500,"n":30},{"q":"2016 Q2","ppsf":656,"price":1405000,"n":69},{"q":"2016 Q3","ppsf":673,"price":1625000,"n":64},{"q":"2016 Q4","ppsf":611,"price":1310000,"n":58},{"q":"2017 Q1","ppsf":860,"price":1800000,"n":37},{"q":"2017 Q2","ppsf":836,"price":1900000,"n":69},{"q":"2017 Q3","ppsf":878,"price":1710000,"n":61},{"q":"2017 Q4","ppsf":785,"price":1670000,"n":60},{"q":"2018 Q1","ppsf":814,"price":1767500,"n":61},{"q":"2018 Q2","ppsf":883,"price":2010000,"n":69},{"q":"2018 Q3","ppsf":902,"price":1661000,"n":53},{"q":"2018 Q4","ppsf":801,"price":1850000,"n":43},{"q":"2019 Q1","ppsf":914,"price":2299500,"n":44},{"q":"2019 Q2","ppsf":801,"price":1784000,"n":62},{"q":"2019 Q3","ppsf":793,"price":1878000,"n":59},{"q":"2019 Q4","ppsf":774,"price":1800000,"n":58},{"q":"2020 Q1","ppsf":702,"price":1730000,"n":37},{"q":"2020 Q2","ppsf":821,"price":1715000,"n":51},{"q":"2020 Q3","ppsf":898,"price":2100000,"n":97},{"q":"2020 Q4","ppsf":907,"price":1878500,"n":80},{"q":"2021 Q1","ppsf":906,"price":2150000,"n":86},{"q":"2021 Q2","ppsf":1011,"price":2352500,"n":126},{"q":"2021 Q3","ppsf":1060,"price":1911000,"n":111},{"q":"2021 Q4","ppsf":1103,"price":2604000,"n":94},{"q":"2022 Q1","ppsf":1166,"price":2487750,"n":68},{"q":"2022 Q2","ppsf":1156,"price":2075000,"n":85},{"q":"2022 Q3","ppsf":1146,"price":1921500,"n":74},{"q":"2022 Q4","ppsf":1051,"price":1884000,"n":50},{"q":"2023 Q1","ppsf":1112,"price":2350000,"n":47},{"q":"2023 Q2","ppsf":1097,"price":2200000,"n":80},{"q":"2023 Q3","ppsf":1032,"price":1760000,"n":60},{"q":"2023 Q4","ppsf":1086,"price":2363500,"n":64},{"q":"2024 Q1","ppsf":1027,"price":1810000,"n":59},{"q":"2024 Q2","ppsf":1054,"price":2148000,"n":89},{"q":"2024 Q3","ppsf":1230,"price":2200000,"n":79},{"q":"2024 Q4","ppsf":1132,"price":1950000,"n":81},{"q":"2025 Q1","ppsf":1236,"price":2350000,"n":39},{"q":"2025 Q2","ppsf":1141,"price":2350000,"n":71},{"q":"2025 Q3","ppsf":1128,"price":2190000,"n":71},{"q":"2025 Q4","ppsf":1157,"price":2295000,"n":46},{"q":"2026 Q1","ppsf":1120,"price":2265000,"n":48},{"q":"2026 Q2","ppsf":1212,"price":2415000,"n":55},{"q":"2026 Q3","ppsf":1274,"price":3645000,"n":11}],"feed":[{"a":"19730 Black Rd","s":"19730-black-rd","p":1139000,"sf":1008,"ppsf":1130,"d":"2026-07-14","b":2,"ba":1.0},{"a":"233 Belmont Ave","s":"233-belmont-ave","p":4600000,"sf":3002,"ppsf":1532,"d":"2026-07-14","b":3,"ba":3.0},{"a":"100 Heintz Ct","s":"100-heintz-ct","p":4900000,"sf":4195,"ppsf":1168,"d":"2026-07-10","b":4,"ba":4.0},{"a":"156 Massol Ave","s":"156-massol-ave","p":3645000,"sf":2861,"ppsf":1274,"d":"2026-07-10","b":3,"ba":2.0},{"a":"16371 Aztec Ridge Dr","s":"16371-aztec-ridge-dr","p":6000000,"sf":4622,"ppsf":1298,"d":"2026-07-09","b":5,"ba":3.0},{"a":"17960 Apache Trl","s":"17960-apache-trl","p":710000,"sf":1450,"ppsf":490,"d":"2026-07-08","b":3,"ba":2.0},{"a":"118 Verde Ct","s":"118-verde-ct","p":1650000,"sf":2000,"ppsf":825,"d":"2026-07-06","b":0,"ba":null},{"a":"15515 Corinne Dr","s":"15515-corinne-dr","p":2725000,"sf":2039,"ppsf":1336,"d":"2026-07-06","b":2,"ba":2.0},{"a":"200 Surmont Dr","s":"200-surmont-dr","p":3950000,"sf":3050,"ppsf":1295,"d":"2026-07-06","b":5,"ba":3.0},{"a":"13111 Sepulveda Cir","s":"13111-sepulveda-cir","p":1327500,"sf":1626,"ppsf":816,"d":"2026-07-02","b":2,"ba":2.0},{"a":"16180 Jasmine Way","s":"16180-jasmine-way","p":4055000,"sf":2571,"ppsf":1577,"d":"2026-07-02","b":3,"ba":3.0},{"a":"16514 Marchmont Dr","s":"16514-marchmont-dr","p":3128000,"sf":928,"ppsf":3371,"d":"2026-06-30","b":2,"ba":1.0},{"a":"16279 Gellatt Ct","s":"16279-gellatt-ct","p":1090000,"sf":1039,"ppsf":1049,"d":"2026-06-29","b":1,"ba":1.0},{"a":"16383 Aztec Ridge Dr","s":"16383-aztec-ridge-dr","p":5250000,"sf":4782,"ppsf":1098,"d":"2026-06-29","b":5,"ba":4.0},{"a":"16857 Farley Rd","s":"16857-farley-rd","p":2415000,"sf":1605,"ppsf":1505,"d":"2026-06-26","b":3,"ba":2.0}],"name":"Los Gatos","domain":"losgatosrealestatemarket.com"},"saratoga":{"totals":{"homes_indexed":5973,"sales_on_record":4408,"streets":707,"sales_12mo":106,"median_ppsf_12mo":1540,"median_price_12mo":4137500,"latest_sale":"2026-07-14"},"quarters":[{"q":"2016 Q1","ppsf":818,"price":2000000,"n":19},{"q":"2016 Q2","ppsf":856,"price":2434000,"n":40},{"q":"2016 Q3","ppsf":829,"price":2060000,"n":45},{"q":"2016 Q4","ppsf":744,"price":2351000,"n":41},{"q":"2017 Q1","ppsf":800,"price":2217500,"n":26},{"q":"2017 Q2","ppsf":906,"price":2500000,"n":54},{"q":"2017 Q3","ppsf":875,"price":2440500,"n":43},{"q":"2017 Q4","ppsf":993,"price":2477000,"n":40},{"q":"2018 Q1","ppsf":993,"price":2750500,"n":29},{"q":"2018 Q2","ppsf":998,"price":2875000,"n":42},{"q":"2018 Q3","ppsf":1023,"price":2815000,"n":30},{"q":"2018 Q4","ppsf":887,"price":2398500,"n":34},{"q":"2019 Q1","ppsf":907,"price":2415000,"n":17},{"q":"2019 Q2","ppsf":991,"price":2662500,"n":66},{"q":"2019 Q3","ppsf":1023,"price":2575000,"n":41},{"q":"2019 Q4","ppsf":865,"price":2495250,"n":42},{"q":"2020 Q1","ppsf":1037,"price":2476250,"n":28},{"q":"2020 Q2","ppsf":1029,"price":2650000,"n":32},{"q":"2020 Q3","ppsf":952,"price":2765500,"n":50},{"q":"2020 Q4","ppsf":1023,"price":2975000,"n":59},{"q":"2021 Q1","ppsf":1053,"price":2855000,"n":49},{"q":"2021 Q2","ppsf":1212,"price":3166000,"n":88},{"q":"2021 Q3","ppsf":1314,"price":3325000,"n":76},{"q":"2021 Q4","ppsf":1184,"price":3425000,"n":49},{"q":"2022 Q1","ppsf":1516,"price":3800000,"n":25},{"q":"2022 Q2","ppsf":1422,"price":3912500,"n":52},{"q":"2022 Q3","ppsf":1402,"price":3750000,"n":37},{"q":"2022 Q4","ppsf":1220,"price":3000000,"n":25},{"q":"2023 Q1","ppsf":1268,"price":3625000,"n":18},{"q":"2023 Q2","ppsf":1354,"price":3705000,"n":42},{"q":"2023 Q3","ppsf":1487,"price":3942500,"n":26},{"q":"2023 Q4","ppsf":1372,"price":3450000,"n":29},{"q":"2024 Q1","ppsf":1377,"price":3880000,"n":33},{"q":"2024 Q2","ppsf":1458,"price":4000000,"n":45},{"q":"2024 Q3","ppsf":1455,"price":3880000,"n":55},{"q":"2024 Q4","ppsf":1523,"price":4150000,"n":43},{"q":"2025 Q1","ppsf":1613,"price":3570500,"n":34},{"q":"2025 Q2","ppsf":1470,"price":4300000,"n":51},{"q":"2025 Q3","ppsf":1424,"price":3637500,"n":30},{"q":"2025 Q4","ppsf":1533,"price":4362500,"n":30},{"q":"2026 Q1","ppsf":1581,"price":3800000,"n":17},{"q":"2026 Q2","ppsf":1579,"price":4162500,"n":32},{"q":"2026 Q3","ppsf":1051,"price":4700000,"n":7}],"feed":[{"a":"14575 Horseshoe Dr","s":"14575-horseshoe-dr","p":5065000,"sf":2341,"ppsf":2164,"d":"2026-07-14","b":3,"ba":3.0},{"a":"19908 Vineyard Ln","s":"19908-vineyard-ln","p":1300000,"sf":1511,"ppsf":860,"d":"2026-07-14","b":2,"ba":2.0},{"a":"20661 Oak Creek Ln","s":"20661-oak-creek-ln","p":1900000,"sf":1807,"ppsf":1051,"d":"2026-07-13","b":3,"ba":2.0},{"a":"12820 Paseo Presada","s":"12820-paseo-presada","p":5500000,"sf":1260,"ppsf":4365,"d":"2026-07-10","b":3,"ba":1.0},{"a":"20740 4th St Apt 4","s":"20740-4th-st-apt-4","p":600000,"sf":876,"ppsf":685,"d":"2026-07-08","b":2,"ba":1.0},{"a":"21842 Via Regina","s":"21842-via-regina","p":4700000,"sf":4656,"ppsf":1009,"d":"2026-07-08","b":5,"ba":4.0},{"a":"12637 Lido Way","s":"12637-lido-way","p":4850000,"sf":2860,"ppsf":1696,"d":"2026-07-01","b":5,"ba":2.0},{"a":"14113 Pike Rd","s":"14113-pike-rd","p":6200000,"sf":6639,"ppsf":934,"d":"2026-06-30","b":4,"ba":5.0},{"a":"14353 Saratoga Ave Apt A","s":"14353-saratoga-ave-apt-a","p":900000,"sf":1429,"ppsf":630,"d":"2026-06-30","b":2,"ba":2.0},{"a":"19605 Glen Una Dr","s":"19605-glen-una-dr","p":5488000,"sf":3149,"ppsf":1743,"d":"2026-06-30","b":5,"ba":3.0},{"a":"20782 Verde Vista Ln","s":"20782-verde-vista-ln","p":4175000,"sf":2531,"ppsf":1650,"d":"2026-06-30","b":4,"ba":2.0},{"a":"15050 Bonnie Brae Ln","s":"15050-bonnie-brae-ln","p":8000000,"sf":5013,"ppsf":1596,"d":"2026-06-29","b":5,"ba":4.0},{"a":"20720 4th St Apt 6","s":"20720-4th-st-apt-6","p":780000,"sf":888,"ppsf":878,"d":"2026-06-12","b":2,"ba":1.0},{"a":"12861 Foothill Ln","s":"12861-foothill-ln","p":3969000,"sf":2002,"ppsf":1983,"d":"2026-06-04","b":3,"ba":1.0},{"a":"12315 Obrad Dr","s":"12315-obrad-dr","p":3598000,"sf":2486,"ppsf":1447,"d":"2026-06-02","b":3,"ba":2.0}],"name":"Saratoga","domain":"saratogarealestatemarket.com"}}}
+// South Bay market intelligence — Campbell / Los Gatos / Saratoga.
+//
+// A self-contained section for the Market Intelligence hub. Renders:
+//   - a market segmented control (three cities + "Compare all")
+//   - a range toggle (1 / 3 / 5 / 10 years)
+//   - a quarterly median $/sf chart, single-series or three-series overlay
+//   - a live feed of the most recent recorded sales
+//   - a coverage stat band per market
+//
+// Data comes from lib/southBay.ts (bundled snapshot today, live when the
+// city-market deployments send CORS headers). No new dependencies: the chart is
+// hand-rolled SVG in the same visual language as the existing PsfChart.
+
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowUpRight } from 'lucide-react'
+import {
+  fetchSouthBay, sliceQuarters, pctChange, fmtMoney, fmtNum, fmtDate,
+  SOUTH_BAY_KEYS, SOUTH_BAY_META, RANGES,
+  type SouthBayPayload, type SouthBayKey, type RangeKey, type SbQuarter,
+} from '@/lib/southBay'
+
+const NAVY = '#1a1f2e'
+const INK = '#5b6675'
+
+type Selection = SouthBayKey | 'all'
+
+/* ------------------------------- the chart -------------------------------- */
+
+type Series = { key: SouthBayKey; name: string; color: string; pts: SbQuarter[] }
+
+function PsfCompareChart({ series }: { series: Series[] }) {
+  const [hoverI, setHoverI] = useState<number | null>(null)
+  const svgRef = useRef<SVGSVGElement | null>(null)
+
+  const len = Math.max(...series.map((s) => s.pts.length), 0)
+  if (!series.length || len < 2) {
+    return (
+      <div className="py-16 text-center mp-mono text-xs uppercase tracking-[0.16em]" style={{ color: INK }}>
+        Not enough quarterly history for this range.
+      </div>
+    )
+  }
+
+  const W = 900, H = 320, PADL = 56, PADR = 24, PADT = 24, PADB = 40
+  const all = series.flatMap((s) => s.pts.map((p) => p.ppsf)).filter((v) => v > 0)
+  const minY = Math.min(...all) * 0.92
+  const maxY = Math.max(...all) * 1.06
+  const x = (i: number) => PADL + (i / (len - 1)) * (W - PADL - PADR)
+  const y = (v: number) => PADT + (1 - (v - minY) / (maxY - minY)) * (H - PADT - PADB)
+  const ticks = Array.from({ length: 5 }, (_, i) => minY + ((maxY - minY) * i) / 4)
+
+  function onMove(e: React.PointerEvent<SVGSVGElement>) {
+    const svg = svgRef.current
+    if (!svg) return
+    const rect = svg.getBoundingClientRect()
+    const relX = ((e.clientX - rect.left) / rect.width) * W
+    let best = 0, bestD = Infinity
+    for (let i = 0; i < len; i++) {
+      const d = Math.abs(x(i) - relX)
+      if (d < bestD) { bestD = d; best = i }
+    }
+    setHoverI(best)
+  }
+
+  const labelAt = (i: number) => series[0]?.pts[i]?.q ?? ''
+
+  return (
+    <div>
+      <svg
+        ref={svgRef}
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full h-auto touch-none"
+        role="img"
+        aria-label="Median price per square foot by quarter for the South Bay markets. Hover to inspect values."
+        onPointerMove={onMove}
+        onPointerLeave={() => setHoverI(null)}
+      >
+        <defs>
+          {series.map((s) => (
+            <linearGradient key={s.key} id={`sb-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={s.color} stopOpacity={series.length > 1 ? 0.10 : 0.18} />
+              <stop offset="100%" stopColor={s.color} stopOpacity="0" />
+            </linearGradient>
+          ))}
+        </defs>
+
+        {ticks.map((t, i) => (
+          <g key={i}>
+            <line x1={PADL} x2={W - PADR} y1={y(t)} y2={y(t)} stroke="#000" strokeOpacity="0.06" />
+            <text x={PADL - 10} y={y(t) + 4} textAnchor="end" fontSize="11" fill={INK} className="mp-mono">
+              ${Math.round(t)}
+            </text>
+          </g>
+        ))}
+
+        {series.map((s) => {
+          const pts = s.pts
+          const path = pts.map((d, i) => `${i === 0 ? 'M' : 'L'} ${x(i).toFixed(1)} ${y(d.ppsf).toFixed(1)}`).join(' ')
+          const area = `${path} L ${x(pts.length - 1).toFixed(1)} ${(H - PADB).toFixed(1)} L ${x(0).toFixed(1)} ${(H - PADB).toFixed(1)} Z`
+          return (
+            <g key={s.key}>
+              <path d={area} fill={`url(#sb-${s.key})`} />
+              <path d={path} fill="none" stroke={s.color} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            </g>
+          )
+        })}
+
+        {hoverI != null && (
+          <g>
+            <line x1={x(hoverI)} x2={x(hoverI)} y1={PADT} y2={H - PADB} stroke={NAVY} strokeOpacity="0.25" strokeDasharray="3 3" />
+            {series.map((s) => {
+              const p = s.pts[hoverI]
+              if (!p) return null
+              return <circle key={s.key} cx={x(hoverI)} cy={y(p.ppsf)} r="4.5" fill="#fff" stroke={s.color} strokeWidth="2.5" />
+            })}
+          </g>
+        )}
+
+        <text x={PADL} y={H - 12} fontSize="11" fill={INK} className="mp-mono">{labelAt(0)}</text>
+        <text x={W - PADR} y={H - 12} textAnchor="end" fontSize="11" fill={INK} className="mp-mono">{labelAt(len - 1)}</text>
+      </svg>
+
+      {/* hover readout */}
+      <div className="mt-4 min-h-[42px] flex flex-wrap items-center gap-x-6 gap-y-2">
+        {hoverI != null ? (
+          <>
+            <span className="mp-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: INK }}>
+              {labelAt(hoverI)}
+            </span>
+            {series.map((s) => {
+              const p = s.pts[hoverI]
+              if (!p) return null
+              return (
+                <span key={s.key} className="flex items-center gap-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />
+                  <span className="text-sm" style={{ color: NAVY }}>
+                    <b>${fmtNum(p.ppsf)}</b>/sf
+                  </span>
+                  <span className="mp-mono text-[11px]" style={{ color: INK }}>
+                    {p.n} sale{p.n === 1 ? '' : 's'}{p.thin ? ' · thin' : ''}
+                  </span>
+                </span>
+              )
+            })}
+          </>
+        ) : (
+          <span className="mp-mono text-[11px] uppercase tracking-[0.16em]" style={{ color: INK }}>
+            Hover the chart to inspect any quarter
+          </span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+/* -------------------------------- section --------------------------------- */
+
+export default function SouthBayIntel() {
+  const [data, setData] = useState<SouthBayPayload | null>(null)
+  const [loaded, setLoaded] = useState(false)
+  const [sel, setSel] = useState<Selection>('campbell')
+  const [range, setRange] = useState<RangeKey>('10y')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchSouthBay().then((d) => {
+      if (cancelled) return
+      setData(d)
+      setLoaded(true)
+    })
+    return () => { cancelled = true }
+  }, [])
+
+  const rangeQuarters = RANGES.find((r) => r.key === range)?.quarters ?? 40
+
+  const series: Series[] = useMemo(() => {
+    if (!data) return []
+    const keys: SouthBayKey[] = sel === 'all' ? [...SOUTH_BAY_KEYS] : [sel]
+    return keys
+      .map((k) => {
+        const m = data.markets[k]
+        if (!m) return null
+        return {
+          key: k,
+          name: SOUTH_BAY_META[k].name,
+          color: SOUTH_BAY_META[k].accent,
+          pts: sliceQuarters(m.quarters, rangeQuarters),
+        }
+      })
+      .filter(Boolean) as Series[]
+  }, [data, sel, rangeQuarters])
+
+  // Feed: one market's sales, or the three interleaved by date when comparing.
+  const feed = useMemo(() => {
+    if (!data) return []
+    const keys: SouthBayKey[] = sel === 'all' ? [...SOUTH_BAY_KEYS] : [sel]
+    return keys
+      .flatMap((k) => (data.markets[k]?.feed ?? []).map((s) => ({ ...s, market: k })))
+      .sort((a, b) => (a.d < b.d ? 1 : -1))
+      .slice(0, sel === 'all' ? 12 : 10)
+  }, [data, sel])
+
+  const single = sel === 'all' ? null : data?.markets[sel] ?? null
+  const change = series.length === 1 ? pctChange(series[0].pts) : null
+
+  if (loaded && !data) return null
+
+  return (
+    <section id="south-bay" className="max-w-6xl mx-auto px-6 py-14 md:py-20 scroll-mt-24">
+      <div className="mp-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: INK }}>
+        South Bay · city markets
+      </div>
+      <h2 className="mp-serif text-3xl md:text-[42px] font-semibold mt-3" style={{ color: NAVY }}>
+        Every home. Every street. Every sale.
+      </h2>
+      <p className="text-[15px] md:text-base mt-4 max-w-2xl leading-relaxed" style={{ color: INK }}>
+        The complete recorded-sale history of three South Bay cities, computed the same way in each
+        one so the comparison actually means something.
+      </p>
+
+      {/* market segmented control */}
+      <div className="mt-8 flex flex-wrap items-center gap-2">
+        {SOUTH_BAY_KEYS.map((k) => {
+          const on = sel === k
+          return (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setSel(k)}
+              className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors border"
+              style={{
+                background: on ? NAVY : '#fff',
+                color: on ? '#fff' : NAVY,
+                borderColor: on ? NAVY : 'rgba(0,0,0,0.12)',
+              }}
+            >
+              {SOUTH_BAY_META[k].name}
+            </button>
+          )
+        })}
+        <button
+          type="button"
+          onClick={() => setSel('all')}
+          className="rounded-full px-4 py-2 text-[13px] font-medium transition-colors border"
+          style={{
+            background: sel === 'all' ? NAVY : '#fff',
+            color: sel === 'all' ? '#fff' : NAVY,
+            borderColor: sel === 'all' ? NAVY : 'rgba(0,0,0,0.12)',
+          }}
+        >
+          Compare all
+        </button>
+      </div>
+
+      {/* chart card */}
+      <div className="mt-6 rounded-[24px] bg-white border border-black/[0.07] p-6 md:p-8">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="mp-mono text-[11px] uppercase tracking-[0.2em]" style={{ color: INK }}>
+              Median price per square foot
+            </div>
+            <div className="flex items-baseline gap-3 mt-2">
+              <span className="mp-serif text-2xl md:text-3xl font-semibold" style={{ color: NAVY }}>
+                {single ? `$${fmtNum(single.totals.median_ppsf_12mo)}` : 'Three markets'}
+              </span>
+              {single && (
+                <span className="mp-mono text-[11px] uppercase tracking-[0.14em]" style={{ color: INK }}>
+                  trailing 12 months
+                </span>
+              )}
+              {change != null && (
+                <span
+                  className="mp-mono text-[11px] uppercase tracking-[0.14em]"
+                  style={{ color: change >= 0 ? '#1f7a4d' : '#b3322c' }}
+                >
+                  {change >= 0 ? '+' : ''}{change.toFixed(1)}% over range
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* range toggle */}
+          <div className="flex items-center gap-1 rounded-full border border-black/[0.12] p-1">
+            {RANGES.map((r) => {
+              const on = range === r.key
+              return (
+                <button
+                  key={r.key}
+                  type="button"
+                  onClick={() => setRange(r.key)}
+                  className="mp-mono rounded-full px-3 py-1.5 text-[11px] uppercase tracking-[0.12em] transition-colors"
+                  style={{ background: on ? NAVY : 'transparent', color: on ? '#fff' : INK }}
+                >
+                  {r.label}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="mt-6">
+          {loaded ? <PsfCompareChart series={series} /> : (
+            <div className="py-24 text-center mp-mono text-xs uppercase tracking-[0.16em]" style={{ color: INK }}>
+              Loading market data…
+            </div>
+          )}
+        </div>
+
+        {/* legend when comparing */}
+        {sel === 'all' && (
+          <div className="mt-2 flex flex-wrap gap-x-6 gap-y-2">
+            {series.map((s) => (
+              <span key={s.key} className="flex items-center gap-2 text-[13px]" style={{ color: NAVY }}>
+                <span className="inline-block w-3 h-3 rounded-full" style={{ background: s.color }} />
+                {s.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* coverage band for the selected market */}
+      {single && (
+        <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Homes indexed', value: fmtNum(single.totals.homes_indexed) },
+            { label: 'Sales on record', value: fmtNum(single.totals.sales_on_record) },
+            { label: 'Sales · last 12mo', value: fmtNum(single.totals.sales_12mo) },
+            { label: 'Median price · 12mo', value: fmtMoney(single.totals.median_price_12mo) },
+          ].map((s) => (
+            <div key={s.label}>
+              <div className="mp-serif text-2xl md:text-3xl font-semibold" style={{ color: NAVY }}>{s.value}</div>
+              <div className="mp-mono text-[10px] uppercase tracking-[0.16em] mt-1" style={{ color: INK }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* live sales feed */}
+      <div className="mt-12">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <div className="mp-mono text-[11px] uppercase tracking-[0.22em]" style={{ color: INK }}>
+              Live · recent sales
+            </div>
+            <h3 className="mp-serif text-2xl md:text-3xl font-semibold mt-2" style={{ color: NAVY }}>
+              The latest closings.
+            </h3>
+          </div>
+          {single && (
+            <a
+              href={`https://${single.domain}/`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 mp-mono text-[11px] uppercase tracking-[0.14em] hover:opacity-70 transition-opacity"
+              style={{ color: NAVY }}
+            >
+              All {single.name} sales <ArrowUpRight size={14} />
+            </a>
+          )}
+        </div>
+
+        <div className="mt-6 grid md:grid-cols-2 gap-3">
+          {feed.map((s) => {
+            const meta = SOUTH_BAY_META[s.market as SouthBayKey]
+            return (
+              <a
+                key={`${s.market}-${s.s}-${s.d}`}
+                href={`https://${meta.domain}/home/${s.s}/`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mp-lift rounded-[18px] border border-black/[0.07] bg-white px-5 py-4 flex items-center justify-between gap-4"
+              >
+                <div className="min-w-0">
+                  <div className="truncate text-[15px] font-medium" style={{ color: NAVY }}>{s.a}</div>
+                  <div className="mp-mono text-[10px] uppercase tracking-[0.14em] mt-1" style={{ color: INK }}>
+                    {sel === 'all' ? `${meta.name} · ` : ''}{fmtDate(s.d)} · {fmtNum(s.sf)} sqft
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="mp-serif text-lg font-semibold" style={{ color: NAVY }}>{fmtMoney(s.p)}</div>
+                  <div className="mp-mono text-[10px]" style={{ color: INK }}>${fmtNum(s.ppsf)}/sf</div>
+                </div>
+              </a>
+            )
+          })}
+        </div>
+
+        {data && (
+          <p className="mp-mono text-[10px] uppercase tracking-[0.16em] mt-6" style={{ color: INK }}>
+            Recorded sales · data as of {data.generated}
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}
