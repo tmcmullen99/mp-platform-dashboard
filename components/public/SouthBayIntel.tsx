@@ -26,9 +26,9 @@ type Selection = SouthBayKey | 'all'
 
 /* ------------------------------- the chart -------------------------------- */
 
-type Series = { key: SouthBayKey; name: string; color: string; pts: SbQuarter[] }
+export type Series = { key: string; name: string; color: string; pts: SbQuarter[] }
 
-function PsfCompareChart({ series }: { series: Series[] }) {
+export function PsfCompareChart({ series }: { series: Series[] }) {
   const [hoverI, setHoverI] = useState<number | null>(null)
   const svgRef = useRef<SVGSVGElement | null>(null)
 
