@@ -47,6 +47,8 @@ export type MarketConfig = {
   // (static JSON via lib/southBay.ts), NOT the Condo Market RPCs. The page
   // renders <SouthBayIntel/> for these instead of the condo data sections.
   southBay?: boolean
+  // true = this market renders <EichlerIntel/> from the Eichler snapshot
+  eichlerIntel?: boolean
 }
 
 // Canonical Condo Market building-page URL for a slug on a given market.
@@ -100,9 +102,10 @@ export const MARKETS: MarketConfig[] = [
     regionSlug: 'eichler',
     cmDomain: 'eichlermarket.com',
     blurb:
-      'The mid-century Eichler market across the Bay Area — closed sales, price per square foot, and tract-level activity. Live feed coming soon.',
+      'The mid-century Eichler market across Silicon Valley and the Peninsula — every recorded sale, tract-level medians, and where the architecture trades highest.',
     blogTags: ['eichler', 'mid-century', 'mid-century-modern'],
-    available: false,
+    available: true,
+    eichlerIntel: true,
   },
   {
     key: 'southbay',
