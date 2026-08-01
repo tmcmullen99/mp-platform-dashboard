@@ -75,7 +75,7 @@ export default function BlogIndex() {
       `}</style>
 
       {/* header */}
-      <PublicNav active="insight" />
+      <PublicNav active="writing" />
 
       {/* intro */}
       <section className="max-w-6xl mx-auto px-6 pt-16 md:pt-20 pb-8">
