@@ -8,7 +8,7 @@ import { Link } from 'react-router-dom'
 import { Menu, X } from 'lucide-react'
 import { LogoWordmark } from '@/components/BrandLogo'
 
-export type PublicNavKey = 'portfolio' | 'tools' | 'buy' | 'sell' | 'services' | 'about' | 'insight'
+export type PublicNavKey = 'portfolio' | 'tools' | 'buy' | 'sell' | 'services' | 'about' | 'insight' | 'writing'
 
 const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
   { key: 'portfolio', to: '/listings', label: 'Portfolio' },
@@ -16,6 +16,7 @@ const LINKS: { key: PublicNavKey; to: string; label: string }[] = [
   { key: 'services', to: '/services', label: 'Services' },
   { key: 'about', to: '/meet-tim', label: 'Meet Tim' },
   { key: 'insight', to: '/blog', label: 'Market' },
+  { key: 'writing', to: '/insights', label: 'Writing' },
 ]
 
 export function PublicNav({
@@ -125,6 +126,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: stri
       { to: '/listings', label: 'Portfolio' },
       { to: '/luxury-listings', label: 'Luxury Listings' },
       { to: '/blog', label: 'Market' },
+      { to: '/insights', label: 'Writing' },
       { to: '/meet-tim', label: 'Meet Tim' },
     ],
   },
