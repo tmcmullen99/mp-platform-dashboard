@@ -109,6 +109,17 @@ export default function BlogPost() {
         .mp-prose img { border-radius: 14px; margin: 1.5em 0; max-width: 100%; height: auto; }
         .mp-prose strong { color: #0D1B2A; }
         .mp-prose hr { border: none; border-top: 1px solid rgba(13,27,42,0.1); margin: 2.5em 0; }
+        .mp-prose table { width: 100%; border-collapse: collapse; margin: 1.9em 0; font-size: 0.95rem; display: block; overflow-x: auto; white-space: nowrap; }
+        @media (min-width: 700px) { .mp-prose table { display: table; white-space: normal; } }
+        .mp-prose thead th { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.09em; color: #0D1B2A; text-align: left; padding: 0 1em 0.7em; border-bottom: 1.5px solid #0D1B2A; }
+        .mp-prose tbody td { padding: 0.72em 1em; border-bottom: 1px solid rgba(13,27,42,0.08); color: #273C46; vertical-align: top; }
+        .mp-prose tbody tr:last-child td { border-bottom: 1.5px solid rgba(13,27,42,0.18); }
+        .mp-prose tbody tr:hover td { background: rgba(13,27,42,0.02); }
+        .mp-prose tbody td strong { color: #0D1B2A; font-weight: 600; }
+        .mp-prose thead th:not(:first-child), .mp-prose tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+        .mp-byline { margin-top: 2.5em; padding-top: 0.5em; }
+        .mp-byline p { font-size: 0.92rem; margin: 0 0 0.35em; color: #273C46; }
+        .mp-byline .mp-note { font-size: 0.8rem; line-height: 1.65; color: #6b7a86; margin-top: 1.4em; }
       `}</style>
 
       {/* header */}
@@ -125,7 +136,7 @@ export default function BlogPost() {
             This piece may have moved or been unpublished.
           </p>
           <Link
-            to="/blog"
+            to="/insights"
             className="inline-block mt-8 mp-mono text-xs uppercase tracking-[0.16em] text-[#0D1B2A] hover:opacity-70"
           >
             ← All writing
@@ -136,7 +147,7 @@ export default function BlogPost() {
           {/* title block */}
           <div className="max-w-3xl mx-auto px-6 pt-14 md:pt-20">
             <Link
-              to="/blog"
+              to="/insights"
               className="mp-mono text-[11px] uppercase tracking-[0.16em] text-[#273C46] hover:text-[#0D1B2A]"
             >
               ← All writing
@@ -214,7 +225,7 @@ export default function BlogPost() {
                   (415) 691-9272
                 </a>
                 <Link
-                  to="/blog"
+                  to="/insights"
                   className="inline-flex items-center gap-2 rounded-full px-6 py-3 text-sm font-medium border border-black/[0.12] text-[#0D1B2A] hover:border-[#0D1B2A]/40"
                 >
                   More writing
