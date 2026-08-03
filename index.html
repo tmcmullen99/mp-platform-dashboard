@@ -14,20 +14,46 @@
     <meta name="theme-color" content="#0D1B2A" />
     <meta name="description" content="McMullen Properties — Bay Area real estate. Buying, selling, and investing with a marketing-first approach. Led by Tim McMullen, under Real Broker." />
 
-    <!-- Open Graph / Facebook / iMessage / LinkedIn -->
+    <!-- ══════════════════════════════════════════════════════════════════════
+         SOCIAL SHARE (Open Graph + Twitter/X)
+
+         These tags are the GUARANTEED FLOOR for the whole site. Every route
+         that has no dedicated Pages Function falls through _redirects to this
+         index.html, so every URL on the domain ships a valid share image even
+         if nothing else knows about that page. Do not remove any tag below.
+
+         Four rules learned the hard way:
+         1. The image is served from THIS domain (/og/share.jpg), not from
+            Supabase storage. Same-origin, on Cloudflare's CDN, no third-party
+            hop for the crawler to time out on.
+         2. og:image:width/height are declared. Without them Facebook, LinkedIn
+            and X must download the whole file before they can lay the card
+            out, which is the classic cause of a blank card on first scrape.
+         3. The file is a REAL JPEG at 1200x630 and ~50KB. It was previously a
+            1.5MB PNG named .jpg — oversized and mistyped.
+         4. Absolute URLs only. Crawlers do not resolve relative paths.
+         ══════════════════════════════════════════════════════════════════════ -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="McMullen Properties" />
+    <meta property="og:locale" content="en_US" />
     <meta property="og:title" content="McMullen Properties" />
     <meta property="og:description" content="Bay Area real estate, marketed like a campaign. Buying, selling, and investing with Tim McMullen." />
     <meta property="og:url" content="https://mcmullenresidential.com/" />
-    <meta property="og:image" content="https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/og/share.jpg" />
-    <meta property="og:image:alt" content="McMullen Properties" />
+    <meta property="og:image" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta property="og:image:secure_url" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="McMullen Properties — Bay Area real estate, marketed like a campaign." />
 
     <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@mcmullenpropSF" />
+    <meta name="twitter:creator" content="@mcmullenpropSF" />
     <meta name="twitter:title" content="McMullen Properties" />
     <meta name="twitter:description" content="Bay Area real estate, marketed like a campaign. Buying, selling, and investing with Tim McMullen." />
-    <meta name="twitter:image" content="https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/og/share.jpg" />
+    <meta name="twitter:image" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta name="twitter:image:alt" content="McMullen Properties — Bay Area real estate, marketed like a campaign." />
 
     <link rel="canonical" href="https://mcmullenresidential.com/" />
     <link rel="sitemap" type="application/xml" href="https://mcmullenresidential.com/sitemap.xml" />
