@@ -1,6 +1,10 @@
 // Bespoke service page: Luxury Listing Marketing ($10M+).
 //
 // Thesis: ultra-luxury homes sell through word of mouth, so we ENGINEER it.
+// PAGE ORDER IS DELIBERATE: strategy first (who the buyer is, where they live,
+// the 7-phase machine, the live dashboard), and only then the already-listed
+// re-launch wedge. Leading with "your home failed to sell" made this read as an
+// expired-listing page rather than a luxury buyer-targeting strategy page.
 // Expanded + interactive: the 7-phase machine is now click-to-expand (each
 // phase reveals the detail, a concrete example, and the actual tooling), and
 // the proof section embeds the LIVE 175 Huckleberry analytics dashboard
@@ -134,7 +138,8 @@ const PROOF = [
 ]
 
 // ---------------------------------------------------------------------------
-// EXPIRED-LISTING REVIEW — the wedge that wins the listing.
+// ALREADY-LISTED REVIEW — the secondary wedge. Rendered near the BOTTOM of the
+// page (after the strategy and the live dashboard), not as the lead.
 //
 // Most luxury homes that "expire" (came off the market unsold) didn't fail on
 // price — they failed on reach. This section shows the exact review process,
@@ -329,28 +334,39 @@ export default function ServiceLuxury() {
               className="mp-anim mp-serif text-white text-[44px] md:text-[66px] leading-[1.03] font-semibold"
               style={{ animationDelay: '0.2s' }}
             >
-              Your home didn&rsquo;t fail to sell.
+              A trophy home has a few hundred
               <br />
-              The marketing <span className="mp-accent-gold">missed the buyer.</span>
+              buyers on earth. <span className="mp-accent-gold">I find them by name.</span>
             </h1>
             <p
               className="mp-anim text-lg md:text-xl mt-7 leading-relaxed"
               style={{ color: 'rgba(255,255,255,0.82)', animationDelay: '0.35s', maxWidth: '660px' }}
             >
-              A luxury home that came off the market unsold almost never has a price problem &mdash;
-              it has a reach problem. I review exactly why a trophy listing stalled, find where the
-              buyer actually lives, and market the home to that person directly. It&rsquo;s the same
-              system running live on a $9.95M listing right now &mdash; and it&rsquo;s how I&rsquo;d
-              re-launch yours.
+              Homes at this level don&rsquo;t sell from a sign in the yard or a portal listing. They
+              sell when the one person who wants it actually hears about it. So I build the real
+              ownership map of who can buy your home, locate those people individually, and market
+              to them directly &mdash; then show you every step of it happening. It&rsquo;s the same
+              system running live on a $9.95M listing right now.
             </p>
             <div className="mp-anim flex flex-wrap gap-3 mt-9" style={{ animationDelay: '0.5s' }}>
               <PillButton href="/luxury-listings" onDark>
-                Request a private listing review <ArrowUpRight className="w-4 h-4" />
+                Request a private strategy session <ArrowUpRight className="w-4 h-4" />
               </PillButton>
-              <PillButton href="#review" variant="secondary" onDark>
-                See how the review works
+              <PillButton href="#machine" variant="secondary" onDark>
+                See how the system works
               </PillButton>
             </div>
+            {/* The expired-listing angle, deliberately demoted to a single line.
+                It is a wedge for one segment of seller, not the page's thesis. */}
+            <p
+              className="mp-anim text-[14px] mt-7"
+              style={{ color: 'rgba(255,255,255,0.55)', animationDelay: '0.6s' }}
+            >
+              Listed before and it didn&rsquo;t sell?{' '}
+              <a href="#review" className="underline underline-offset-4" style={{ color: 'rgba(255,255,255,0.8)' }}>
+                It&rsquo;s usually because the buyer never saw it &rarr;
+              </a>
+            </p>
           </div>
         </div>
       </ParallaxHero>
@@ -374,67 +390,10 @@ export default function ServiceLuxury() {
               This is why trophy homes stall. The sale almost never comes from a sign in the yard or
               a portal listing &mdash; it comes from the right person hearing about it. That sounds
               like luck, but it isn&rsquo;t: it can be manufactured. Everything below is how I do it
-              &mdash; starting with a candid review of why a home stalled, and ending with a live,
-              measurable pipeline pointed at the few hundred people who can actually buy it.
+              &mdash; mapping where the buyer actually lives, reaching them by name, and running a
+              live, measurable pipeline pointed at the few hundred people who can actually buy it.
             </p>
           </Reveal>
-        </div>
-      </section>
-
-      {/* EXPIRED-LISTING REVIEW — the wedge */}
-      <section id="review" className="max-w-6xl mx-auto px-6 py-20 md:py-28">
-        <Reveal>
-          <div className="max-w-3xl">
-            <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: GOLD }}>
-              How I review a stalled listing
-            </div>
-            <h2 className="mp-serif text-[32px] md:text-[48px] leading-[1.05] font-semibold" style={{ color: NAVY }}>
-              A trophy home that didn&rsquo;t sell gets a real diagnosis &mdash; not a price cut.
-            </h2>
-            <p className="mt-5 text-[17px] leading-relaxed" style={{ color: INK }}>
-              When a luxury listing comes off the market unsold, the reflex is to blame the price.
-              It&rsquo;s almost always the wrong call. I run the same four-step review on every
-              stuck home &mdash; and it consistently finds that the marketing was aimed at the wrong
-              pool. Here it is, with the live 175 Huckleberry review as the worked example.
-            </p>
-          </div>
-        </Reveal>
-
-        <div className="mt-12 grid md:grid-cols-2 gap-5">
-          {REVIEW_STEPS.map((s, i) => {
-            const Icon = s.icon
-            return (
-              <Reveal key={s.n} delay={0.05 * i}>
-                <div className="mp-lift h-full rounded-[22px] border border-black/[0.07] bg-white p-7 md:p-8 flex flex-col">
-                  <div className="flex items-center gap-4 mb-4">
-                    <div
-                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
-                      style={{ background: 'rgba(184,150,90,0.12)' }}
-                    >
-                      <Icon className="w-5 h-5" style={{ color: GOLD }} />
-                    </div>
-                    <span className="mp-serif text-[34px] font-semibold leading-none" style={{ color: 'rgba(13,27,42,0.14)' }}>
-                      {s.n}
-                    </span>
-                  </div>
-                  <h3 className="mp-serif text-[22px] md:text-[25px] font-semibold" style={{ color: NAVY }}>
-                    {s.title}
-                  </h3>
-                  <p className="text-[15px] leading-relaxed mt-3" style={{ color: INK }}>
-                    {s.body}
-                  </p>
-                  <div className="mt-5 rounded-xl p-4" style={{ background: '#f7f8fa' }}>
-                    <div className="mp-mono text-[10px] uppercase tracking-[0.16em] mb-1.5" style={{ color: GOLD }}>
-                      Huckleberry, in practice
-                    </div>
-                    <p className="text-[13.5px] leading-relaxed" style={{ color: NAVY }}>
-                      {s.hb}
-                    </p>
-                  </div>
-                </div>
-              </Reveal>
-            )
-          })}
         </div>
       </section>
 
@@ -537,6 +496,68 @@ export default function ServiceLuxury() {
               </span>
             </div>
           </Reveal>
+        </div>
+      </section>
+
+      {/* ALREADY-LISTED WEDGE — deliberately placed AFTER the strategy and the
+          live proof. This page leads with how luxury buyers are found; the
+          expired-listing angle is a secondary entry point for one kind of
+          seller, not the argument. Keep it below the dashboard. */}
+      <section id="review" style={{ background: '#f7f8fa' }}>
+        <div className="max-w-6xl mx-auto px-6 py-20 md:py-24">
+        <Reveal>
+          <div className="max-w-3xl">
+            <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: GOLD }}>
+              Already been listed?
+            </div>
+            <h2 className="mp-serif text-[28px] md:text-[38px] leading-[1.08] font-semibold" style={{ color: NAVY }}>
+              If it didn&rsquo;t sell, the buyer almost certainly never saw it.
+            </h2>
+            <p className="mt-5 text-[16px] leading-relaxed" style={{ color: INK }}>
+              A trophy home that comes off the market unsold rarely has a price problem &mdash; it
+              has a reach problem, and a price cut treats the symptom. The same system above works
+              as a re-launch: I run a four-step diagnosis first, using the live 175 Huckleberry
+              review as the worked example.
+            </p>
+          </div>
+        </Reveal>
+
+        <div className="mt-12 grid md:grid-cols-2 gap-5">
+          {REVIEW_STEPS.map((s, i) => {
+            const Icon = s.icon
+            return (
+              <Reveal key={s.n} delay={0.05 * i}>
+                <div className="mp-lift h-full rounded-[22px] border border-black/[0.07] bg-white p-7 md:p-8 flex flex-col">
+                  <div className="flex items-center gap-4 mb-4">
+                    <div
+                      className="w-12 h-12 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'rgba(184,150,90,0.12)' }}
+                    >
+                      <Icon className="w-5 h-5" style={{ color: GOLD }} />
+                    </div>
+                    <span className="mp-serif text-[34px] font-semibold leading-none" style={{ color: 'rgba(13,27,42,0.14)' }}>
+                      {s.n}
+                    </span>
+                  </div>
+                  <h3 className="mp-serif text-[22px] md:text-[25px] font-semibold" style={{ color: NAVY }}>
+                    {s.title}
+                  </h3>
+                  <p className="text-[15px] leading-relaxed mt-3" style={{ color: INK }}>
+                    {s.body}
+                  </p>
+                  <div className="mt-5 rounded-xl p-4" style={{ background: '#f7f8fa' }}>
+                    <div className="mp-mono text-[10px] uppercase tracking-[0.16em] mb-1.5" style={{ color: GOLD }}>
+                      Huckleberry, in practice
+                    </div>
+                    <p className="text-[13.5px] leading-relaxed" style={{ color: NAVY }}>
+                      {s.hb}
+                    </p>
+                  </div>
+                </div>
+              </Reveal>
+            )
+          })}
+        </div>
         </div>
       </section>
 
