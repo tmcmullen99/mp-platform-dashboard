@@ -1,5 +1,9 @@
 {
   "version": 1,
-  "include": ["/listings/*", "/view/*"],
+  "include": [
+    "/listings/*",
+    "/view/*",
+    "/blog/*"
+  ],
   "exclude": []
 }
