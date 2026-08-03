@@ -76,9 +76,13 @@ export async function onRequest(context) {
 
   // --- 3. Compute listing-specific share values. ---
   const SITE = 'https://mcmullenresidential.com'
-  const imageUrl =
-    (listing.main_image && listing.main_image.url) ||
-    `${SUPABASE_URL}/storage/v1/object/public/listing-photos/og/share.jpg`
+  // Default image is now served same-origin from this domain (see index.html
+  // note) rather than Supabase storage: fewer hops for the crawler.
+  const DEFAULT_IMAGE = `${SITE}/og/share.jpg`
+  const listingImage =
+    listing.main_image && listing.main_image.url ? String(listing.main_image.url) : null
+  const imageUrl = listingImage || DEFAULT_IMAGE
+  const usingDefault = !listingImage
   const title = listing.meta_title || `${listing.name} | McMullen Properties`
   const description =
     listing.meta_description ||
@@ -91,6 +95,13 @@ export async function onRequest(context) {
       el.setAttribute('content', value)
     },
   })
+  // Listing photos are arbitrary dimensions, so we strip the declared
+  // width/height rather than assert 1200x630 about a photo that is not.
+  const dropIfCustom = {
+    element(el) {
+      if (!usingDefault) el.remove()
+    },
+  }
 
   // --- 4. Rewrite the OG/Twitter tags in the shell and return it. ---
   const out = new HTMLRewriter()
@@ -103,12 +114,22 @@ export async function onRequest(context) {
     .on('meta[property="og:title"]', setContent(title))
     .on('meta[property="og:description"]', setContent(description))
     .on('meta[property="og:image"]', setContent(imageUrl))
+    .on('meta[property="og:image:secure_url"]', setContent(imageUrl))
     .on('meta[property="og:image:alt"]', setContent(imageAlt))
+    .on('meta[property="og:image:width"]', usingDefault ? setContent('1200') : dropIfCustom)
+    .on('meta[property="og:image:height"]', usingDefault ? setContent('630') : dropIfCustom)
+    .on('meta[property="og:image:type"]', usingDefault ? setContent('image/jpeg') : dropIfCustom)
     .on('meta[property="og:url"]', setContent(pageUrl))
     .on('meta[property="og:type"]', setContent('article'))
     .on('meta[name="twitter:title"]', setContent(title))
     .on('meta[name="twitter:description"]', setContent(description))
     .on('meta[name="twitter:image"]', setContent(imageUrl))
+    .on('meta[name="twitter:image:alt"]', setContent(imageAlt))
+    .on('link[rel="canonical"]', {
+      element(el) {
+        el.setAttribute('href', pageUrl)
+      },
+    })
     .transform(shell)
 
   // Ensure HTML content-type + no stale cache of the transformed document.
