@@ -8,16 +8,34 @@
 // index.html whose OG tags advertise the generic McMullen share image, and
 // social crawlers (iMessage, WhatsApp, Slack, LinkedIn) never run JavaScript.
 // This Pages Function rewrites the tags at the edge so a shared CMA link
-// previews as the PROPERTY ADDRESS over a generic branded CMA card, instead
-// of the site-wide cover image. Humans still get the normal SPA.
+// previews as the PROPERTY ADDRESS over the deliverable's own share card,
+// instead of the site-wide cover image. Humans still get the normal SPA.
 //
 // DATA PATH
-// Metadata comes from the serve_page Edge Function's v3 meta kinds
+// Metadata comes from the serve_page Edge Function's meta kinds
 // (?kind=cma_meta|review_meta&id=<uuid>), which serve published rows only via
 // the service role — no Supabase keys needed here, and RLS on the private
 // rows stays intact. Unknown/unpublished IDs fall back to default tags.
 //
 // Requires "/view/*" in public/_routes.json (Functions route allowlist).
+//
+// ── CHANGES IN THIS VERSION ──────────────────────────────────────────────
+// 1. PER-DELIVERABLE CARD. serve_page now returns `image` (from
+//    cmas.showcase_image / disclosure_reviews.showcase_image). When present it
+//    becomes the share image; otherwise we fall back to the generic
+//    /og/cma-share.png or /og/review-share.png exactly as before.
+//
+// 2. THE ACTUAL BUG — og:image:secure_url. index.html ships BOTH
+//    <meta property="og:image"> and <meta property="og:image:secure_url">,
+//    and the previous version rewrote only the first. Facebook, iMessage and
+//    several other crawlers prefer secure_url when both are present, so the
+//    site-wide brand card (mcmullenresidential.com/og/share.jpg) kept winning
+//    no matter what og:image was set to. That is why shared CMA links previewed
+//    as "Bay Area real estate, marketed like a campaign." We now rewrite
+//    secure_url too — plus og:image:type, which was hardcoded to image/jpeg in
+//    the shell and must match whichever card we actually serve.
+//
+// 3. Also rewrites twitter:image:alt and og:site_name for completeness.
 
 export async function onRequest(context) {
   const { request, env } = context
@@ -65,9 +83,19 @@ export async function onRequest(context) {
     kind === 'cma'
       ? 'Comparative Market Analysis — prepared by McMullen Properties.'
       : 'Disclosure Cheat Sheet — prepared by McMullen Properties.'
-  const imageUrl = `${url.origin}/og/${kind === 'cma' ? 'cma-share.png' : 'review-share.png'}`
+
+  // Per-deliverable card when serve_page supplies one, else the generic card.
+  const fallbackImage = `${url.origin}/og/${kind === 'cma' ? 'cma-share.png' : 'review-share.png'}`
+  const imageUrl =
+    typeof meta.image === 'string' && /^https:\/\//i.test(meta.image.trim())
+      ? meta.image.trim()
+      : fallbackImage
+
+  // The shell hardcodes image/jpeg; keep the declared type honest.
+  const imageType = /\.png(\?|$)/i.test(imageUrl) ? 'image/png' : 'image/jpeg'
+
   const pageUrl = `${url.origin}/view/${kind}/${id}`
-  const imageAlt = `${kindLabel} — McMullen Properties`
+  const imageAlt = `${title} — ${kindLabel}`
 
   const setContent = (value) => ({
     element(el) {
@@ -86,12 +114,16 @@ export async function onRequest(context) {
     .on('meta[property="og:title"]', setContent(title))
     .on('meta[property="og:description"]', setContent(description))
     .on('meta[property="og:image"]', setContent(imageUrl))
+    // The fix: secure_url outranks og:image for several crawlers.
+    .on('meta[property="og:image:secure_url"]', setContent(imageUrl))
+    .on('meta[property="og:image:type"]', setContent(imageType))
     .on('meta[property="og:image:alt"]', setContent(imageAlt))
     .on('meta[property="og:url"]', setContent(pageUrl))
     .on('meta[property="og:type"]', setContent('article'))
     .on('meta[name="twitter:title"]', setContent(title))
     .on('meta[name="twitter:description"]', setContent(description))
     .on('meta[name="twitter:image"]', setContent(imageUrl))
+    .on('meta[name="twitter:image:alt"]', setContent(imageAlt))
     .transform(shell)
 
   const headers = new Headers(out.headers)
