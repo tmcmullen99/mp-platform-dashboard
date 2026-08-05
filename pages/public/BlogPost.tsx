@@ -117,6 +117,12 @@ export default function BlogPost() {
         .mp-prose tbody tr:hover td { background: rgba(13,27,42,0.02); }
         .mp-prose tbody td strong { color: #0D1B2A; font-weight: 600; }
         .mp-prose thead th:not(:first-child), .mp-prose tbody td:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+        .mp-prose figure { margin: 2.4em 0; }
+        .mp-prose figure img { display: block; width: 100%; height: auto; border-radius: 3px; margin: 0; }
+        .mp-prose figcaption { font-size: 0.85rem; line-height: 1.6; color: #6b7a86; margin-top: 0.7em; padding-left: 0.9em; border-left: 2px solid rgba(145,161,186,0.55); }
+        .mp-prose .shots2 { display: grid; grid-template-columns: 1fr; gap: 1.1em; }
+        @media (min-width: 700px) { .mp-prose .shots2 { grid-template-columns: 1fr 1fr; } }
+        .mp-prose .shots2 figure { margin: 0; }
         .mp-byline { margin-top: 2.5em; padding-top: 0.5em; }
         .mp-byline p { font-size: 0.92rem; margin: 0 0 0.35em; color: #273C46; }
         .mp-byline .mp-note { font-size: 0.8rem; line-height: 1.65; color: #6b7a86; margin-top: 1.4em; }
