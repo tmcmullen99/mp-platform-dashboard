@@ -1,13 +1,25 @@
 // /view/:kind/:id — public viewer for a PRIVATE buyer deliverable (CMA landing
-// page or disclosure cheat sheet), addressed by its unguessable row UUID.
+// page or disclosure cheat sheet).
 //
-// Why this exists: the stored HTML documents are served by the `serve_page`
-// Edge Function, but Supabase's functions gateway hardens every response with
-// `Content-Type: text/plain` + a sandbox CSP, so navigating to the function URL
-// shows raw source instead of a page. This route fetches that same endpoint as
-// DATA and renders it in a sandboxed iframe on our own domain — which also
-// gives clients a branded mp-platform-dashboard.pages.dev link instead of a
-// supabase.co one.
+// ADDRESSING (changed): `:id` accepts EITHER the row UUID or the row's
+// `public_slug` — an address-derived slug plus a short random token, e.g.
+// /view/cma/133-union-ave-unit-f-campbell-c4e24a. Links already shared as bare
+// UUIDs keep working; this is additive.
+//
+// WHY THE TOKEN IS NOT OPTIONAL: nothing authenticates this route. serve_page
+// runs verify_jwt=false and these pages are linked only from a client's own
+// documents — the UNGUESSABILITY OF THE IDENTIFIER *IS* THE ACCESS CONTROL.
+// A bare address slug would let anyone who knows the property address read a
+// private supported value and negotiating position, so SLUG_RE below requires
+// the trailing hex token and a naked address slug must NOT resolve.
+//
+// Why this component exists: the stored HTML documents are served by the
+// `serve_page` Edge Function, but Supabase's functions gateway hardens every
+// response with `Content-Type: text/plain` + a sandbox CSP, so navigating to
+// the function URL shows raw source instead of a page. This route fetches that
+// same endpoint as DATA and renders it in a sandboxed iframe on our own domain
+// — which also gives clients a branded mp-platform-dashboard.pages.dev link
+// instead of a supabase.co one.
 //
 // Contrast with /cma-review/:slug (CMAShowcaseViewer): that surface lists only
 // visibility='public_showcase' rows on the public marketing gallery. This one
@@ -21,6 +33,9 @@ import { EDGE_FUNCTIONS_BASE_URL } from '@/lib/supabase'
 import { Loader2 } from 'lucide-react'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// Address slug + '-' + 5–12 hex token. Keep the token requirement in sync with
+// SLUG_RE in supabase/functions/serve_page/index.ts.
+const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*-[0-9a-f]{5,12}$/
 const KINDS = new Set(['cma', 'review'])
 
 export default function DeliverableViewer() {
@@ -31,13 +46,15 @@ export default function DeliverableViewer() {
   useEffect(() => {
     let cancelled = false
     async function load() {
-      if (!kind || !id || !KINDS.has(kind) || !UUID_RE.test(id)) {
+      const ref = (id || '').trim()
+      const valid = UUID_RE.test(ref) || SLUG_RE.test(ref.toLowerCase())
+      if (!kind || !ref || !KINDS.has(kind) || !valid) {
         setState('missing')
         return
       }
       try {
         const res = await fetch(
-          `${EDGE_FUNCTIONS_BASE_URL}/serve_page?kind=${kind}&id=${id}`
+          `${EDGE_FUNCTIONS_BASE_URL}/serve_page?kind=${kind}&id=${encodeURIComponent(ref)}`
         )
         if (cancelled) return
         if (!res.ok) {
