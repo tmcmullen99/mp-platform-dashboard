@@ -3,7 +3,8 @@
   "include": [
     "/listings/*",
     "/view/*",
-    "/blog/*"
+    "/blog/*",
+    "/expired/*"
   ],
   "exclude": []
 }
