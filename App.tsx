@@ -45,6 +45,7 @@ import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
 import OffMarketTool from '@/pages/public/OffMarketTool'
 import LuxuryListings from '@/pages/public/LuxuryListings'
 import ServiceLuxury from '@/pages/public/ServiceLuxury'
+import ServiceExpired from '@/pages/public/ServiceExpired'
 import ServiceDisclosure from '@/pages/public/ServiceDisclosure'
 import Service1031 from '@/pages/public/Service1031'
 import ServiceCommercial from '@/pages/public/ServiceCommercial'
@@ -90,6 +91,7 @@ export default function App() {
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
           <Route path="/services/luxury-listing" element={<ServiceLuxury />} />
+          <Route path="/services/expired-listing" element={<ServiceExpired />} />
           <Route path="/services/disclosure-review" element={<ServiceDisclosure />} />
           <Route path="/services/1031-exchange" element={<Service1031 />} />
           <Route path="/services/commercial" element={<ServiceCommercial />} />
