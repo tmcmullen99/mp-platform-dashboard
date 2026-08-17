@@ -20,6 +20,44 @@
 // an auth gate, and a letter already in the post cannot wait for a client-side
 // redirect to decide whether it is allowed to be seen.
 
+/* Mirrors components/public/PublicNav.tsx — same links, same order, same
+   phone and account actions. If that nav changes, change this with it. */
+const HEADER = `
+<style>
+  .mrnav{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.92);
+    backdrop-filter:blur(10px);border-bottom:1px solid rgba(0,0,0,.06);
+    font-family:Inter,system-ui,-apple-system,sans-serif}
+  .mrnav-in{max-width:72rem;margin:0 auto;padding:0 24px;height:64px;
+    display:flex;align-items:center;justify-content:space-between;gap:18px}
+  .mrmark{display:flex;align-items:baseline;gap:7px;text-decoration:none;
+    color:#0D1B2A;font-weight:700;letter-spacing:.06em;font-size:14px}
+  .mrmark span{font-weight:400;letter-spacing:.14em;color:#273C46}
+  .mrlinks{display:none;align-items:center;gap:28px;font-size:14px}
+  .mrlinks a{color:#273C46;text-decoration:none}
+  .mrlinks a:hover{color:#0D1B2A}
+  .mrright{display:flex;align-items:center;gap:12px}
+  .mrphone{display:none;font-size:14px;font-weight:500;color:#0D1B2A;text-decoration:none}
+  .mrcta{background:#0D1B2A;color:#fff;text-decoration:none;font-size:13px;
+    font-weight:500;padding:9px 18px;border-radius:999px;white-space:nowrap}
+  @media(min-width:768px){.mrlinks{display:flex}}
+  @media(min-width:1024px){.mrphone{display:inline}}
+</style>
+<header class="mrnav"><div class="mrnav-in">
+  <a class="mrmark" href="https://mcmullenresidential.com/home">MCMULLEN.<span>PROPERTIES</span></a>
+  <nav class="mrlinks">
+    <a href="https://mcmullenresidential.com/listings">Portfolio</a>
+    <a href="https://mcmullenresidential.com/tools">Tools</a>
+    <a href="https://mcmullenresidential.com/services">Services</a>
+    <a href="https://mcmullenresidential.com/meet-tim">Meet Tim</a>
+    <a href="https://mcmullenresidential.com/blog">Market</a>
+    <a href="https://mcmullenresidential.com/insights">Writing</a>
+  </nav>
+  <div class="mrright">
+    <a class="mrphone" href="tel:+14156919272">(415) 691-9272</a>
+    <a class="mrcta" href="https://mcmullenresidential.com/services/expired-listing">How I run a listing</a>
+  </div>
+</div></header>`
+
 const RENDERER = 'https://campbellrealestatemarket.com/_ooa/expired/'
 
 export async function onRequest(context) {
@@ -42,8 +80,17 @@ export async function onRequest(context) {
      to somebody standing in their kitchen with a letter. */
   if (!upstream || !upstream.ok) return gone()
 
-  const html = await upstream.text()
+  let html = await upstream.text()
   if (!html || html.length < 500) return gone()
+
+  /* The renderer sends the page without its own header, because this page is
+     served under mcmullenresidential.com and must wear that site's chrome. A
+     city market's "For sale / Toolkit / Intelligence" menu here would send the
+     owner to a site that does not cover their city.
+     Static markup rather than the React <PublicNav>: the SPA has not booted
+     at this point and cannot, since the page is edge-rendered. Links match
+     PublicNav's LINKS exactly. */
+  html = html.replace('<body>', '<body>' + HEADER)
 
   return new Response(html, {
     status: 200,
