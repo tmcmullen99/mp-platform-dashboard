@@ -4,7 +4,8 @@
     "/listings/*",
     "/view/*",
     "/blog/*",
-    "/expired/*"
+    "/expired/*",
+    "/proposal/*"
   ],
   "exclude": []
 }
