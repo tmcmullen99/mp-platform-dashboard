@@ -140,6 +140,7 @@ export const FOOTER_COLUMNS: { heading: string; links: { to: string; label: stri
       { to: '/services/home-improvement', label: 'Home Improvement' },
       { to: '/services/flips', label: 'Flips & Off-Market' },
       { to: '/services/sell-with-tenants', label: 'Sell Tenant-Occupied' },
+      { to: '/services/probate', label: 'Probate' },
     ],
   },
   {
@@ -203,7 +204,9 @@ export function PublicFooter() {
         {/* legal / license bar */}
         <div className="mt-12 pt-8 border-t border-black/[0.07] flex flex-col md:flex-row md:items-center justify-between gap-4 text-xs text-[#273C46]">
           <div className="leading-relaxed">
-            © {year} McMullen Properties. Tim McMullen, CA DRE #02016832 · Brokered by Real Broker.
+            © {year} McMullen Properties LLC, which is not a real estate brokerage.
+            <br className="hidden md:block" />
+            Real estate services provided by Tim McMullen, Broker · CA DRE #02016832 · Real Broker, CA DRE #02228473.
             <br className="hidden md:block" />
             Equal Housing Opportunity. All information deemed reliable but not guaranteed.
           </div>
