@@ -52,6 +52,7 @@ import ServiceCommercial from '@/pages/public/ServiceCommercial'
 import ServiceImprovement from '@/pages/public/ServiceImprovement'
 import ServiceFlips from '@/pages/public/ServiceFlips'
 import ServiceTenantOccupied from '@/pages/public/ServiceTenantOccupied'
+import ServiceProbate from '@/pages/public/ServiceProbate'
 import Sitemap from '@/pages/public/Sitemap'
 import MarketPage from '@/pages/public/MarketPage'
 import MarketBuilding from '@/pages/public/MarketBuilding'
@@ -98,6 +99,7 @@ export default function App() {
           <Route path="/services/home-improvement" element={<ServiceImprovement />} />
           <Route path="/services/flips" element={<ServiceFlips />} />
           <Route path="/services/sell-with-tenants" element={<ServiceTenantOccupied />} />
+          <Route path="/services/probate" element={<ServiceProbate />} />
           <Route path="/blog" element={<MarketPage />} />
           <Route path="/market/:region/:slug" element={<MarketBuilding />} />
           <Route path="/insights" element={<BlogIndex />} />
