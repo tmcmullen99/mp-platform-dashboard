@@ -73,6 +73,23 @@ export function useInView<T extends HTMLElement>(threshold = 0.14) {
   useEffect(() => {
     const el = ref.current
     if (!el) return
+
+    // No observer, or the reader has asked for less motion: show it now.
+    // Content that depends on an animation to become visible is content that
+    // can fail to become visible.
+    if (
+      typeof IntersectionObserver === 'undefined' ||
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+    ) {
+      setInView(true)
+      return
+    }
+
+    // A ratio threshold cannot be met by a block taller than 1/threshold
+    // viewports: at 0.14, anything over ~7 screens never reveals and sits at
+    // opacity 0 forever. Text blocks reach that height on a phone, which is
+    // where this showed up. Fire on any intersection instead, pulled in
+    // slightly from the bottom edge so the motion still reads as a reveal.
     const io = new IntersectionObserver(
       (entries) =>
         entries.forEach((e) => {
@@ -81,9 +98,15 @@ export function useInView<T extends HTMLElement>(threshold = 0.14) {
             io.unobserve(e.target)
           }
         }),
-      { threshold }
+      { threshold: 0, rootMargin: '0px 0px -8% 0px' }
     )
     io.observe(el)
+
+    // Anything already on screen at mount - above the fold, or restored by a
+    // back-navigation scroll - may never produce an intersection event.
+    const r = el.getBoundingClientRect()
+    if (r.top < window.innerHeight && r.bottom > 0) setInView(true)
+
     return () => io.disconnect()
   }, [threshold])
   return { ref, inView }
@@ -101,6 +124,14 @@ export function Reveal({
   y?: number
 }) {
   const { ref, inView } = useInView<HTMLDivElement>()
+
+  // `delay` is seconds, but three pages were written against a milliseconds
+  // convention and pass 80, 120, 340. Interpolated straight into CSS that
+  // became `340s` - almost six minutes of an invisible block holding its full
+  // layout height, which is exactly the "huge blank gap" this looked like on a
+  // phone. Nobody passes 1, so anything >= 1 is milliseconds.
+  const secs = delay >= 1 ? delay / 1000 : delay
+
   return (
     <div
       ref={ref}
@@ -108,7 +139,7 @@ export function Reveal({
       style={{
         opacity: inView ? 1 : 0,
         transform: inView ? 'none' : `translateY(${y}px)`,
-        transition: `opacity .8s ease-out ${delay}s, transform .8s cubic-bezier(0.16,1,0.3,1) ${delay}s`,
+        transition: `opacity .8s ease-out ${secs}s, transform .8s cubic-bezier(0.16,1,0.3,1) ${secs}s`,
       }}
     >
       {children}
