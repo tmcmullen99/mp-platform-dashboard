@@ -80,7 +80,7 @@ const PHASES = [
     detail:
       'This is a retrospective opinion of value — what the property would have sold for on the date the owner died — and it is a different document from the probate referee’s Inventory and Appraisal, which the court orders separately. Estates need a date-of-death figure because that is the value the beneficiaries’ tax basis is measured from. Your attorney will want it in the file. We prepare it from recorded sales in the immediate area, we show our comparables, and we hand it over whether or not you ever list the property with anyone.',
     example:
-      'A petitioner who receives this in week two arrives at the first attorney meeting with the one number every subsequent decision depends on, instead of guessing for three months.',
+      'Having it early means walking into the first attorney meeting with the number everything else rests on, rather than carrying the question around for months.',
     tool: 'Retrospective comparable analysis · written letter addressed to the estate · no charge, no listing agreement',
   },
   {
@@ -88,11 +88,11 @@ const PHASES = [
     tag: 'Phase 2',
     title: 'Find out what authority you actually have',
     lead:
-      'Whether you can sell without returning to court is the single fact that determines your timeline. Most petitioners do not know which they were granted.',
+      'Whether you can sell without returning to court shapes your whole timeline. It is not obvious from the paperwork, and most people have not been told which they were granted.',
     detail:
       'Under the Independent Administration of Estates Act, letters are issued with either full authority or limited authority. With full authority a sale can usually proceed on a Notice of Proposed Action to the beneficiaries. With limited authority, the sale must be confirmed by the court — which brings a published hearing, a minimum price tied to the appraised value, and an open overbid process. These are completely different sales, on completely different calendars. We read your letters with you and tell you which one you are running, before a single decision is made on price or timing.',
     example:
-      'Discovering a confirmation requirement after accepting an offer is how deals fall apart and buyers walk. Discovering it in week two is simply a different plan.',
+      'Finding out about a confirmation requirement after an offer is accepted is where sales come undone. Finding out early is just a different plan.',
     tool: 'Review of your Letters · IAEA authority check · timeline mapped to your court',
   },
   {
@@ -100,11 +100,11 @@ const PHASES = [
     tag: 'Phase 3',
     title: 'If the court must confirm, run it properly',
     lead:
-      'A confirmation sale has rules that catch first-time executors. Knowing them in advance is most of the work.',
+      'A confirmation sale has rules that surprise almost everyone the first time. Knowing them early is most of the work.',
     detail:
-      'A court-confirmed sale generally cannot be accepted below ninety percent of the appraised value. The hearing is published, and at that hearing any qualified buyer may overbid in open court in set increments above the accepted offer. Your buyer may lose the property on the courthouse steps to somebody who has never been inside it. That is not a failure of the sale — it is the process working as designed — but a buyer who has not been told about it in advance walks away, and a petitioner who has not been told feels ambushed. We market to buyers who understand the process, we prepare your accepted buyer for the possibility, and we attend the hearing.',
+      'A court-confirmed sale generally cannot be accepted below ninety percent of the appraised value. The hearing is published, and at that hearing any qualified buyer may overbid in open court in set increments above the accepted offer. Your buyer can lose the property in open court to someone who has never been inside it. That is the process working as intended rather than anything going wrong — but it lands badly on anyone who was not told, and buyers who feel blindsided tend to walk. We market to buyers who understand the process, we prepare your accepted buyer for the possibility, and we attend the hearing.',
     example:
-      'The overbid is the single most common reason a first-time executor loses faith in the process. It is entirely avoidable as a surprise.',
+      'The overbid is the part that most often shakes someone’s faith in the process. It needn’t be a surprise.',
     tool: 'Confirmation-aware marketing · buyer preparation · attendance at hearing',
   },
   {
@@ -112,11 +112,11 @@ const PHASES = [
     tag: 'Phase 4',
     title: 'Deal with the house itself',
     lead:
-      'A home lived in for forty years by someone who has died is a problem before it is an asset. Most of this happens before anyone talks about price.',
+      'A home someone lived in for forty years asks a lot of you before it asks anything about price. Most of this comes first.',
     detail:
       'The property needs clearing, securing, insuring and — sometimes — repairing. It is generating carrying costs the entire time: mortgage, property tax, insurance, HOA dues and utilities on an empty house, every month, paid by the estate. Those costs, not the market, usually decide how fast this needs to move. We run the arithmetic with you and coordinate the work, which matters most for the petitioners managing all of this from another county or another state.',
     example:
-      'Standard homeowner policies frequently restrict or void coverage once a property has been vacant for thirty to sixty days. Almost no first-time executor knows this until something happens.',
+      'Standard homeowner policies often restrict or void cover once a home has stood empty for thirty to sixty days. It is not something anyone thinks to check until it matters.',
     tool: 'Vacant-property insurance referral · clear-out coordination · carrying-cost model · remote oversight',
   },
   {
@@ -124,7 +124,7 @@ const PHASES = [
     tag: 'Phase 5',
     title: 'Sell it — and keep every heir in the same conversation',
     lead:
-      'Most probate sales stall on beneficiaries disagreeing, not on price. One channel, one set of facts, everybody at once.',
+      'Sales more often stall on families not hearing the same thing than on price. One update, the same facts, everyone at once.',
     detail:
       'When heirs receive different information at different times, the sale stops. We send one update to every beneficiary on the same day, containing the same numbers, for the duration. The petitioner remains the decision-maker and the point of contact — but nobody learns about an offer second-hand from a sibling. When the property does go to market it is marketed properly: professional photography, full exposure, and the same preparation any other listing would receive. An estate property is not a discount property.',
     example:
@@ -266,20 +266,23 @@ export default function ServiceProbate() {
             <div className="mt-6 space-y-5 text-[16.5px] leading-relaxed" style={{ color: INK }}>
               <p>
                 That distinction is the whole thing. A seller chooses to sell, on their own
-                timeline, for their own benefit. You have been appointed by a court to manage
-                someone else’s property for someone else’s benefit, you can be held personally
-                responsible for doing it badly, and you did not volunteer.
+                timeline, for their own benefit. You have been asked by a court to look after
+                someone else’s property for someone else’s benefit, you carry a personal
+                responsibility for doing it well, and you did not put your hand up for it.
               </p>
               <p>
-                Which is why the postcards you are already receiving — cash offer, close in seven
-                days, no repairs — land so poorly. They are addressed to a seller. Your actual
+                Which is why the postcards arriving now — cash offer, close in seven days, no
+                repairs — feel so wide of the mark. They are written for a seller. Your actual
                 problems are a court calendar, a house full of a lifetime of belongings, siblings
                 who each have a view, and carrying costs running every month in the background.
               </p>
               <p>
                 I handle the property side of that. The attorney handles the law, the CPA handles
                 the tax, and I will tell you plainly when a question belongs to one of them rather
-                than to me.
+                than to me. McMullen Properties does keep an attorney in house who reviews our
+                documents and process, so what reaches you has been read properly before it gets
+                there — but that is our own review, not legal advice to you, and it is not a
+                substitute for your own attorney.
               </p>
             </div>
           </Reveal>
@@ -538,7 +541,7 @@ export default function ServiceProbate() {
             <ProbateValuationForm source="services/probate" />
             <div className="mt-6 flex justify-center">
               <PillButton href="/services/probate/for-attorneys" variant="secondary">
-                I’m an attorney
+                For probate attorneys
               </PillButton>
             </div>
           </Reveal>
