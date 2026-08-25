@@ -54,7 +54,7 @@ const LADDER = [
   },
   {
     tag: 'After signup',
-    title: 'A $10,000 credit that\u2019s yours',
+    title: 'A $10,000 credit that’s yours',
     blurb:
       'Apply for a $10,000 credit toward your next deal — a uniform benefit for account holders, yours to keep at closing.',
   },
