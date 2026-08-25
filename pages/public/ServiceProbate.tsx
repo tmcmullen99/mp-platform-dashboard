@@ -30,6 +30,7 @@ import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import ProbateValuationForm from '@/components/public/ProbateValuationForm'
+import ProbateMeetScheduler from '@/components/public/ProbateMeetScheduler'
 import {
   MotionStyles,
   Reveal,
@@ -612,6 +613,38 @@ export default function ServiceProbate() {
       </section>
 
       <ServiceArticleFeed serviceSlug="probate" heading="Reading on probate sales" />
+
+      {/* ── Talk to someone ──────────────────────────────────────────
+          Placed after the reading and before the close: by here they have
+          seen the phases, the bench and the counties, and the remaining
+          question is whether to speak to a person. A petitioner is often in
+          another state, so a call is the practical way to sit down. */}
+      <section id="talk" className="py-20 md:py-28 px-6 scroll-mt-20">
+        <div className="max-w-3xl mx-auto text-center">
+          <Reveal>
+            <div className="flex items-center justify-center gap-3 mb-5">
+              <span className="w-8 h-px" style={{ background: 'rgba(13,27,42,0.18)' }} />
+              <span className="font-mono text-[11px] uppercase tracking-[0.28em]" style={{ color: ACCENT }}>
+                When you are ready
+              </span>
+              <span className="w-8 h-px" style={{ background: 'rgba(13,27,42,0.18)' }} />
+            </div>
+            <h2 className="font-serif text-[clamp(1.8rem,4vw,2.9rem)] leading-tight" style={{ color: NAVY }}>
+              Half an hour, whenever suits.
+            </h2>
+          </Reveal>
+          <Reveal delay={90}>
+            <p className="mt-6 text-[16.5px] leading-relaxed" style={{ color: INK, opacity: 0.82 }}>
+              On Google Meet, so it works from wherever you are &mdash; most people I speak with are
+              not in the same city as the house, and several are not in the same state. Bring
+              questions or bring nothing. There is no charge and nothing follows from it.
+            </p>
+          </Reveal>
+          <Reveal delay={160}>
+            <ProbateMeetScheduler />
+          </Reveal>
+        </div>
+      </section>
 
       {/* ── Close ────────────────────────────────────────────────────── */}
       <section className="py-20 md:py-28 px-6" style={{ background: NAVY }}>
