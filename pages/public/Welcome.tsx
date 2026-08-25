@@ -26,6 +26,28 @@ export default function Welcome() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const ranRef = useRef(false)
 
+  /* Supabase reports a bad confirmation link in the URL fragment and then
+     leaves. Without reading it, clicking an expired or already-used link
+     dropped the visitor on a plain sign-in screen with no explanation - which
+     is exactly what a second click on the same email looks like, and is
+     indistinguishable from "the link did nothing". */
+  const [linkError, setLinkError] = useState<string | null>(null)
+  useEffect(() => {
+    const h = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+    const code = h.get('error_code') || h.get('error')
+    if (!code) return
+    const desc = (h.get('error_description') || '').replace(/\+/g, ' ')
+    setLinkError(
+      /expired/i.test(code + desc)
+        ? 'That confirmation link has expired. Send yourself a fresh one and it will work.'
+        : /already|used/i.test(desc)
+          ? 'That link has already been used. Your account is active — just sign in.'
+          : desc || 'That link could not be used.'
+    )
+    /* Clear the fragment so a refresh does not replay the error. */
+    window.history.replaceState({}, '', window.location.pathname + window.location.search)
+  }, [])
+
   useEffect(() => {
     if (authLoading) return
     if (!session) {
@@ -108,20 +130,38 @@ export default function Welcome() {
           </>
         ) : phase === 'signin' ? (
           <>
+            {/* This screen is reached both by a good link and a dead one, so it
+                must not assert "Email confirmed" in both cases. Telling someone
+                their email is confirmed when the link just failed is the
+                cruellest version of this bug: they stop looking for the
+                problem. */}
             <div className="mp-mono text-xs uppercase tracking-[0.22em] text-white/40 mb-5">
-              Email confirmed
+              {linkError ? 'That link did not work' : 'Email confirmed'}
             </div>
-            <h1 className="mp-serif text-3xl not-italic">Sign in to finish.</h1>
+            <h1 className="mp-serif text-3xl not-italic">
+              {linkError ? 'Let us get you in.' : 'Sign in to finish.'}
+            </h1>
             <p className="text-white/60 text-sm mt-4 leading-relaxed">
-              Your email is confirmed. Sign in with the password you created and your account
-              finishes setting up automatically.
+              {linkError
+                ? linkError
+                : 'Your email is confirmed. Sign in with the password you created and your account finishes setting up automatically.'}
             </p>
-            <Link
-              to="/login"
-              className="mt-7 inline-flex items-center justify-center rounded-full bg-white text-[#0D1B2A] px-6 py-3 text-sm font-medium"
-            >
-              Sign in
-            </Link>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <Link
+                to="/login"
+                className="inline-flex items-center justify-center rounded-full bg-white text-[#0D1B2A] px-6 py-3 text-sm font-medium"
+              >
+                Sign in
+              </Link>
+              {linkError && (
+                <Link
+                  to="/join"
+                  className="inline-flex items-center justify-center rounded-full border border-white/25 text-white px-6 py-3 text-sm"
+                >
+                  Send a new link
+                </Link>
+              )}
+            </div>
           </>
         ) : (
           <>
