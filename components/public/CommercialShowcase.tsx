@@ -92,8 +92,8 @@ function DealCard({ d, i }: { d: CommercialDeal; i: number }) {
 
 export default function CommercialShowcase({
   eyebrow = 'McMullen Commercial',
-  heading = 'This isn\u2019t theory. It\u2019s already the work.',
-  intro = 'Commercial real estate is a dedicated arm of the practice \u2014 McMullen Commercial \u2014 representing buyers acquiring income-producing industrial and commercial assets. A few recent closings:',
+  heading = 'This isn’t theory. It’s already the work.',
+  intro = 'Commercial real estate is a dedicated arm of the practice — McMullen Commercial — representing buyers acquiring income-producing industrial and commercial assets. A few recent closings:',
   surface = 'light',
 }: {
   eyebrow?: string
