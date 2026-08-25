@@ -29,6 +29,7 @@
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
+import ProbateValuationForm from '@/components/public/ProbateValuationForm'
 import {
   MotionStyles,
   Reveal,
@@ -527,16 +528,14 @@ export default function ServiceProbate() {
             <p className="mt-5 text-[16.5px] leading-relaxed" style={{ color: INK }}>
               Tell me the property and the date of passing. I will prepare a written opinion of
               value as of that date, with the comparable sales it is built from, addressed to the
-              estate so it can go straight into your attorney’s file. It takes a few days. There
-              is no charge, no listing agreement, and no obligation of any kind — the letter is
-              yours whatever you decide to do next.
+              estate so it can go straight into your attorney’s file. You will have it within 24
+              hours. There is no charge, no listing agreement, and no obligation of any kind — the
+              letter is yours whatever you decide to do next.
             </p>
           </Reveal>
           <Reveal delay={210}>
-            <div className="mt-9 flex flex-wrap gap-3 justify-center">
-              <PillButton href="mailto:tim@mcmullen.properties?subject=Date-of-death%20valuation%20request&body=Property%20address%3A%0ADate%20of%20passing%3A%0AYour%20name%3A%0A">
-                Request the valuation letter
-              </PillButton>
+            <ProbateValuationForm source="services/probate" />
+            <div className="mt-6 flex justify-center">
               <PillButton href="/services/probate/for-attorneys" variant="secondary">
                 I’m an attorney
               </PillButton>
@@ -634,7 +633,7 @@ export default function ServiceProbate() {
           </Reveal>
           <Reveal delay={160}>
             <div className="mt-9 flex flex-wrap gap-3 justify-center">
-              <PillButton href="mailto:tim@mcmullen.properties?subject=Date-of-death%20valuation%20request&body=Property%20address%3A%0ADate%20of%20passing%3A%0AYour%20name%3A%0A" onDark>
+              <PillButton href="#valuation" onDark>
                 Request the valuation letter
               </PillButton>
               <PillButton href="/meet-tim" variant="secondary" onDark>
