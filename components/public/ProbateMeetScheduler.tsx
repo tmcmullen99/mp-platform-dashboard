@@ -27,11 +27,23 @@ const REASONS: Record<string, string> = {
   slot_taken: 'Someone just took that one. Pick another.',
 }
 
-export default function ProbateMeetScheduler() {
+/* prefill lets the valuation flow hand over what it already knows. Someone who
+   has just typed their name, email and the address is not going to type them
+   again to book a call, and asking would be the point most people stop. */
+export default function ProbateMeetScheduler({
+  prefill,
+  compact = false,
+}: {
+  prefill?: { name?: string; email?: string; phone?: string; address?: string }
+  compact?: boolean
+} = {}) {
   const [slots, setSlots] = useState<Slot[]>([])
   const [state, setState] = useState<State>('loading')
   const [pick, setPick] = useState<string>('')
-  const [f, setF] = useState({ name: '', email: '', phone: '', address: '', note: '' })
+  const [f, setF] = useState({
+    name: prefill?.name ?? '', email: prefill?.email ?? '',
+    phone: prefill?.phone ?? '', address: prefill?.address ?? '', note: '',
+  })
   const [err, setErr] = useState<string | null>(null)
   const [done, setDone] = useState<{ when: string; meet_url: string | null } | null>(null)
 
@@ -141,7 +153,7 @@ export default function ProbateMeetScheduler() {
         </div>
       )}
 
-      <div className="grid md:grid-cols-2 gap-4">
+      <div className={compact ? 'hidden' : 'grid md:grid-cols-2 gap-4'}>
         <div>
           <label className={label} style={{ color: INK }} htmlFor="pm-name">Your name</label>
           <input id="pm-name" className={field} style={border} value={f.name} onChange={set('name')} autoComplete="name" />
