@@ -69,7 +69,17 @@ export default function JoinTeaser() {
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
+  const [state, setState] =
+    useState<'idle' | 'sending' | 'sent' | 'resending' | 'exists' | 'error'>('idle')
+  const [cooldown, setCooldown] = useState(0)
+
+  /* Supabase rate-limits resends; a live countdown is kinder than a button
+     that silently refuses. */
+  useEffect(() => {
+    if (cooldown <= 0) return
+    const t = setTimeout(() => setCooldown(c => c - 1), 1000)
+    return () => clearTimeout(t)
+  }, [cooldown])
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // After email confirmation Supabase returns to /welcome; forward the intended
@@ -96,8 +106,9 @@ export default function JoinTeaser() {
     }
     setState('sending')
     setErrorMsg(null)
-    const { error } = await supabase.auth.signUp({
-      email: email.trim().toLowerCase(),
+    const addr = email.trim().toLowerCase()
+    const { data, error } = await supabase.auth.signUp({
+      email: addr,
       password,
       options: {
         emailRedirectTo: redirectTo,
@@ -109,7 +120,51 @@ export default function JoinTeaser() {
       setState('error')
       return
     }
+
+    /* If email confirmation is switched off in the project, signUp returns a
+       live session and the person is already logged in. The old code ignored
+       `data` entirely and always showed "Check your email", so turning
+       confirmation off would have left the page promising an email that was
+       never going to be sent. */
+    if (data.session) {
+      navigate(next || '/welcome', { replace: true })
+      return
+    }
+
+    /* Supabase deliberately does not error when the address already has an
+       account - it returns a user with an empty identities array instead, so
+       an existing customer got "Check your email" and an email that never
+       came, forever. Name it and give them the way in. */
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      setState('exists')
+      return
+    }
+
     setState('sent')
+  }
+
+  /* A real resend, not a form reset. "Try again" put them back on a blank form
+     where re-submitting the same address hits the existing-account path above
+     and sends nothing - the exact loop somebody who did not get the first
+     email would fall into. */
+  async function resend() {
+    if (cooldown > 0 || state === 'resending') return
+    setState('resending')
+    setErrorMsg(null)
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: redirectTo },
+    })
+    if (error) {
+      /* Rate limiting is the single most likely reason a confirmation email
+         never arrives, so say so plainly rather than showing the raw string. */
+      setErrorMsg(/rate|limit|seconds/i.test(error.message)
+        ? 'That is too many requests in a row. Wait a minute and try once more.'
+        : error.message)
+    }
+    setState('sent')
+    setCooldown(45)
   }
 
   const inputCls =
@@ -140,18 +195,61 @@ export default function JoinTeaser() {
 
           {/* signup card */}
           <div className="max-w-xl mx-auto mt-12 rounded-[24px] bg-white/[0.05] border border-white/10 p-7 md:p-8">
-            {state === 'sent' ? (
+            {state === 'exists' ? (
+              <div className="text-center py-4">
+                <div className="mp-serif text-2xl text-white not-italic">
+                  You already have an account.
+                </div>
+                <p className="text-white/60 text-sm mt-3 leading-relaxed">
+                  <span className="text-white">{email}</span> is already registered, so nothing new
+                  was sent. Sign in with your password, or reset it if you cannot remember.
+                </p>
+                <div className="mt-6 flex flex-wrap gap-3 justify-center">
+                  <Link
+                    to={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+                    className="rounded-full bg-white text-[#0D1B2A] px-6 py-2.5 text-sm font-medium"
+                  >
+                    Sign in
+                  </Link>
+                  <button
+                    onClick={() => { setState('idle'); setEmail('') }}
+                    className="rounded-full border border-white/25 text-white px-6 py-2.5 text-sm"
+                  >
+                    Use a different email
+                  </button>
+                </div>
+              </div>
+            ) : state === 'sent' || state === 'resending' ? (
               <div className="text-center py-4">
                 <div className="mp-serif text-2xl text-white not-italic">Check your email.</div>
                 <p className="text-white/60 text-sm mt-3 leading-relaxed">
                   We sent a confirmation link to <span className="text-white">{email}</span>. Click it to
                   activate your account and unlock the tools. The link lands you right back here.
                 </p>
-                <p className="mp-mono text-[10px] uppercase tracking-[0.16em] text-white/30 mt-5">
-                  Didn&rsquo;t get it? Check spam, or{' '}
-                  <button onClick={() => setState('idle')} className="underline">
-                    try again
+                {errorMsg && (
+                  <p className="text-[#f0a58f] text-sm mt-4" role="alert">{errorMsg}</p>
+                )}
+                <div className="mt-6 flex flex-wrap gap-3 justify-center items-center">
+                  <button
+                    onClick={resend}
+                    disabled={cooldown > 0 || state === 'resending'}
+                    className="rounded-full border border-white/25 text-white px-6 py-2.5 text-sm disabled:opacity-45"
+                  >
+                    {state === 'resending'
+                      ? 'Sending\u2026'
+                      : cooldown > 0
+                        ? `Send it again in ${cooldown}s`
+                        : 'Send it again'}
                   </button>
+                  <Link
+                    to={`/login${next ? `?next=${encodeURIComponent(next)}` : ''}`}
+                    className="text-white/60 text-sm underline"
+                  >
+                    Already confirmed? Sign in
+                  </Link>
+                </div>
+                <p className="mp-mono text-[10px] uppercase tracking-[0.16em] text-white/30 mt-5">
+                  Check spam and promotions &middot; it comes from Supabase
                 </p>
               </div>
             ) : (
