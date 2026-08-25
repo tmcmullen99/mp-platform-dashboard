@@ -27,7 +27,6 @@
 // splits, then the attorney door, closing into the valuation request.
 
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import {
@@ -55,7 +54,6 @@ import {
   Calculator,
   KeyRound,
   ArrowRight,
-  ArrowUpRight,
   Plus,
   Minus,
   MapPin,
@@ -78,10 +76,10 @@ const PHASES = [
     lead:
       'Before anything is decided, the estate needs a defensible value as of the date of passing. We prepare it, in writing, at no cost.',
     detail:
-      'This is a retrospective opinion of value — what the property would have sold for on the date the owner died — and it is a different document from the probate referee\u2019s Inventory and Appraisal, which the court orders separately. Estates need a date-of-death figure because that is the value the beneficiaries\u2019 tax basis is measured from. Your attorney will want it in the file. We prepare it from recorded sales in the immediate area, we show our comparables, and we hand it over whether or not you ever list the property with anyone.',
+      'This is a retrospective opinion of value — what the property would have sold for on the date the owner died — and it is a different document from the probate referee’s Inventory and Appraisal, which the court orders separately. Estates need a date-of-death figure because that is the value the beneficiaries’ tax basis is measured from. Your attorney will want it in the file. We prepare it from recorded sales in the immediate area, we show our comparables, and we hand it over whether or not you ever list the property with anyone.',
     example:
       'A petitioner who receives this in week two arrives at the first attorney meeting with the one number every subsequent decision depends on, instead of guessing for three months.',
-    tool: 'Retrospective comparable analysis \u00b7 written letter addressed to the estate \u00b7 no charge, no listing agreement',
+    tool: 'Retrospective comparable analysis · written letter addressed to the estate · no charge, no listing agreement',
   },
   {
     icon: Scale,
@@ -93,7 +91,7 @@ const PHASES = [
       'Under the Independent Administration of Estates Act, letters are issued with either full authority or limited authority. With full authority a sale can usually proceed on a Notice of Proposed Action to the beneficiaries. With limited authority, the sale must be confirmed by the court — which brings a published hearing, a minimum price tied to the appraised value, and an open overbid process. These are completely different sales, on completely different calendars. We read your letters with you and tell you which one you are running, before a single decision is made on price or timing.',
     example:
       'Discovering a confirmation requirement after accepting an offer is how deals fall apart and buyers walk. Discovering it in week two is simply a different plan.',
-    tool: 'Review of your Letters \u00b7 IAEA authority check \u00b7 timeline mapped to your court',
+    tool: 'Review of your Letters · IAEA authority check · timeline mapped to your court',
   },
   {
     icon: Gavel,
@@ -105,7 +103,7 @@ const PHASES = [
       'A court-confirmed sale generally cannot be accepted below ninety percent of the appraised value. The hearing is published, and at that hearing any qualified buyer may overbid in open court in set increments above the accepted offer. Your buyer may lose the property on the courthouse steps to somebody who has never been inside it. That is not a failure of the sale — it is the process working as designed — but a buyer who has not been told about it in advance walks away, and a petitioner who has not been told feels ambushed. We market to buyers who understand the process, we prepare your accepted buyer for the possibility, and we attend the hearing.',
     example:
       'The overbid is the single most common reason a first-time executor loses faith in the process. It is entirely avoidable as a surprise.',
-    tool: 'Confirmation-aware marketing \u00b7 buyer preparation \u00b7 attendance at hearing',
+    tool: 'Confirmation-aware marketing · buyer preparation · attendance at hearing',
   },
   {
     icon: Home,
@@ -117,19 +115,19 @@ const PHASES = [
       'The property needs clearing, securing, insuring and — sometimes — repairing. It is generating carrying costs the entire time: mortgage, property tax, insurance, HOA dues and utilities on an empty house, every month, paid by the estate. Those costs, not the market, usually decide how fast this needs to move. We run the arithmetic with you and coordinate the work, which matters most for the petitioners managing all of this from another county or another state.',
     example:
       'Standard homeowner policies frequently restrict or void coverage once a property has been vacant for thirty to sixty days. Almost no first-time executor knows this until something happens.',
-    tool: 'Vacant-property insurance referral \u00b7 clear-out coordination \u00b7 carrying-cost model \u00b7 remote oversight',
+    tool: 'Vacant-property insurance referral · clear-out coordination · carrying-cost model · remote oversight',
   },
   {
     icon: Users,
     tag: 'Phase 5',
-    title: 'Sell it \u2014 and keep every heir in the same conversation',
+    title: 'Sell it — and keep every heir in the same conversation',
     lead:
       'Most probate sales stall on beneficiaries disagreeing, not on price. One channel, one set of facts, everybody at once.',
     detail:
       'When heirs receive different information at different times, the sale stops. We send one update to every beneficiary on the same day, containing the same numbers, for the duration. The petitioner remains the decision-maker and the point of contact — but nobody learns about an offer second-hand from a sibling. When the property does go to market it is marketed properly: professional photography, full exposure, and the same preparation any other listing would receive. An estate property is not a discount property.',
     example:
       'A single shared update thread removes the most common cause of a probate sale collapsing, and it costs nothing to run.',
-    tool: 'All-beneficiary updates \u00b7 full-exposure marketing \u00b7 offer review with your attorney',
+    tool: 'All-beneficiary updates · full-exposure marketing · offer review with your attorney',
   },
 ]
 
@@ -151,7 +149,7 @@ const BENCH = [
     icon: ShieldCheck,
     title: 'Holding it safely',
     items: [
-      'Vacant-property insurance \u2014 before a standard policy lapses',
+      'Vacant-property insurance — before a standard policy lapses',
       'Grounds and exterior upkeep so the home does not look empty',
       'Periodic interior checks, mail hold, utility management',
       'Re-keying and lockbox control',
@@ -180,9 +178,9 @@ const BENCH = [
 ]
 
 const COUNTIES = [
-  { name: 'San Francisco', slug: 'san-francisco', court: 'San Francisco Superior Court \u00b7 Probate Department' },
-  { name: 'San Mateo', slug: 'san-mateo', court: 'San Mateo County Superior Court \u00b7 Probate' },
-  { name: 'Santa Clara', slug: 'santa-clara', court: 'Santa Clara County Superior Court \u00b7 Probate' },
+  { name: 'San Francisco', slug: 'san-francisco', court: 'San Francisco Superior Court · Probate Department' },
+  { name: 'San Mateo', slug: 'san-mateo', court: 'San Mateo County Superior Court · Probate' },
+  { name: 'Santa Clara', slug: 'santa-clara', court: 'Santa Clara County Superior Court · Probate' },
 ]
 
 export default function ServiceProbate() {
@@ -201,7 +199,7 @@ export default function ServiceProbate() {
               className="font-mono text-[11px] uppercase tracking-[0.22em] mb-5"
               style={{ color: ACCENT }}
             >
-              Probate \u00b7 San Francisco \u00b7 San Mateo \u00b7 Santa Clara
+              Probate · San Francisco · San Mateo · Santa Clara
             </p>
           </Reveal>
           <Reveal delay={90}>
@@ -236,18 +234,20 @@ export default function ServiceProbate() {
         </div>
       </ParallaxHero>
 
-      <Marquee
-        items={[
-          'Date-of-death valuation letters',
-          'IAEA authority review',
-          'Court-confirmation sales',
-          'Overbid preparation',
-          'Estate clear-out',
-          'Vacant-property insurance',
-          'All-beneficiary updates',
-          'Out-of-state executors',
-        ]}
-      />
+      <div style={{ background: NAVY }}>
+        <Marquee
+          items={[
+            'Date-of-death valuation letters',
+            'IAEA authority review',
+            'Court-confirmation sales',
+            'Overbid preparation',
+            'Estate clear-out',
+            'Vacant-property insurance',
+            'All-beneficiary updates',
+            'Out-of-state executors',
+          ]}
+        />
+      </div>
 
       {/* ── The frame ────────────────────────────────────────────────── */}
       <section className="py-20 md:py-28 px-6">
@@ -265,12 +265,12 @@ export default function ServiceProbate() {
               <p>
                 That distinction is the whole thing. A seller chooses to sell, on their own
                 timeline, for their own benefit. You have been appointed by a court to manage
-                someone else\u2019s property for someone else\u2019s benefit, you can be held personally
+                someone else’s property for someone else’s benefit, you can be held personally
                 responsible for doing it badly, and you did not volunteer.
               </p>
               <p>
-                Which is why the postcards you are already receiving \u2014 cash offer, close in seven
-                days, no repairs \u2014 land so poorly. They are addressed to a seller. Your actual
+                Which is why the postcards you are already receiving — cash offer, close in seven
+                days, no repairs — land so poorly. They are addressed to a seller. Your actual
                 problems are a court calendar, a house full of a lifetime of belongings, siblings
                 who each have a view, and carrying costs running every month in the background.
               </p>
@@ -450,16 +450,16 @@ export default function ServiceProbate() {
                   </h3>
                   <p className="mt-3 text-[15.5px] leading-relaxed" style={{ color: INK }}>
                     No referral fee, no revenue share, no arrangement of any kind with anyone on
-                    this list. That is partly ethics rules \u2014 fee-splitting with attorneys and
+                    this list. That is partly ethics rules — fee-splitting with attorneys and
                     accountants is prohibited, and federal law governs referrals for settlement
-                    services \u2014 and partly the point. A recommendation you have paid for is not a
+                    services — and partly the point. A recommendation you have paid for is not a
                     recommendation. If someone on this bench does poor work, tell me and they come
                     off it.
                   </p>
                   <p className="mt-3 text-[15.5px] leading-relaxed" style={{ color: INK }}>
                     For the same reason: I do not give tax or legal advice. Questions about basis,
                     estate returns, creditor claims or your duties as a fiduciary go to your CPA and
-                    your attorney \u2014 and I will say so rather than guess.
+                    your attorney — and I will say so rather than guess.
                   </p>
                 </div>
               </div>
@@ -482,30 +482,22 @@ export default function ServiceProbate() {
               Three counties, three different courts.
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed text-white/70 max-w-2xl">
-              Timelines, local practice and how quickly a hearing can be set differ by county. Pick
-              yours.
+              Timelines, local practice and how quickly a hearing can be set differ by county.
+              Tell me which one you are in and I will tell you what to expect.
             </p>
           </Reveal>
 
           <div className="mt-12 grid md:grid-cols-3 gap-5">
             {COUNTIES.map((c, i) => (
               <Reveal key={c.slug} delay={i * 80}>
-                <Link
-                  to={`/services/probate/${c.slug}`}
-                  className="group block h-full rounded-2xl p-7 transition-colors"
+                <div
+                  className="block h-full rounded-2xl p-7"
                   style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)' }}
                 >
                   <MapPin size={20} color={ACCENT} strokeWidth={1.7} />
                   <h3 className="mt-4 font-serif text-[22px] text-white">{c.name} County</h3>
                   <p className="mt-2 text-[14px] leading-relaxed text-white/60">{c.court}</p>
-                  <span
-                    className="mt-5 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em]"
-                    style={{ color: ACCENT }}
-                  >
-                    Probate in {c.name}
-                    <ArrowUpRight size={13} className="transition-transform group-hover:translate-x-0.5" />
-                  </span>
-                </Link>
+                </div>
               </Reveal>
             ))}
           </div>
@@ -535,25 +527,25 @@ export default function ServiceProbate() {
             <p className="mt-5 text-[16.5px] leading-relaxed" style={{ color: INK }}>
               Tell me the property and the date of passing. I will prepare a written opinion of
               value as of that date, with the comparable sales it is built from, addressed to the
-              estate so it can go straight into your attorney\u2019s file. It takes a few days. There
-              is no charge, no listing agreement, and no obligation of any kind \u2014 the letter is
+              estate so it can go straight into your attorney’s file. It takes a few days. There
+              is no charge, no listing agreement, and no obligation of any kind — the letter is
               yours whatever you decide to do next.
             </p>
           </Reveal>
           <Reveal delay={210}>
             <div className="mt-9 flex flex-wrap gap-3 justify-center">
-              <PillButton href="/contact?topic=probate-valuation">
+              <PillButton href="mailto:tim@mcmullen.properties?subject=Date-of-death%20valuation%20request&body=Property%20address%3A%0ADate%20of%20passing%3A%0AYour%20name%3A%0A">
                 Request the valuation letter
               </PillButton>
               <PillButton href="/services/probate/for-attorneys" variant="secondary">
-                I\u2019m an attorney
+                I’m an attorney
               </PillButton>
             </div>
           </Reveal>
           <Reveal delay={280}>
             <p className="mt-6 text-[13.5px] leading-relaxed" style={{ color: INK, opacity: 0.7 }}>
               A date-of-death valuation is an opinion of value prepared by a licensed real estate
-              broker. It is not a certified appraisal, and it is not the probate referee\u2019s
+              broker. It is not a certified appraisal, and it is not the probate referee’s
               Inventory and Appraisal, which the court arranges separately.
             </p>
           </Reveal>
@@ -585,7 +577,7 @@ export default function ServiceProbate() {
                   than at the hearing.
                 </p>
                 <p>
-                  No referral fee in either direction \u2014 that is prohibited and I would not want it
+                  No referral fee in either direction — that is prohibited and I would not want it
                   anyway. What I would like is to be useful enough that you keep my number.
                 </p>
               </div>
@@ -635,14 +627,14 @@ export default function ServiceProbate() {
           <Reveal delay={90}>
             <p className="mt-6 text-[16.5px] leading-relaxed text-white/75">
               Most people I speak with are months away from a decision, and a good number never sell
-              at all \u2014 the house goes to a beneficiary, or the family keeps it. The valuation letter
+              at all — the house goes to a beneficiary, or the family keeps it. The valuation letter
               is useful in every one of those outcomes. Ask for it, use it, and if the property does
               go to market later, you will already know who I am.
             </p>
           </Reveal>
           <Reveal delay={160}>
             <div className="mt-9 flex flex-wrap gap-3 justify-center">
-              <PillButton href="/contact?topic=probate-valuation" onDark>
+              <PillButton href="mailto:tim@mcmullen.properties?subject=Date-of-death%20valuation%20request&body=Property%20address%3A%0ADate%20of%20passing%3A%0AYour%20name%3A%0A" onDark>
                 Request the valuation letter
               </PillButton>
               <PillButton href="/meet-tim" variant="secondary" onDark>
