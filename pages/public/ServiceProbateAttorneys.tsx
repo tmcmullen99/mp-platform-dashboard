@@ -158,7 +158,7 @@ export default function ServiceProbateAttorneys() {
       <PublicNav />
 
       <ParallaxHero image={HERO_IMG} accent="blue" minH="74vh">
-        <div className="max-w-4xl">
+        <div className="max-w-6xl mx-auto px-6 py-28">
           <Reveal>
             <p
               className="font-mono text-[11px] uppercase tracking-[0.22em] mb-5"
