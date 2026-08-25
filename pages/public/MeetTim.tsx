@@ -529,6 +529,101 @@ export default function MeetTim() {
         </div>
       </section>
 
+      {/* ------------------------------- THE PERSON ------------------------ */}
+      {/* Sits deliberately between the hero and the six marketplaces.
+
+          Everything else on this page is a grid: cards, counts, stats. This is
+          the one fold with none of that - one photograph, one long first-person
+          paragraph, no numbers at all. The contrast is the point. The hero
+          opens on scale and the next fold opens on inventory; a reader who
+          never meets the person in between just sees a platform.
+
+          Copy is Tim's own, in his words, split for reading rather than
+          rewritten. The pull-quote sentence is lifted OUT of the running text
+          so it lands once rather than twice. */}
+      <section id="the-person" className="py-16 md:py-28 scroll-mt-20">
+        <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+
+            <Reveal className="lg:col-span-5">
+              <div className="relative">
+                <div className="overflow-hidden rounded-3xl bg-[#141414] border border-white/10">
+                  <img
+                    src="/meet-tim/tim-portrait.jpg"
+                    alt="Tim McMullen"
+                    loading="lazy"
+                    className="w-full h-full object-cover aspect-[4/5]"
+                  />
+                </div>
+                <p className="text-[11px] uppercase tracking-[0.25em] text-white/35 mt-4">
+                  Tim McMullen &middot; Broker &middot; CA DRE #02016832
+                </p>
+              </div>
+            </Reveal>
+
+            <div className="lg:col-span-7">
+              <Reveal delay={0.08}>
+                <div className="flex items-center gap-3 mb-5">
+                  <span className="w-8 h-px bg-white/15" />
+                  <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">
+                    Before any of the rest of it
+                  </span>
+                </div>
+                <h2 className="text-3xl md:text-5xl leading-tight text-white/95">
+                  Ten years of helping people{' '}
+                  <span className="mt2-serif text-white">get from A to B.</span>
+                </h2>
+              </Reveal>
+
+              <Reveal delay={0.16}>
+                <div className="mt-7 space-y-5 text-[15px] md:text-base leading-relaxed text-white/60 max-w-[62ch]">
+                  <p>
+                    I&rsquo;ve spent the last ten years helping people all over the Bay navigate
+                    unique and interesting real estate purchases, sales, exchanges and estate
+                    sales, meeting some incredible people and joining in on their journeys along
+                    the way.
+                  </p>
+                  <p>
+                    I wouldn&rsquo;t change a thing. I&rsquo;ve lost some heartbreaking deals,
+                    I&rsquo;ve had some triumphant wins, and I&rsquo;ve set local sales records in
+                    almost every market I&rsquo;ve played in.
+                  </p>
+                </div>
+              </Reveal>
+
+              {/* The one line the section exists to carry. Given the page's
+                  display face and room to breathe, and nothing else on this
+                  fold competes with it. */}
+              <Reveal delay={0.24}>
+                <blockquote className="my-9 md:my-11 pl-6 border-l border-white/15">
+                  <p className="mt2-serif text-2xl md:text-4xl leading-[1.25] text-white">
+                    The most important part of real estate is the people.
+                  </p>
+                </blockquote>
+              </Reveal>
+
+              <Reveal delay={0.3}>
+                <div className="space-y-5 text-[15px] md:text-base leading-relaxed text-white/60 max-w-[62ch]">
+                  <p>
+                    It doesn&rsquo;t matter how much money you net someone if the relationship goes
+                    south afterward &mdash; just like the price you pay for a home only really
+                    matters at the time of purchase. The hardest part, more often than not, is
+                    getting your offer accepted in the first place.
+                  </p>
+                  <p className="text-white/80">
+                    The thing that brings me the most joy in this world is helping people get from
+                    A to B in the smoothest, simplest and most effective way possible.{' '}
+                    <span className="mt2-serif text-white">
+                      If I can do that for you, it would be my pleasure.
+                    </span>
+                  </p>
+                </div>
+              </Reveal>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* --------------------- ENTREPRENEURIAL PURSUITS -------------------- */}
       <section id="pursuits" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
