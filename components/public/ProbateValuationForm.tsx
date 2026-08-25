@@ -63,12 +63,13 @@ export default function ProbateValuationForm({ source = 'services/probate' }: { 
         style={{ background: 'rgba(79,130,185,0.07)', border: '1px solid rgba(79,130,185,0.20)' }}
       >
         <h3 className="font-serif text-[22px]" style={{ color: NAVY }}>
-          Asked. You will have it within 24 hours.
+          That is the first one done.
         </h3>
         <p className="mt-3 text-[15px] leading-relaxed" style={{ color: INK }}>
-          It comes to {f.email} as a written letter addressed to the estate, with the comparable
-          sales it is built from, so it can go straight into your attorney’s file. If anything about
-          the property needs explaining first, I will call you before I write it.
+          <b>Within 24 hours</b> it arrives at {f.email} as a written letter addressed to the
+          estate, with the comparable sales it is built from — forward it to your attorney and it
+          is in the file. If anything about the property needs explaining first, I will call you
+          before I write it.
         </p>
         <p className="mt-4 text-[13.5px]" style={{ color: INK, opacity: 0.7 }}>
           Nothing else happens. There is no listing agreement and no obligation of any kind.
@@ -98,16 +99,19 @@ export default function ProbateValuationForm({ source = 'services/probate' }: { 
                  onChange={set('email')} autoComplete="email" placeholder="Where the letter goes" />
         </div>
         <div>
+          <label className={label} style={{ color: INK }} htmlFor="pv-dod">
+            Date of passing <span style={{ color: ACCENT }}>— this sets the valuation date</span>
+          </label>
+          <input id="pv-dod" type="date" className={field}
+                 style={{ ...border, borderColor: 'rgba(176,111,36,0.55)' }} value={f.dod}
+                 onChange={set('dod')} max={new Date().toISOString().slice(0, 10)} />
+        </div>
+        <div>
           <label className={label} style={{ color: INK }} htmlFor="pv-phone">
             Mobile <span style={{ opacity: 0.55 }}>— optional</span>
           </label>
           <input id="pv-phone" type="tel" className={field} style={border} value={f.phone}
                  onChange={set('phone')} autoComplete="tel" placeholder="Only if you would rather I called" />
-        </div>
-        <div>
-          <label className={label} style={{ color: INK }} htmlFor="pv-dod">Date of passing</label>
-          <input id="pv-dod" type="date" className={field} style={border} value={f.dod}
-                 onChange={set('dod')} max={new Date().toISOString().slice(0, 10)} />
         </div>
         <div className="md:col-span-2">
           <label className={label} style={{ color: INK }} htmlFor="pv-addr">Property address</label>
@@ -141,7 +145,8 @@ export default function ProbateValuationForm({ source = 'services/probate' }: { 
 
       <p className="mt-4 text-[12.5px] leading-relaxed" style={{ color: INK, opacity: 0.62 }}>
         Sent to me only, and used for this one letter. No charge, no listing agreement,
-        no obligation. <span style={{ color: ACCENT }}>Within 24 hours.</span>
+        no obligation. <span style={{ color: ACCENT }}>Written up and with you within 24 hours,
+        ready for your attorney.</span>
       </p>
     </div>
   )
