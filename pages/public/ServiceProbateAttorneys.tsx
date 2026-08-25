@@ -72,7 +72,7 @@ const VALUE = [
     icon: ClipboardCheck,
     title: 'A carrying-cost model you can put in front of beneficiaries',
     body:
-      'Mortgage, taxes, insurance, HOA and utilities, monthly, against the estimated sale proceeds. When beneficiaries disagree about timing, the arithmetic settles it faster than anyone\u2019s opinion \u2014 and it comes from us rather than from you.',
+      'Mortgage, taxes, insurance, HOA and utilities, monthly, against the estimated sale proceeds. When beneficiaries disagree about timing, the arithmetic settles it faster than anyone’s opinion — and it comes from us rather than from you.',
   },
   {
     icon: Gavel,
@@ -96,7 +96,7 @@ const VALUE = [
     icon: Briefcase,
     title: 'The vendor bench, so the house stops being your problem',
     body:
-      'Clear-out, vacant-property insurance before a standard policy lapses, grounds, security, trades, staging. Coordinated by us, especially where the petitioner is out of county or out of state \u2014 more than half of them are.',
+      'Clear-out, vacant-property insurance before a standard policy lapses, grounds, security, trades, staging. Coordinated by us, especially where the petitioner is out of county or out of state — more than half of them are.',
   },
 ]
 
@@ -120,7 +120,7 @@ const SPEEDS = [
     points: [
       'Prepared, photographed and marketed like any other listing',
       'Targeted clear-out and repair where the return justifies the spend',
-      'Full exposure \u2014 an estate property is not a discount property',
+      'Full exposure — an estate property is not a discount property',
       'Modelled against carrying cost so the extra weeks are shown to pay for themselves',
     ],
   },
@@ -133,11 +133,11 @@ const FAQ = [
   },
   {
     q: 'What is the in-house counsel for?',
-    a: 'To answer questions about OUR process, paperwork and disclosures \u2014 how we document an as-is sale, what our listing agreement says in an estate context, how we handle an overbid. It exists so that you can verify how we operate without spending your own billable time reconstructing it. It is explicitly not advice to your client, not a second opinion on your matter, and not a substitute for anything you do.',
+    a: 'To answer questions about OUR process, paperwork and disclosures — how we document an as-is sale, what our listing agreement says in an estate context, how we handle an overbid. It exists so that you can verify how we operate without spending your own billable time reconstructing it. It is explicitly not advice to your client, not a second opinion on your matter, and not a substitute for anything you do.',
   },
   {
     q: 'Will you give my client legal or tax advice?',
-    a: 'No. Questions about fiduciary duty, creditor claims, estate tax, basis or the terms of the will go back to you and to the client\u2019s CPA \u2014 and we say so plainly rather than guessing. The most common failure mode for a broker in this space is answering a question that was not theirs to answer.',
+    a: 'No. Questions about fiduciary duty, creditor claims, estate tax, basis or the terms of the will go back to you and to the client’s CPA — and we say so plainly rather than guessing. The most common failure mode for a broker in this space is answering a question that was not theirs to answer.',
   },
   {
     q: 'What if the property should not be sold?',
@@ -164,7 +164,7 @@ export default function ServiceProbateAttorneys() {
               className="font-mono text-[11px] uppercase tracking-[0.22em] mb-5"
               style={{ color: ACCENT }}
             >
-              Probate \u00b7 for attorneys
+              Probate · for attorneys
             </p>
           </Reveal>
           <Reveal delay={90}>
@@ -177,7 +177,7 @@ export default function ServiceProbateAttorneys() {
           <Reveal delay={180}>
             <p className="mt-7 text-[17px] leading-relaxed text-white/80 max-w-2xl">
               Recommending a broker puts your name behind theirs. This page is the case for why
-              that is safe \u2014 and what comes off your desk when it is.
+              that is safe — and what comes off your desk when it is.
             </p>
           </Reveal>
           <Reveal delay={260}>
@@ -220,14 +220,14 @@ export default function ServiceProbateAttorneys() {
             <div className="mt-6 space-y-5 text-[16.5px] leading-relaxed" style={{ color: INK }}>
               <p>
                 You are running the estate. The property is one asset in it, and it is the one that
-                generates the most questions per dollar of value \u2014 what is it worth, who clears it,
+                generates the most questions per dollar of value — what is it worth, who clears it,
                 who insures it, why is the sister objecting, what happens at the hearing. Most of
                 those questions are not legal questions, but they arrive at your desk because there
                 is nobody else to ask.
               </p>
               <p>
-                That is the work we take. Not the parts that are yours \u2014 authority, notices,
-                accountings, distribution \u2014 but everything about the house that currently
+                That is the work we take. Not the parts that are yours — authority, notices,
+                accountings, distribution — but everything about the house that currently
                 interrupts them.
               </p>
             </div>
@@ -296,7 +296,7 @@ export default function ServiceProbateAttorneys() {
               className="font-serif text-[clamp(1.8rem,4vw,2.9rem)] leading-tight max-w-3xl"
               style={{ color: NAVY }}
             >
-              Clean and quick, or top of the market. Your client decides \u2014 with the numbers in
+              Clean and quick, or top of the market. Your client decides — with the numbers in
               front of them.
             </h2>
             <p className="mt-5 text-[16.5px] leading-relaxed max-w-2xl" style={{ color: INK }}>
@@ -366,7 +366,7 @@ export default function ServiceProbateAttorneys() {
           </Reveal>
           <Reveal delay={70}>
             <h2 className="mt-7 font-serif text-white text-[clamp(1.8rem,4vw,2.8rem)] leading-tight">
-              Counsel in-house \u2014 so you can verify how we work without spending your own time on
+              Counsel in-house — so you can verify how we work without spending your own time on
               it.
             </h2>
           </Reveal>
@@ -375,7 +375,7 @@ export default function ServiceProbateAttorneys() {
               <p>
                 If you want to see how we document an as-is estate sale, what our listing agreement
                 says in a probate context, how disclosures are handled where nobody living has
-                occupied the property, or how we manage an overbid \u2014 you can have that
+                occupied the property, or how we manage an overbid — you can have that
                 conversation with counsel on our side rather than reconstructing it yourself.
               </p>
               <p>
