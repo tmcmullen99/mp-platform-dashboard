@@ -215,13 +215,14 @@ export default function ServiceProbate() {
             <p className="mt-7 text-[17px] leading-relaxed text-white/80 max-w-2xl">
               Being appointed to administer an estate makes you responsible for a property, to a
               court, on a timetable, while you are grieving. Often from another city. Usually for
-              the first time. This page is what I would want to know if it were me.
+              the first time. This page is what I would want to know if it were me &mdash; starting
+              with the one thing the estate needs before anything else can be decided.
             </p>
           </Reveal>
           <Reveal delay={260}>
             <div className="mt-9 flex flex-wrap gap-3">
               <PillButton href="#valuation" onDark>
-                Request a date-of-death valuation
+                Get the date-of-death valuation &mdash; 24 hours
               </PillButton>
               <PillButton href="#process" variant="secondary" onDark>
                 How probate sales actually work
@@ -235,6 +236,49 @@ export default function ServiceProbate() {
           </Reveal>
         </div>
       </ParallaxHero>
+
+      {/* ── The one task ─────────────────────────────────────────────
+          Deliberately styled as an assigned, unfinished item rather than an
+          offer. Someone landing here has been handed a job by a court; the
+          most useful thing this page can do in its first screen is name the
+          first step and say when it will be done. The date of passing is the
+          input because it is the input - it fixes the valuation date, and
+          therefore the beneficiaries' basis, and nothing else can be settled
+          until the estate has that figure. */}
+      <section
+        className="px-6 py-7 md:py-8"
+        style={{ background: '#F4EFE4', borderTop: '1px solid rgba(176,111,36,0.28)',
+                 borderBottom: '1px solid rgba(176,111,36,0.28)' }}
+      >
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-x-7 gap-y-4">
+          {/* An empty checkbox reads as "not done" in a way no icon does. */}
+          <span
+            aria-hidden="true"
+            className="flex-none rounded-[5px]"
+            style={{ width: 26, height: 26, border: '2px solid #b06f24', background: '#fff' }}
+          />
+          <div className="flex-1 min-w-[16rem]">
+            <p className="font-mono text-[10.5px] uppercase tracking-[0.24em]" style={{ color: '#8a5d10' }}>
+              Outstanding &middot; usually the first thing
+            </p>
+            <p className="mt-1.5 font-serif text-[19px] md:text-[21px] leading-snug" style={{ color: NAVY }}>
+              Establish what the property was worth on the date of passing.
+            </p>
+            <p className="mt-1.5 text-[14px] leading-relaxed" style={{ color: INK, opacity: 0.78 }}>
+              Tell me the address and the date. I will write it up, with the recorded sales behind
+              it, and send it to you <b>within 24 hours</b> &mdash; ready to go straight to your
+              attorney. No charge, and nothing follows from it.
+            </p>
+          </div>
+          <a
+            href="#valuation"
+            className="flex-none inline-flex items-center rounded-full px-7 py-3.5 text-[15px] font-medium transition-transform duration-200 hover:-translate-y-0.5"
+            style={{ background: NAVY, color: '#fff' }}
+          >
+            Start it &mdash; two minutes
+          </a>
+        </div>
+      </section>
 
       <div style={{ background: NAVY }}>
         <Marquee
@@ -525,16 +569,18 @@ export default function ServiceProbate() {
               className="mt-7 font-serif text-[clamp(1.8rem,4vw,2.9rem)] leading-tight"
               style={{ color: NAVY }}
             >
-              Start with the date-of-death valuation.
+              The date of passing is where this starts.
             </h2>
           </Reveal>
           <Reveal delay={140}>
             <p className="mt-5 text-[16.5px] leading-relaxed" style={{ color: INK }}>
-              Tell me the property and the date of passing. I will prepare a written opinion of
-              value as of that date, with the comparable sales it is built from, addressed to the
-              estate so it can go straight into your attorney’s file. You will have it within 24
-              hours. There is no charge, no listing agreement, and no obligation of any kind — the
-              letter is yours whatever you decide to do next.
+              Two things: the address, and the day they passed. That date fixes the value the
+              estate is measured from and the basis the beneficiaries inherit, so almost nothing
+              else can be settled until it is written down. I will prepare it as a written opinion
+              of value with the comparable sales behind it, addressed to the estate so it goes
+              straight into your attorney’s file, and you will have it <b>within 24 hours</b>.
+              No charge, no listing agreement, no obligation of any kind — the letter is yours
+              whatever you decide to do next.
             </p>
           </Reveal>
           <Reveal delay={210}>
