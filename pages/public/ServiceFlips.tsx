@@ -9,6 +9,7 @@ import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import ProbateFlowMap from '@/components/public/ProbateFlowMap'
 import DeveloperStrategyForm from '@/components/public/DeveloperStrategyForm'
+import DealListSignup from '@/components/public/DealListSignup'
 import {
   MotionStyles,
   Reveal,
@@ -193,6 +194,8 @@ export default function ServiceFlips() {
         </div>
       </section>
 
+      <DealListSignup variant="band" source="flips_after_thesis" />
+
       {/* interactive pipeline */}
       <section id="pipeline" className="max-w-6xl mx-auto px-6 py-20 md:py-28">
         <Reveal>
@@ -234,6 +237,10 @@ export default function ServiceFlips() {
 
       <ProbateFlowMap />
 
+      <section className="max-w-6xl mx-auto px-6 pb-4 md:pb-8 -mt-6">
+        <DealListSignup variant="inline" source="flips_after_estate_map" showFocus />
+      </section>
+
       <DeveloperStrategyForm />
 
       {/* FAQ */}
@@ -266,6 +273,11 @@ export default function ServiceFlips() {
               <PillButton href="tel:+14156919272" variant="secondary" onDark>
                 <Phone className="w-4 h-4" /> (415) 691-9272
               </PillButton>
+            </div>
+            {/* A call is a large first step. This is the small one, for the
+                developer who is interested but not ready to book time. */}
+            <div className="mt-10 max-w-xl mx-auto text-left">
+              <DealListSignup variant="panel" source="flips_footer" />
             </div>
           </Reveal>
         </div>
