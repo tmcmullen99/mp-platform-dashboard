@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>What happens now — a plain guide to California probate for the person handling it</title>
+<meta name="description" content="A plain-language guide for someone appointed to handle a California estate: what happens and roughly when, who answers which question, and what you can do while you wait.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://mcmullenresidential.com/probate-guide.html">
+<style>
+/* Self-contained on purpose. This gets emailed, forwarded, printed at a
+   library, and opened on a phone in a hospital car park. No fonts to fetch, no
+   scripts, nothing that fails quietly on a bad connection. */
+@page { size: letter; margin: 0.6in 0.65in; }
+
+:root{
+  --ink:#1c2226;
+  --soft:#5c6771;
+  --rule:#dfe3e6;
+  --blue:#4f82b9;      /* LOGO_BLUE, the probate page accent */
+  --navy:#0D1B2A;
+  --wash:#f4f6f8;
+  --paper:#fff;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  color:var(--ink);background:var(--wash);
+  font-size:11pt;line-height:1.6;
+}
+.page{max-width:7.1in;margin:0 auto;background:var(--paper);padding:44px 46px 40px}
+@media(max-width:640px){ .page{padding:28px 20px 32px} body{font-size:11.5pt} }
+
+h1{font-size:26pt;line-height:1.12;font-weight:600;letter-spacing:-.015em;margin-bottom:12px}
+@media(max-width:640px){ h1{font-size:21pt} }
+.lede{font-size:12.5pt;color:var(--soft);line-height:1.55;max-width:34em}
+h2{font-size:14pt;font-weight:600;margin:34px 0 10px;padding-bottom:5px;border-bottom:1.5px solid var(--navy)}
+h3{font-size:11.5pt;font-weight:600;margin:16px 0 3px}
+p{margin-bottom:11px;max-width:36em}
+p.tight{margin-bottom:5px}
+strong{font-weight:600}
+
+.eyebrow{font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;font-size:8pt;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--blue);margin-bottom:14px}
+
+/* the timeline — probate genuinely is a sequence, so it is numbered */
+.step{display:grid;grid-template-columns:30px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.step:last-of-type{border-bottom:none}
+.step .n{font-family:ui-monospace,Menlo,monospace;font-size:15pt;color:var(--rule);font-weight:600;line-height:1.1}
+.step .when{font-family:ui-monospace,Menlo,monospace;font-size:8pt;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--blue);display:block;margin-bottom:2px}
+.step p{margin:0;max-width:34em}
+
+/* who answers what */
+.who{border:1px solid var(--rule);border-left:3px solid var(--blue);padding:14px 16px;margin:12px 0}
+.who h3{margin:0 0 4px}
+.who p{margin:0;font-size:10.5pt;color:var(--soft)}
+.who .ask{display:block;margin-top:6px;font-size:10pt;color:var(--ink)}
+
+.callout{background:var(--wash);padding:16px 18px;margin:16px 0;border-radius:3px}
+.callout p:last-child{margin-bottom:0}
+
+ul{list-style:none;margin:0 0 12px}
+li{padding-left:16px;position:relative;margin-bottom:6px;max-width:36em}
+li::before{content:"";position:absolute;left:0;top:.62em;width:6px;height:1px;background:var(--blue)}
+
+.qa{padding:10px 0;border-top:1px solid var(--rule)}
+.qa:first-of-type{border-top:none}
+.qa .q{font-weight:600;margin-bottom:2px}
+.qa p{margin-bottom:0;color:var(--soft)}
+.qa p strong{color:var(--ink)}
+
+.foot{margin-top:34px;padding-top:14px;border-top:1.5px solid var(--navy);
+  font-size:9.5pt;color:var(--soft);line-height:1.55}
+.foot strong{color:var(--ink)}
+
+.noprint{margin-top:26px;display:flex;gap:10px;flex-wrap:wrap}
+.btn{display:inline-block;padding:11px 20px;border-radius:999px;background:var(--navy);
+  color:#fff;text-decoration:none;font-size:10.5pt;font-family:system-ui,sans-serif;font-weight:500;
+  border:none;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--navy);border:1px solid var(--navy)}
+
+@media print{
+  body{background:#fff;font-size:10pt}
+  .page{max-width:none;padding:0}
+  .noprint{display:none}
+  h2{page-break-after:avoid}
+  .step,.who,.qa,.callout{page-break-inside:avoid}
+  h1{font-size:21pt}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">California probate · a plain guide</p>
+  <h1>What happens now</h1>
+  <p class="lede">If you have been named to handle someone's estate, you have been given a job you
+    did not apply for, at a time you would not have chosen. This is what the process looks like,
+    roughly how long each part takes, and — the part nobody explains — which professional answers
+    which question, so you stop paying for the wrong advice.</p>
+
+  <div class="callout">
+    <p>Nothing here is legal or tax advice, and it is not specific to your estate. It is a map, so
+      that when you talk to your attorney you already know what you are looking at. Every rule below
+      has exceptions, and yours may be one of them.</p>
+  </div>
+
+  <h2>The sequence, and roughly how long</h2>
+
+  <div class="step"><span class="n">1</span><div>
+    <span class="when">Where it starts</span>
+    <p>A petition is filed with the county Superior Court asking it to open probate and appoint
+      someone to act — the executor if there is a will, an administrator if there is not.
+      <strong>You do not have authority yet.</strong> This is the hardest part to sit through,
+      because the responsibility arrives before the ability to do anything.</p>
+  </div></div>
+
+  <div class="step"><span class="n">2</span><div>
+    <span class="when">About four to eight weeks</span>
+    <p>Notice is published in a local paper and mailed to everyone entitled to it, and the court
+      sets a hearing. Nothing much is required of you here except to wait, and to keep the house
+      insured and the bills paid.</p>
+  </div></div>
+
+  <div class="step"><span class="n">3</span><div>
+    <span class="when">The hearing — the day it changes</span>
+    <p>The court appoints you and issues <strong>Letters</strong>. This single page is the document
+      that proves you can act. Banks, title companies and insurers will all ask for it. Keep several
+      certified copies. It also states <em>how much</em> authority you were given, which decides
+      almost everything about selling a property.</p>
+  </div></div>
+
+  <div class="step"><span class="n">4</span><div>
+    <span class="when">Within about four months</span>
+    <p>A <strong>probate referee</strong> — appointed by the court, not chosen by you — appraises the
+      property and other non-cash assets. Their figure becomes the estate's official value. If a sale
+      has to be confirmed by the court, that figure is the number it is measured against.</p>
+  </div></div>
+
+  <div class="step"><span class="n">5</span><div>
+    <span class="when">Four months, running alongside</span>
+    <p>Creditors have a window to make claims. This is a large part of why an estate cannot simply
+      be wound up quickly, even when everyone agrees.</p>
+  </div></div>
+
+  <div class="step"><span class="n">6</span><div>
+    <span class="when">Any time after step 3</span>
+    <p>If the property is to be sold, it can be sold. How depends on your authority: either like an
+      ordinary sale with written notice to the heirs beforehand, or through a court hearing where
+      other buyers are allowed to bid against the accepted offer. Your attorney will tell you which
+      applies to you.</p>
+  </div></div>
+
+  <div class="step"><span class="n">7</span><div>
+    <span class="when">Nine to eighteen months, commonly</span>
+    <p>A final accounting, distribution to the beneficiaries, and discharge. Estates with a property
+      to sell, a dispute, or a tax filing take longer. Very few take less.</p>
+  </div></div>
+
+  <h2>Who answers which question</h2>
+  <p>Most of the frustration in probate comes from asking the right question of the wrong person.
+    This is the division.</p>
+
+  <div class="who">
+    <h3>Your probate attorney</h3>
+    <p>Authority, deadlines, court filings, creditor claims, disagreements among heirs, whether you
+      can rent the property out, what your own liability looks like.</p>
+    <span class="ask">Ask first: <strong>“What authority do my Letters give me, and can I sell
+      without a court hearing?”</strong> Everything else about the property follows from that.</span>
+  </div>
+
+  <div class="who">
+    <h3>A CPA or tax adviser</h3>
+    <p>The estate's tax filings, the cost basis of the property, capital gains if it is sold, and
+      whether keeping the house triggers a property-tax reassessment under Proposition 19.</p>
+    <span class="ask">Ask early, not at the end: <strong>“If we keep the house rather than sell it,
+      what happens to the property taxes?”</strong> In this county that answer is often large enough
+      to change the decision, and it is far easier to plan for than to undo.</span>
+  </div>
+
+  <div class="who">
+    <h3>The probate referee</h3>
+    <p>The court's own appraisal of the property. You do not choose them and you do not negotiate
+      with them. Their value is a formal step, not an opinion of what a buyer would pay today.</p>
+  </div>
+
+  <div class="who">
+    <h3>A real estate broker — what I actually do</h3>
+    <p>What the property is worth, what it would take to sell it, and how to get it emptied, cleared
+      and presented. I can put a written opinion of value in your hands, dated to the date of death,
+      which your attorney and your CPA will both ask for.</p>
+    <span class="ask">What I will not do is tell you whether to sell, answer a tax question, or give
+      you a number over the phone before I have done the work. If I do any of those, get a second
+      opinion about me.</span>
+  </div>
+
+  <h2>What you can do while you wait</h2>
+  <p>The gap between filing and appointment is the part that feels useless. It is not — these are
+    the things that cause trouble later if they are left.</p>
+  <ul>
+    <li><strong>Tell the insurer the house is empty.</strong> Most policies limit or drop cover on a
+      vacant property, often after 30 or 60 days, and a claim then fails. A vacancy endorsement is
+      usually straightforward. This is the single most common expensive oversight.</li>
+    <li><strong>Keep the mortgage and property taxes current.</strong> They do not pause. If there is
+      a reverse mortgage, tell your attorney this week — those have a short clock after a death.</li>
+    <li><strong>Do not throw anything away yet.</strong> Not paperwork, not what looks like junk.
+      Beneficiaries and the court may both need to see it, and things that look worthless sometimes
+      are not.</li>
+    <li><strong>Find the deed, or ask the title company to.</strong> How the property was held
+      changes what has to happen, and it is better known early.</li>
+    <li><strong>Write down what you spend.</strong> You are generally entitled to be reimbursed for
+      what you lay out, but only if you can show it.</li>
+    <li><strong>Ask whether full probate is even required.</strong> California has simpler routes for
+      smaller estates and for property passing between spouses. The thresholds change, so this is a
+      question for your attorney rather than something to read off a website.</li>
+  </ul>
+
+  <h2>Questions people ask, that have short answers</h2>
+
+  <div class="qa"><p class="q">Do I have to clean the house out before it can be sold?</p>
+    <p><strong>No.</strong> It can be sold as it stands, and often that is the better decision. There
+      are companies that clear a house entirely, and the family takes what it wants first.</p></div>
+
+  <div class="qa"><p class="q">Can I sell it before probate is finished?</p>
+    <p><strong>Usually yes</strong> — once you have been appointed. The sale does not have to wait
+      for the estate to close.</p></div>
+
+  <div class="qa"><p class="q">Do I need a lawyer to do this?</p>
+    <p><strong>Not legally.</strong> California lets you file and act on your own, and people do. But
+      where estates go wrong is almost always the sale, a creditor claim, or a disagreement between
+      heirs — and by then it is more expensive to fix than it would have been to avoid.</p></div>
+
+  <div class="qa"><p class="q">My brother and I do not agree about selling.</p>
+    <p>The person the court appointed has the authority, but a beneficiary who objects can require a
+      hearing. <strong>This is a question for the attorney</strong>, early, before positions harden.</p></div>
+
+  <div class="qa"><p class="q">What is the house worth?</p>
+    <p>That is a real question with a real answer, and it deserves the work rather than a guess.
+      <strong>I will prepare a written opinion of value with the comparable sales behind it, dated to
+      the date of death, at no charge and with no obligation.</strong> Most attorneys prefer to have
+      it in the file early.</p></div>
+
+  <div class="qa"><p class="q">Am I personally on the hook if I get something wrong?</p>
+    <p>A personal representative does carry real responsibility. That is exactly why the boring
+      steps — insurance, records, receipts — matter more than they look.
+      <strong>Ask your attorney to spell out your duties in writing.</strong></p></div>
+
+  <h2>If you want the valuation</h2>
+  <p>It is a written broker's opinion of value: the estate's property, the comparable sales it rests
+    on, a range with a midpoint as of the date of death, and a present-day range alongside it.
+    It is not an appraisal, and it is not the probate referee's valuation — the court arranges that
+    separately, and it is the figure the estate is formally measured against. It is a document to
+    help you and your advisers see the position clearly.</p>
+  <p>There is no charge and no obligation, and I will send a copy directly to your attorney if you
+    would like. If you never list the property with me, the document is still yours.</p>
+
+  <div class="noprint">
+    <a class="btn" href="https://mcmullenresidential.com/services/probate#valuation">Request the valuation</a>
+    <a class="btn ghost" href="https://mcmullenresidential.com/services/probate#talk">Talk it through first</a>
+    <button class="btn ghost" onclick="window.print()">Print this guide</button>
+  </div>
+
+  <div class="foot">
+    <p><strong>Tim McMullen</strong> · Broker · CA DRE #02016832 · (415) 691-9272 ·
+      tim@mcmullen.properties<br>
+      Owned and operated by McMullen Properties LLC, which is not a real estate brokerage. Real
+      estate services provided by Tim McMullen, Broker · CA DRE #02016832.</p>
+    <p style="margin-top:8px">I am a real estate broker. <strong>I am not an attorney and not a tax
+      adviser</strong>, and nothing here is legal or tax advice — timelines, thresholds and rules
+      change, and every estate differs. If you would like names of probate attorneys or CPAs who work
+      in these counties, I will give you several and you choose.
+      <strong>I take no referral fee in either direction, from anyone.</strong></p>
+    <p style="margin-top:8px">If the property is already listed with another broker, this is not a
+      solicitation of that listing.</p>
+  </div>
+
+</div>
+</body>
+</html>
