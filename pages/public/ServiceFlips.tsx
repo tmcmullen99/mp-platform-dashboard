@@ -8,6 +8,7 @@ import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import ProbateFlowMap from '@/components/public/ProbateFlowMap'
+import DeveloperStrategyForm from '@/components/public/DeveloperStrategyForm'
 import {
   MotionStyles,
   Reveal,
@@ -126,22 +127,23 @@ export default function ServiceFlips() {
         <div className="max-w-6xl mx-auto px-6 py-24">
           <div className="max-w-3xl">
             <div className="mp-anim mp-mono text-[11px] uppercase tracking-[0.28em] mb-6" style={{ color: STEEL, animationDelay: '0.1s' }}>
-              Flips & Off-Market · For Investors
+              Flips & Development · For Builders and Investors
             </div>
             <h1 className="mp-anim mp-serif text-white text-[46px] md:text-[64px] leading-[1.03] font-semibold" style={{ animationDelay: '0.2s' }}>
-              The deals that never <span className="mp-accent">hit the market</span>.
+              Bought right. <span className="mp-accent">Sold for more</span>.
             </h1>
             <p className="mp-anim text-lg md:text-xl mt-7 leading-relaxed" style={{ color: 'rgba(255,255,255,0.82)', animationDelay: '0.35s', maxWidth: '640px' }}>
-              The best flips are bought before anyone else sees them. I bring exclusive access to
-              off-market properties vetted for flip potential — with full ROI analysis, a rehab
-              plan, and an exit strategy before you ever write an offer.
+              Two sides, and most developers only get help with one. I source off-market and
+              underwrite it cold — then price the finished product against comparables projected to
+              the month you actually hit the market, and hold that number through the launch.
+              Fifty-plus transactions, both directions.
             </p>
             <div className="mp-anim flex flex-wrap gap-3 mt-9" style={{ animationDelay: '0.5s' }}>
               <PillButton href={CAL} onDark>
                 <Video className="w-4 h-4" /> Schedule a video call with Tim
               </PillButton>
-              <PillButton href="#pipeline" variant="secondary" onDark>
-                See how a flip gets made
+              <PillButton href="#strategy" variant="secondary" onDark>
+                Get a selling strategy for a project underway
               </PillButton>
             </div>
           </div>
@@ -149,7 +151,7 @@ export default function ServiceFlips() {
       </ParallaxHero>
 
       <div style={{ background: NAVY_DEEP }}>
-        <Marquee items={['Off-market sourcing', 'Conservative underwriting', 'Rehab scoped for resale', 'Full ROI on every deal', 'Exit strategy first', 'Deals before the MLS']} />
+        <Marquee items={['Off-market sourcing', 'Conservative underwriting', 'Comps projected 0–24 months out', 'Rehab scoped for resale', '2% listing side, guaranteed', 'Priced to the top of the market', 'Deals before the MLS']} />
       </div>
 
       {/* stats */}
@@ -158,8 +160,8 @@ export default function ServiceFlips() {
           {[
             { v: 1, prefix: '$', suffix: 'M+', label: 'Margins on tear-down rehabs' },
             { v: 50, suffix: '+', label: 'Transactions closed' },
-            { raw: 'Off-market', label: 'Deal sourcing' },
-            { raw: 'Full ROI', label: 'Analysis on every deal' },
+            { raw: '0–24 mo', label: 'Comps projected to your market date' },
+            { raw: '2%', label: 'Listing side, guaranteed in writing' },
           ].map((s, i) => (
             <Reveal key={s.label} delay={0.06 * i}>
               <div className="mp-serif text-[38px] md:text-[52px] font-semibold leading-none" style={{ color: NAVY }}>
@@ -177,13 +179,15 @@ export default function ServiceFlips() {
           <Reveal>
             <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-5" style={{ color: STEEL }}>The edge</div>
             <h2 className="mp-serif text-[30px] md:text-[46px] leading-[1.12] font-semibold" style={{ color: NAVY }}>
-              Flip profit is made on the buy — not the sale.
+              Profit is made on the buy. It is kept, or lost, on the sale.
             </h2>
             <p className="mt-7 leading-relaxed text-[17px]" style={{ color: INK }}>
-              By the time a fixer hits the open market, the margin has usually been bid away. The
-              investors who win consistently aren’t the ones who renovate best — they’re the ones
-              who get to the deal first and underwrite it coldly. That’s the whole game: proprietary
-              deal flow, and the discipline to walk when the numbers don’t clear.
+              By the time a fixer hits the open market the margin has usually been bid away, so
+              getting to the deal first and underwriting it coldly is half the game. The other half
+              gets far less attention: a finished build priced off today’s closed sales is priced
+              off a market that no longer exists by the time it lists. On a high-basis project the
+              gap between a competent sale and a well-run one is routinely six figures — which is
+              more than most developers ever save on the buy.
             </p>
           </Reveal>
         </div>
@@ -229,6 +233,8 @@ export default function ServiceFlips() {
       </section>
 
       <ProbateFlowMap />
+
+      <DeveloperStrategyForm />
 
       {/* FAQ */}
       <section className="max-w-4xl mx-auto px-6 py-20 md:py-24">
