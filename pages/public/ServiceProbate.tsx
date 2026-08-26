@@ -43,6 +43,8 @@ import {
   LOGO_BLUE,
 } from '@/components/public/motion'
 import {
+  BookOpen,
+  ExternalLink,
   FileText,
   Scale,
   CalendarClock,
@@ -349,6 +351,49 @@ export default function ServiceProbate() {
             >
               Selling is the last phase, and the shortest.
             </h2>
+          </Reveal>
+
+          {/* The plain guide. Placed before the phases and styled quietly on
+              purpose: it competes with nothing, and it is the one thing on this
+              page a petitioner can take away without handing over an address.
+              Opens in a new tab so nobody loses their place mid-read. */}
+          <Reveal delay={80}>
+            <a
+              href="/probate-guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group mt-8 flex items-start gap-4 rounded-xl border bg-white px-5 py-4 transition-colors hover:border-current focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{ borderColor: '#E3E7EC', color: NAVY }}
+            >
+              <BookOpen
+                size={22}
+                color={ACCENT}
+                strokeWidth={1.7}
+                className="mt-[3px] shrink-0"
+                aria-hidden="true"
+              />
+              <span className="min-w-0">
+                <span className="block font-serif text-lg leading-snug">
+                  What happens now — a plain guide to California probate
+                </span>
+                <span
+                  className="mt-1 block text-sm leading-relaxed"
+                  style={{ color: '#5c6771' }}
+                >
+                  The sequence and roughly how long each part takes, which professional answers which
+                  question, and what is worth doing while you wait for the court. Free, nothing to
+                  fill in, printable.
+                </span>
+                <span
+                  className="mt-2 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.14em]"
+                  style={{ color: ACCENT }}
+                >
+                  Read the guide
+                  <ExternalLink size={12} strokeWidth={2} aria-hidden="true" />
+                  <span className="sr-only">(opens in a new tab)</span>
+                </span>
+              </span>
+            </a>
           </Reveal>
 
           <div className="mt-12 space-y-3">
