@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
+import ProbateFlowMap from '@/components/public/ProbateFlowMap'
 import {
   MotionStyles,
   Reveal,
@@ -226,6 +227,8 @@ export default function ServiceFlips() {
           </div>
         </div>
       </section>
+
+      <ProbateFlowMap />
 
       {/* FAQ */}
       <section className="max-w-4xl mx-auto px-6 py-20 md:py-24">
