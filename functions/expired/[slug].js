@@ -27,6 +27,11 @@ const HEADER = `
   .mrnav{position:sticky;top:0;z-index:60;background:rgba(255,255,255,.92);
     backdrop-filter:blur(10px);border-bottom:1px solid rgba(0,0,0,.06);
     font-family:Inter,system-ui,-apple-system,sans-serif}
+  /* This header is injected into a document that already has its own
+     stylesheet, so every rule is scoped and box-sizing is stated rather than
+     assumed. Without it the padding below competes with whatever the host
+     sheet says and the wordmark ends up flush to the screen edge. */
+  .mrnav,.mrnav *{box-sizing:border-box}
   .mrnav-in{max-width:72rem;margin:0 auto;padding:0 24px;height:64px;
     display:flex;align-items:center;justify-content:space-between;gap:18px}
   .mrmark{display:flex;align-items:baseline;gap:7px;text-decoration:none;
@@ -56,6 +61,13 @@ const HEADER = `
     font-weight:500;padding:9px 18px;border-radius:999px;white-space:nowrap}
   @media(min-width:768px){.mrlinks{display:flex}}
   @media(min-width:1024px){.mrphone{display:inline}}
+  /* The city worker's own nav is position:fixed and is stripped before this
+     page is served, but the document still reserves room for it - which shows
+     up under this header as a band of empty paper above the hero. Nothing in
+     the served page needs top margin, so the first element after this header
+     is pinned flush. */
+  .mrnav + *{margin-top:0!important;padding-top:0!important}
+  body{margin:0}
 </style>
 <header class="mrnav"><div class="mrnav-in">
   <a class="mrmark" href="https://mcmullenresidential.com/home">MCMULLEN.<span>PROPERTIES</span></a>
@@ -74,6 +86,7 @@ const HEADER = `
 </div></header>`
 
 const RENDERER = 'https://campbellrealestatemarket.com/_ooa/expired/'
+const RENDERER_ORIGIN = 'https://campbellrealestatemarket.com'
 
 export async function onRequest(context) {
   const { params } = context
@@ -110,6 +123,14 @@ export async function onRequest(context) {
      this replace silently stops matching and the page ships with no header at
      all - a failure that looks like a styling bug and is actually a missing
      nav. Falls back to prepending, so the header can never be dropped. */
+  /* Point asset URLs back at the renderer's origin. They are emitted
+     root-relative for the city domains that serve them; on this host they
+     resolve here and 404. cb-track.js is the one that matters - without it an
+     expired page records no visit at all, which is exactly what happened:
+     zero events from this host in 24 hours while a city domain logged 55. */
+  html = html.replace(/(<script[^>]+src=")\/assets\//g, '$1' + RENDERER_ORIGIN + '/assets/')
+             .replace(/(<link[^>]+href=")\/assets\//g, '$1' + RENDERER_ORIGIN + '/assets/')
+
   const bodyTag = html.match(/<body[^>]*>/)
   html = bodyTag
     ? html.replace(bodyTag[0], bodyTag[0] + HEADER)
