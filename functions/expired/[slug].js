@@ -32,6 +32,21 @@ const HEADER = `
   .mrmark{display:flex;align-items:baseline;gap:7px;text-decoration:none;
     color:#0D1B2A;font-weight:700;letter-spacing:.06em;font-size:14px}
   .mrmark span{font-weight:400;letter-spacing:.14em;color:#273C46}
+  /* On a phone the wordmark and the pill were still at desktop size while the
+     page under them had scaled down, so the header read as a different design
+     from the rest of the document. Both come down a step, and the wordmark's
+     letter-spacing tightens because tracking that reads as considered at 14px
+     reads as sprawl at 11.5. */
+  @media(max-width:640px){
+    .mrnav-in{height:52px;padding:0 16px;gap:10px}
+    .mrmark{font-size:11.5px;letter-spacing:.04em;gap:5px}
+    .mrmark span{letter-spacing:.1em}
+    .mrcta{font-size:11.5px;padding:7px 13px}
+  }
+  @media(max-width:360px){
+    .mrmark{font-size:10.5px}
+    .mrcta{font-size:11px;padding:6px 11px}
+  }
   .mrlinks{display:none;align-items:center;gap:28px;font-size:14px}
   .mrlinks a{color:#273C46;text-decoration:none}
   .mrlinks a:hover{color:#0D1B2A}
@@ -90,7 +105,15 @@ export async function onRequest(context) {
      Static markup rather than the React <PublicNav>: the SPA has not booted
      at this point and cannot, since the page is edge-rendered. Links match
      PublicNav's LINKS exactly. */
-  html = html.replace('<body>', '<body>' + HEADER)
+  /* Matched by pattern rather than by the literal string '<body>'. The worker
+     emits a bare <body> today, but the day it gains an attribute or a class
+     this replace silently stops matching and the page ships with no header at
+     all - a failure that looks like a styling bug and is actually a missing
+     nav. Falls back to prepending, so the header can never be dropped. */
+  const bodyTag = html.match(/<body[^>]*>/)
+  html = bodyTag
+    ? html.replace(bodyTag[0], bodyTag[0] + HEADER)
+    : HEADER + html
 
   return new Response(html, {
     status: 200,
