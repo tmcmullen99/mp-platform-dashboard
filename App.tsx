@@ -39,6 +39,7 @@ import Compare from '@/pages/public/Compare'
 import JoinTeaser from '@/pages/public/JoinTeaser'
 import ToolsHub from '@/pages/public/ToolsHub'
 import NetSheetTool from '@/pages/public/NetSheetTool'
+import PreForeclosureTool from '@/pages/public/PreForeclosureTool'
 import CMATool from '@/pages/public/CMATool'
 import CompsRequestTool from '@/pages/public/CompsRequestTool'
 import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
@@ -133,6 +134,7 @@ export default function App() {
           <Route path="/view/:kind/:id" element={<DeliverableViewer />} />
           <Route path="/tools" element={<ToolsHub />} />
           <Route path="/tools/net-sheet" element={<NetSheetTool />} />
+          <Route path="/tools/pre-foreclosure" element={<PreForeclosureTool />} />
           <Route path="/tools/cma" element={<CMATool />} />
           <Route path="/tools/comps" element={<CompsRequestTool />} />
           <Route path="/tools/review" element={<ReviewRequestTool />} />
