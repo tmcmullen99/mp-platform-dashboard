@@ -207,11 +207,11 @@ export default function LuxuryListings() {
             One operator. One system. <span className="lx-serif font-normal italic" style={{ color: BLUEGRAY }}>Full accountability.</span>
           </h2>
           <div className="mt-6 space-y-4 text-lg leading-relaxed" style={{ color: INK }}>
-            <p>I’m Tim McMullen — a Bay Area agent with McMullen Properties, under Real Broker. I built the marketing system on this page myself, and I run it personally for every home I represent. There’s no hand-off to a junior team member and no outsourced vendor between you and your campaign.</p>
+            <p>I’m Tim McMullen — a Bay Area broker with McMullen Properties. I built the marketing system on this page myself, and I run it personally for every home I represent. There’s no hand-off to a junior team member and no outsourced vendor between you and your campaign.</p>
             <p>If you’re weighing whether your home is being marketed the way an asset of its caliber deserves, that’s exactly the conversation I want to have.</p>
           </div>
           <div className="mt-6 lx-mono text-xs uppercase tracking-[0.16em]" style={{ color: BLUEGRAY }}>
-            McMullen Properties · Real Broker · CA DRE #02016832
+            Tim McMullen, Broker · McMullen Properties · CA DRE #02016832
           </div>
         </Reveal>
       </section>
@@ -385,7 +385,7 @@ function ConsultForm() {
         </div>
 
         <p className="text-center text-xs mt-5" style={{ color: BLUEGRAY }}>
-          Confidential. Tim McMullen · McMullen Properties · Real Broker · CA DRE #02016832
+          Confidential. Tim McMullen · Tim McMullen, Broker · McMullen Properties · CA DRE #02016832
         </p>
       </div>
     </section>
