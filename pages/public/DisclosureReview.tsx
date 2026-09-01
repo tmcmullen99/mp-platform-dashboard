@@ -186,7 +186,7 @@ export default function DisclosureReview() {
           <p className="mt-6 text-xs leading-relaxed" style={{ color: '#8a92a0' }}>
             This review is a summary prepared to inform a buyer&rsquo;s diligence; it is not a
             substitute for the full disclosure package or a professional inspection. McMullen
-            Properties LLC, under Real Broker · CA DRE #02016832.
+            Properties LLC. Real estate services provided by Tim McMullen, Broker · CA DRE #02016832.
           </p>
         </div>
       )}
