@@ -186,14 +186,14 @@ export default function AccountDashboard() {
           <p className="text-xs leading-relaxed text-[#273C46]/80 max-w-3xl">
             The $10,000 is a platform account credit applied toward the costs of a real estate
             transaction initiated through McMullen Properties via Tim McMullen, California DRE
-            #02016832 (operating under Real Broker). It is not cash, has no surrender value, cannot
+            #02016832. It is not cash, has no surrender value, cannot
             be withdrawn or transferred, and is limited to one credit per account and one redemption
             per person. The credit does not expire and may be redeemed at any time, subject to these
             terms. Tim McMullen reserves the right to refer or assign any resulting transaction to
             any affiliated agent; the credit is honored regardless of which affiliated agent is
             assigned. This offer is not a guarantee of any particular service, price, or transaction
             outcome, and is void where prohibited. Real estate brokerage services are provided
-            through Real Broker. This is not legal, tax, or financial advice.
+            through Tim McMullen, Broker. This is not legal, tax, or financial advice.
           </p>
         </div>
       </div>
