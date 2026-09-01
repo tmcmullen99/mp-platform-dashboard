@@ -17,10 +17,25 @@
 
 import { useEffect, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
+
+/* THIS SITE'S SUPABASE IS NOT THE CAMPAIGN DATABASE.
+   `@/lib/supabase` points at the dashboard project (kumfuludrhoqirxvaqja).
+   The letter campaigns, the QR codes and record_qr_scan all live on Platform A
+   (qinuukntpyulqjzndnho). I wired this to the app's default client without
+   checking, so every scan threw, fell to the catch, and sent people to the
+   home page — which is exactly what a broken QR looks like from the outside.
+
+   Called over plain fetch rather than a second supabase-js client: it is one
+   RPC, it needs no session, and a second client sharing storage keys with the
+   dashboard one is a good way to break sign-in on this site. */
+const CAMPAIGN_URL = 'https://qinuukntpyulqjzndnho.supabase.co'
+const CAMPAIGN_KEY = 'sb_publishable_1CzH1AWkEzy1WjMvZqwlhA_xiay_wJ2'
 
 const FALLBACK = '/'
-const MAX_WAIT_MS = 1200
+/* Was 1200ms. A cold RPC on mobile data can exceed that, and the fallback is
+   the home page — indistinguishable from the bug above. Long enough to succeed,
+   short enough that nobody waits. */
+const MAX_WAIT_MS = 4000
 
 export default function QrRedirect() {
   const { code } = useParams<{ code: string }>()
@@ -52,13 +67,22 @@ export default function QrRedirect() {
        rather than casting the type away. */
     void (async () => {
       try {
-        const { data } = await supabase.rpc('record_qr_scan', {
-          p_code: String(code).toUpperCase(),
-          p_recipient: params.get('h'),
-          p_visitor: params.get('v'),
-          p_ua: navigator.userAgent,
-          p_ref: document.referrer || null,
+        const res = await fetch(CAMPAIGN_URL + '/rest/v1/rpc/record_qr_scan', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: CAMPAIGN_KEY,
+            Authorization: 'Bearer ' + CAMPAIGN_KEY,
+          },
+          body: JSON.stringify({
+            p_code: String(code).toUpperCase(),
+            p_recipient: params.get('h'),
+            p_visitor: params.get('v'),
+            p_ua: navigator.userAgent,
+            p_ref: document.referrer || null,
+          }),
         })
+        const data = res.ok ? await res.json() : null
         clearTimeout(timer)
         const target = data && data.ok && data.target ? String(data.target) : FALLBACK
         // An absolute URL is honoured only for this origin, so a bad row can
