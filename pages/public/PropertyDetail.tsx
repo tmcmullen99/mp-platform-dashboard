@@ -1300,14 +1300,14 @@ function Contact({ name, slug }: { name: string; slug: string }) {
           <div className="mp-mono text-xs uppercase tracking-widest" style={{ color: BLUEGRAY }}>Inquire</div>
           <h2 className="mt-4 mp-display text-3xl sm:text-5xl leading-tight" style={{ color: NAVY }}>Arrange a private showing</h2>
           <p className="mt-6 leading-relaxed max-w-md" style={{ color: `${INK}d9` }}>
-            This home is represented by Tim McMullen of McMullen Properties, under Real Broker.
+            This home is represented by Tim McMullen, Broker · CA DRE #02016832.
             Reach out to schedule a tour of {name}.
           </p>
           <div className="mt-10 flex items-center gap-4">
             <div className="h-14 w-14 rounded-full flex items-center justify-center mp-display text-2xl" style={{ background: NAVY, color: '#fff' }}>M</div>
             <div>
               <div className="mp-display text-xl" style={{ color: LOGOBLUE }}>Tim McMullen</div>
-              <div className="text-sm" style={{ color: `${INK}99` }}>McMullen Properties · Real Broker</div>
+              <div className="text-sm" style={{ color: `${INK}99` }}>McMullen Properties · CA DRE #02016832</div>
             </div>
           </div>
           <div className="mt-8 space-y-3">
@@ -1349,7 +1349,7 @@ function Contact({ name, slug }: { name: string; slug: string }) {
                 {status === 'sending' ? 'Sending…' : 'Send message'}
               </button>
               <p className="text-[11px] text-center leading-relaxed" style={{ color: `${INK}66` }}>
-                Represented by Tim McMullen, McMullen Properties under Real Broker. Information deemed reliable but not guaranteed.
+                Represented by Tim McMullen, Broker · CA DRE #02016832. Information deemed reliable but not guaranteed.
               </p>
             </div>
           )}
@@ -1370,7 +1370,7 @@ function Footer() {
           </span>
           <div>
             <Link to="/home" className="text-white font-semibold text-sm tracking-wide">McMULLEN PROPERTIES</Link>
-            <div className="text-xs text-white/50">Campbell, CA · under Real Broker</div>
+            <div className="text-xs text-white/50">Campbell, CA · CA DRE #02016832</div>
           </div>
         </div>
         <div className="sm:text-right text-sm">
