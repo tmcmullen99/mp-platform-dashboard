@@ -308,7 +308,7 @@ export default function ProbateValuationPage() {
               {v.published_at ? ` · ${longDate(v.published_at)}` : ''}
               <br />
               McMullen Properties LLC, which is not a real estate brokerage. Real estate services
-              provided by Tim McMullen, Broker · CA DRE #02016832 · Real Broker, CA DRE #02228473.
+              provided by Tim McMullen, Broker · CA DRE #02016832.
             </p>
           </Reveal>
         </div>
