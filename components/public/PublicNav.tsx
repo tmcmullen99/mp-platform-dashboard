@@ -206,7 +206,7 @@ export function PublicFooter() {
           <div className="leading-relaxed">
             © {year} McMullen Properties LLC, which is not a real estate brokerage.
             <br className="hidden md:block" />
-            Real estate services provided by Tim McMullen, Broker · CA DRE #02016832 · Real Broker, CA DRE #02228473.
+            Real estate services provided by Tim McMullen, Broker · CA DRE #02016832.
             <br className="hidden md:block" />
             Equal Housing Opportunity. All information deemed reliable but not guaranteed.
           </div>
