@@ -40,6 +40,7 @@ import JoinTeaser from '@/pages/public/JoinTeaser'
 import ToolsHub from '@/pages/public/ToolsHub'
 import NetSheetTool from '@/pages/public/NetSheetTool'
 import PreForeclosureTool from '@/pages/public/PreForeclosureTool'
+import QrRedirect from '@/pages/public/QrRedirect'
 import CMATool from '@/pages/public/CMATool'
 import CompsRequestTool from '@/pages/public/CompsRequestTool'
 import ReviewRequestTool from '@/pages/public/ReviewRequestTool'
@@ -135,6 +136,8 @@ export default function App() {
           <Route path="/tools" element={<ToolsHub />} />
           <Route path="/tools/net-sheet" element={<NetSheetTool />} />
           <Route path="/tools/pre-foreclosure" element={<PreForeclosureTool />} />
+          {/* Printed QR codes. Must resolve on this domain — see QrRedirect. */}
+          <Route path="/r/:code" element={<QrRedirect />} />
           <Route path="/tools/cma" element={<CMATool />} />
           <Route path="/tools/comps" element={<CompsRequestTool />} />
           <Route path="/tools/review" element={<ReviewRequestTool />} />
