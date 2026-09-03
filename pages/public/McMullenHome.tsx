@@ -236,10 +236,14 @@ export default function McMullenHome() {
       const soldP = supabase
         .from('properties')
         .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, statuses(name), neighborhoods(name)')
-        .eq('listing_stage', 'sold')
+        /* Off-market sales belong on the track record — 859 Boar Terrace and
+           11195 Hooper Lane are two of the largest, and filtering to 'sold'
+           alone hid them. Their stage is preserved so the card can label them
+           rather than implying they went through the open market. */
+        .in('listing_stage', ['sold', 'off_market'])
         .neq('slug', 'union-house-residence-5c')
         .order('price', { ascending: false, nullsFirst: false })
-        .limit(12)
+        .limit(14)
 
       // Live hero images for the Same Developer pair.
       const devP = supabase
