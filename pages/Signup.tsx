@@ -150,7 +150,7 @@ export default function Signup() {
               autoFocus
               value={brokerageName}
               onChange={(e) => setBrokerageName(e.target.value)}
-              placeholder="Real Broker, eXp Realty, etc."
+              placeholder="Your brokerage name"
               className="w-full border-b border-ink-200 pb-3 text-lg text-ink-900 focus:outline-none focus:border-ink-900 transition-colors bg-transparent placeholder:text-ink-300"
             />
 

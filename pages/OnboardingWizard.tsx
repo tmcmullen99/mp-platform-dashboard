@@ -500,7 +500,7 @@ export default function OnboardingWizard() {
               <Section title="Identity">
                 <Field label="Full name" value={draft.agent_name} onChange={(v) => upd('agent_name', v)} placeholder="Jane Agent" />
                 <Field label="Title" value={draft.agent_title} onChange={(v) => upd('agent_title', v)} placeholder="REALTOR®" />
-                <Field label="Brokerage" value={draft.brokerage_affiliation} onChange={(v) => upd('brokerage_affiliation', v)} placeholder="Real Broker" />
+                <Field label="Brokerage" value={draft.brokerage_affiliation} onChange={(v) => upd('brokerage_affiliation', v)} placeholder="Your brokerage" />
                 <Field label="DRE #" value={draft.dre_license} onChange={(v) => upd('dre_license', v)} placeholder="02000000" />
                 <Field label="Bio" value={draft.agent_bio} onChange={(v) => upd('agent_bio', v)} placeholder="A sentence or two about how you work." textarea />
               </Section>

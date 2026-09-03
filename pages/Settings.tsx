@@ -182,7 +182,7 @@ export default function Settings() {
           <Field label="Brokerage affiliation" colspan={2}>
             <Input
               value={draft.brokerage_affiliation || ''}
-              placeholder="Real Broker"
+              placeholder="Your brokerage"
               onChange={(v) => upd('brokerage_affiliation', v)}
             />
           </Field>
