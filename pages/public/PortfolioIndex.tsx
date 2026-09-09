@@ -48,6 +48,7 @@ export default function PortfolioIndex() {
   const [rows, setRows] = useState<PropertyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('All')
+  const [query, setQuery] = useState<string>('')
 
   useEffect(() => {
     let cancelled = false
@@ -86,10 +87,23 @@ export default function PortfolioIndex() {
     return ['All', ...ordered]
   }, [rows])
 
-  const visible = useMemo(
-    () => (filter === 'All' ? rows : rows.filter((r) => r.status_name === filter)),
-    [rows, filter]
-  )
+  /* Search matches address, neighbourhood and status together. Someone typing
+     "cortland" wants the home; someone typing "bernal" wants the area; someone
+     typing "sold" is filtering by outcome. Splitting those into separate inputs
+     would make the visitor choose a field before they know which one holds what
+     they remember. Terms are ANDed, so "bernal sold" narrows rather than widens. */
+  const visible = useMemo(() => {
+    const byStatus = filter === 'All' ? rows : rows.filter((r) => r.status_name === filter)
+    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    if (!terms.length) return byStatus
+    return byStatus.filter((r) => {
+      const hay = [r.name, r.neighborhood_name, r.status_name]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return terms.every((t) => hay.includes(t))
+    })
+  }, [rows, filter, query])
 
   return (
     <div className="mp-home min-h-screen bg-white text-[#0D1B2A]">
@@ -115,8 +129,40 @@ export default function PortfolioIndex() {
           across the Bay Area and beyond.
         </p>
 
+        {/* search */}
+        <div className="mt-8 relative max-w-md">
+          <svg
+            className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"
+            width="16" height="16" viewBox="0 0 24 24" fill="none"
+            stroke="rgba(13,27,42,0.4)" strokeWidth="2" strokeLinecap="round"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="M20 20l-3.5-3.5" />
+          </svg>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by address, neighbourhood or status…"
+            aria-label="Search the portfolio"
+            className="w-full rounded-full border py-3 pl-11 pr-11 text-sm outline-none transition-colors
+                       focus:border-[#0D1B2A]"
+            style={{ borderColor: 'rgba(13,27,42,0.15)', color: '#0D1B2A' }}
+          />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              aria-label="Clear search"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-sm leading-none"
+              style={{ color: 'rgba(13,27,42,0.45)' }}
+            >
+              &times;
+            </button>
+          )}
+        </div>
+
         {/* filter chips */}
-        <div className="flex flex-wrap gap-2 mt-8">
+        <div className="flex flex-wrap gap-2 mt-4">
           {statuses.map((s) => {
             const active = s === filter
             return (
@@ -139,12 +185,41 @@ export default function PortfolioIndex() {
 
       {/* grid */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
+        {!loading && query && visible.length > 0 && (
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] pb-6">
+            {visible.length} {visible.length === 1 ? 'listing' : 'listings'}
+          </div>
+        )}
         {loading ? (
           <div className="py-24 text-center mp-mono text-xs uppercase tracking-[0.25em] text-[#273C46]">
             Loading portfolio…
           </div>
         ) : visible.length === 0 ? (
-          <div className="py-24 text-center text-[#273C46]">No listings in this category yet.</div>
+          /* The old copy said "in this category", which reads as a gap in the
+             portfolio rather than a search that found nothing. Name the query
+             back so the visitor knows the site heard them, and give them a way
+             out that does not involve reloading. */
+          <div className="py-24 text-center text-[#273C46]">
+            {query ? (
+              <>
+                <div>
+                  No listings match &ldquo;{query}&rdquo;
+                  {filter !== 'All' ? ` in ${filter}` : ''}.
+                </div>
+                <button
+                  onClick={() => {
+                    setQuery('')
+                    setFilter('All')
+                  }}
+                  className="mt-4 underline underline-offset-4"
+                >
+                  Clear search
+                </button>
+              </>
+            ) : (
+              'No listings in this category yet.'
+            )}
+          </div>
         ) : (
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {visible.map((p) => {
