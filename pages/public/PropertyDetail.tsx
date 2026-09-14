@@ -949,6 +949,17 @@ function FeaturesSpecs({ p }: { p: Row }) {
   const hasRte = !!(p.features_html || p.amenities_html)
   if (!hasRte && specRows.length < 3) return null
 
+  /* A features block that ships its own <style> is a designed piece — the
+     Eichler Social invitation is 7KB of self-contained HTML and CSS built on
+     clamp(). Rendered in the two-column grid below it gets roughly 580px of a
+     max-w-6xl page, so every clamp() resolved against that and scaled the whole
+     invitation down to a narrow strip. It was doing what it was told; it was
+     told the wrong width.
+
+     Designed blocks get the full container. Plain feature lists keep the
+     two-column layout they were written for. */
+  const richFeatures = /<style[\s>]/i.test(p.features_html || '')
+
   return (
     <section id="features" className="py-20 sm:py-28" style={{ background: PAPER }}>
       <div className="max-w-6xl mx-auto px-6 sm:px-10">
@@ -957,9 +968,18 @@ function FeaturesSpecs({ p }: { p: Row }) {
           <h2 className="mt-4 mp-display text-3xl sm:text-5xl" style={{ color: NAVY }}>The details</h2>
         </Reveal>
 
-        {(p.features_html || p.amenities_html) && (
+        {richFeatures && p.features_html && (
+          <Reveal className="mb-16">
+            <div
+              className="mp-rte"
+              dangerouslySetInnerHTML={{ __html: p.features_html }}
+            />
+          </Reveal>
+        )}
+
+        {((p.features_html && !richFeatures) || p.amenities_html) && (
           <div className="grid lg:grid-cols-2 gap-10 mb-16">
-            {p.features_html && (
+            {p.features_html && !richFeatures && (
               <Reveal>
                 <div className="mp-display text-xl mb-4" style={{ color: LOGOBLUE }}>Features</div>
                 <div className="h-px w-full mb-4" style={{ background: SAND }} />
