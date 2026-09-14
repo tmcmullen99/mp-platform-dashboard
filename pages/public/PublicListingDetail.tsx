@@ -208,6 +208,9 @@ export default function PublicListingDetail() {
   }
 
   const isPending = deal?.listing_status === 'pending'
+  /* A features block that brings its own <style> is a designed piece and
+     gets the full page width; anything else stays in the narrow column. */
+  const hasStyledFeatures = /<style[\s>]/i.test(listing.features_html || '')
   const isSoftLaunch = deal?.listing_status === 'soft_launch'
 
   return (
@@ -329,8 +332,13 @@ export default function PublicListingDetail() {
               </section>
             )}
 
-            {/* Features */}
-            {listing.features_html && (
+            {/* Features - plain content only. A block that ships its own
+                <style> is a designed piece, not a bullet list, and renders full
+                width below instead. Inside this column it is capped at two
+                thirds of a max-w-6xl page, which is why the Eichler Social
+                invitation arrived as a narrow strip with its own clamp() type
+                scaled down to match. */}
+            {listing.features_html && !hasStyledFeatures && (
               <section>
                 <div className="text-2xs uppercase tracking-widest text-ink-500 mb-3">
                   Features
@@ -366,6 +374,20 @@ export default function PublicListingDetail() {
           </aside>
         </div>
       </div>
+
+      {/* A designed features block, given the width it was drawn for. Outside
+          max-w-6xl so the hero can run wide; the block's own CSS caps its text
+          at 52-64ch, so nothing over-stretches. */}
+      {hasStyledFeatures && (
+        <section className="mt-4 mb-20">
+          <div className="max-w-[1180px] mx-auto px-6">
+            <div
+              className="text-ink-700"
+              dangerouslySetInnerHTML={{ __html: listing.features_html as string }}
+            />
+          </div>
+        </section>
+      )}
 
       {inquiryOpen && deal && (
         <InquiryModal
