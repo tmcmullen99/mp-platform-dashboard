@@ -218,8 +218,8 @@ export default function PortfolioIndex() {
                 <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
                   {/* Sharp. The cover photograph is the invitation — the gate
                       still holds the gallery and the detail behind an email. */}
-                  {p.img ? (
-                    <img src={p.img} alt={p.name}
+                  {p.main_image?.url ? (
+                    <img src={p.main_image.url} alt={p.main_image.alt ?? p.name}
                       className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
@@ -235,10 +235,10 @@ export default function PortfolioIndex() {
                 <div className="p-5">
                   <div className="mp-serif text-[22px] text-[#0d1b2a]">{money(p.price)}</div>
                   <div className="flex gap-3 text-[13px] mt-1.5 text-[#5a6578]">
-                    {p.beds != null ? <span>{p.beds} bd</span> : null}
-                    {p.baths != null ? <span>{p.baths} ba</span> : null}
+                    {p.bedrooms != null ? <span>{p.bedrooms} bd</span> : null}
+                    {p.bathrooms != null ? <span>{p.bathrooms} ba</span> : null}
                     {p.area_sqft != null ? <span>{Math.round(p.area_sqft).toLocaleString()} sqft</span> : null}
-                    {p.hood ? <span>{p.hood}</span> : null}
+                    {p.neighborhood_name ? <span>{p.neighborhood_name}</span> : null}
                   </div>
                   <div className="text-sm mt-1.5 text-[#7b8794]">{p.name}</div>
                 </div>
