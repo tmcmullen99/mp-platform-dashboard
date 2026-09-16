@@ -216,9 +216,18 @@ export default function PortfolioIndex() {
                 style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
               >
                 <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
+                  {/* Blurred, matching the treatment coming-soon cards already
+                      get in the portfolio grid — and matching the gate itself,
+                      which shows only a blurred hero until an email is given.
+                      A sharp photograph on a public card would hand over the
+                      thing the gate exists to hold back. */}
                   {p.img ? (
-                    <img src={p.img} alt={p.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+                    <img
+                      src={p.img}
+                      alt={p.name}
+                      className="w-full h-full object-cover transition-transform duration-500"
+                      style={{ filter: 'blur(8px)', transform: 'scale(1.08)' }}
+                    />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#7b8794]">
