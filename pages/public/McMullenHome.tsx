@@ -202,10 +202,75 @@ function PillButton({
   )
 }
 
+/* ------------------------------ coming soon ------------------------------ */
+/* Deliberately the SAME card as the track record — same radius, same shadow,
+   same image height, same price/beds/hood stack. A second card style for the
+   same object is how two sections of one page start looking like two sites.
+   The only differences are the badge and the empty-photo panel. */
+function ComingSoon({ cards }: { cards: SoldCard[] }) {
+  return (
+    <section className="py-20 md:py-28 bg-white">
+      <div className="max-w-6xl mx-auto px-6">
+        <Reveal>
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: BLUEGRAY }}>
+            On the way
+          </div>
+          <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
+            Coming <span className="mp-serif font-normal" style={{ color: NAVY }}>Soon.</span>
+          </h2>
+          <p className="text-lg leading-relaxed mt-4 max-w-2xl" style={{ color: INK }}>
+            Homes preparing to list. Ask about any of them before they reach the open market.
+          </p>
+        </Reveal>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
+          {cards.map((s, i) => (
+            <Reveal key={s.slug} delay={0.06 * i}>
+              <Link
+                to={`/listings/${s.slug}`}
+                className="group block rounded-[20px] overflow-hidden bg-white h-full"
+                style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
+              >
+                <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
+                  {s.img ? (
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="mp-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: BLUEGRAY }}>
+                        Photography in progress
+                      </span>
+                    </div>
+                  )}
+                  <span
+                    className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide"
+                    style={{ background: NAVY, color: '#fff' }}
+                  >
+                    Coming Soon
+                  </span>
+                </div>
+                <div className="p-5">
+                  <div className="mp-serif text-[22px]" style={{ color: NAVY }}>{money(s.price)}</div>
+                  <div className="flex gap-3 text-[13px] mt-1.5" style={{ color: '#5a6578' }}>
+                    {s.beds != null ? <span>{s.beds} beds</span> : null}
+                    {s.baths != null ? <span>{s.baths} baths</span> : null}
+                    {s.hood ? <span>{s.hood}</span> : null}
+                  </div>
+                  <div className="text-sm mt-1.5" style={{ color: BLUEGRAY }}>{s.name}</div>
+                </div>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /* --------------------------------- page ---------------------------------- */
 export default function McMullenHome() {
   const [content, setContent] = useState<HomeContent | null>(null)
   const [sold, setSold] = useState<SoldCard[]>([])
+  const [comingSoon, setComingSoon] = useState<SoldCard[]>([])
   // Live hero images for the "Same Developer" proof→mandate pair, keyed by slug,
   // so they auto-update once Huckleberry's photos are rehosted to Supabase.
   const [devImgs, setDevImgs] = useState<Record<string, string>>({})
@@ -245,13 +310,23 @@ export default function McMullenHome() {
         .order('price', { ascending: false, nullsFirst: false })
         .limit(14)
 
+      /* Coming soon, on the same shape as the sold cards so they can share the
+         card component rather than growing a second one that drifts from it. */
+      const soonP = supabase
+        .from('properties')
+        .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, statuses(name), neighborhoods(name)')
+        .eq('listing_stage', 'coming_soon')
+        .order('price', { ascending: false, nullsFirst: false })
+        .limit(6)
+
       // Live hero images for the Same Developer pair.
       const devP = supabase
         .from('properties')
         .select('slug, main_image')
         .in('slug', ['4250-west-lake-blvd', '175-huckleberry-drive'])
 
-      const [{ data: cData }, { data: sData }, { data: dData }] = await Promise.all([contentP, soldP, devP])
+      const [{ data: cData }, { data: sData }, { data: dData }, { data: csData }] =
+        await Promise.all([contentP, soldP, devP, soonP])
       if (cancelled) return
 
       setContent((cData?.content as HomeContent) ?? null)
@@ -277,6 +352,23 @@ export default function McMullenHome() {
         // only cards with a photo + real bed count (filters equity-exchange rows)
         .filter((c) => c.img && c.beds != null)
       setSold(cards)
+
+      /* Coming soon keeps cards that have no photograph yet. The sold filter
+         drops those deliberately — a track record card with no image looks
+         broken. Here it is the opposite: a listing announced before its photos
+         exist is the normal state of "coming soon", and dropping it would make
+         the section silently disagree with the listings page. The card renders
+         a labelled panel instead of an empty frame. */
+      setComingSoon((csData ?? []).map((r: Record<string, unknown>) => ({
+        slug: r.slug as string,
+        name: r.name as string,
+        price: (r.price as number) ?? null,
+        beds: (r.bedrooms as number) ?? null,
+        baths: (r.bathrooms as number) ?? null,
+        hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
+        img: ((r.main_image as { url?: string } | null)?.url) ?? null,
+        badge: 'Coming Soon',
+      })))
 
       setLoading(false)
     }
@@ -621,6 +713,9 @@ export default function McMullenHome() {
           </Reveal>
         </div>
       </section>
+
+      {/* =========================== COMING SOON =========================== */}
+      {comingSoon.length > 0 && <ComingSoon cards={comingSoon} />}
 
       {/* ============================= SERVICES ============================= */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">
