@@ -23,7 +23,10 @@ type PropertyRow = {
   listing_stage: string | null
 }
 
-const STATUS_ORDER = ['Active', 'New Construction', 'Coming Soon', 'Off Market', '1031', 'Sold']
+/* 'Coming Soon' is no longer a chip. It has its own section above the track
+   record, so leaving it here too would offer a filter that empties the grid
+   while the same two homes sit in full view further up the page. */
+const STATUS_ORDER = ['Active', 'New Construction', 'Off Market', '1031', 'Sold']
 
 function money(n: number | null): string {
   if (n == null) return 'Price on request'
@@ -48,6 +51,10 @@ export default function PortfolioIndex() {
   const [rows, setRows] = useState<PropertyRow[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('All')
+  const soon = useMemo(
+    () => rows.filter((r) => r.listing_stage === 'coming_soon')
+              .sort((a, b) => (b.price ?? 0) - (a.price ?? 0)),
+    [rows])
   const [query, setQuery] = useState<string>('')
 
   useEffect(() => {
@@ -93,7 +100,11 @@ export default function PortfolioIndex() {
      would make the visitor choose a field before they know which one holds what
      they remember. Terms are ANDed, so "bernal sold" narrows rather than widens. */
   const visible = useMemo(() => {
-    const byStatus = filter === 'All' ? rows : rows.filter((r) => r.status_name === filter)
+    /* The grid is the track record: sold, off market, active. Coming soon is
+       rendered above it, so it is excluded here rather than appearing twice
+       under two different treatments on one page. */
+    const recordRows = rows.filter((r) => r.listing_stage !== 'coming_soon')
+    const byStatus = filter === 'All' ? recordRows : recordRows.filter((r) => r.status_name === filter)
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
     if (!terms.length) return byStatus
     return byStatus.filter((r) => {
@@ -182,6 +193,59 @@ export default function PortfolioIndex() {
           })}
         </div>
       </section>
+
+      {/* coming soon — its own section, above the record */}
+      {!loading && soon.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 pt-4 pb-16">
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">
+            On the way
+          </div>
+          <h2 className="text-[30px] md:text-[40px] leading-[1.06] font-semibold tracking-tight">
+            Coming <span className="mp-serif font-normal">Soon.</span>
+          </h2>
+          <p className="text-[15px] leading-relaxed mt-3 max-w-2xl text-[#4a5568]">
+            Homes preparing to list. Ask about any of them before they reach the open market.
+          </p>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+            {soon.map((p) => (
+              <Link
+                key={p.slug}
+                to={`/listings/${p.slug}`}
+                className="group block rounded-[20px] overflow-hidden bg-white h-full"
+                style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
+              >
+                <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
+                  {p.img ? (
+                    <img src={p.img} alt={p.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#7b8794]">
+                        Photography in progress
+                      </span>
+                    </div>
+                  )}
+                  <span className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide bg-[#0d1b2a] text-white">
+                    Coming Soon
+                  </span>
+                </div>
+                <div className="p-5">
+                  <div className="mp-serif text-[22px] text-[#0d1b2a]">{money(p.price)}</div>
+                  <div className="flex gap-3 text-[13px] mt-1.5 text-[#5a6578]">
+                    {p.beds != null ? <span>{p.beds} beds</span> : null}
+                    {p.baths != null ? <span>{p.baths} baths</span> : null}
+                    {p.hood ? <span>{p.hood}</span> : null}
+                  </div>
+                  <div className="text-sm mt-1.5 text-[#7b8794]">{p.name}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-14 h-px" style={{ background: 'rgba(13,27,42,0.08)' }} />
+        </section>
+      )}
 
       {/* grid */}
       <section className="max-w-6xl mx-auto px-6 pb-24">
