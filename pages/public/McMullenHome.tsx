@@ -117,6 +117,7 @@ type SoldCard = {
   price: number | null
   beds: number | null
   baths: number | null
+  sqft: number | null
   hood: string | null
   img: string | null
   badge: string
@@ -232,18 +233,11 @@ function ComingSoon({ cards }: { cards: SoldCard[] }) {
                 style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
               >
                 <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
-                  {/* Blurred, matching the treatment coming-soon cards already
-                      get in the portfolio grid — and matching the gate itself,
-                      which shows only a blurred hero until an email is given.
-                      A sharp photograph on a public card would hand over the
-                      thing the gate exists to hold back. */}
+                  {/* Sharp. The cover photograph is the invitation — the gate
+                      still holds the gallery, the figures and the address detail
+                      behind an email, which is where the value actually sits. */}
                   {s.img ? (
-                    <img
-                      src={s.img}
-                      alt={s.name}
-                      className="w-full h-full object-cover transition-transform duration-500"
-                      style={{ filter: 'blur(8px)', transform: 'scale(1.08)' }}
-                    />
+                    <img src={s.img} alt={s.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <span className="mp-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: BLUEGRAY }}>
@@ -261,8 +255,9 @@ function ComingSoon({ cards }: { cards: SoldCard[] }) {
                 <div className="p-5">
                   <div className="mp-serif text-[22px]" style={{ color: NAVY }}>{money(s.price)}</div>
                   <div className="flex gap-3 text-[13px] mt-1.5" style={{ color: '#5a6578' }}>
-                    {s.beds != null ? <span>{s.beds} beds</span> : null}
-                    {s.baths != null ? <span>{s.baths} baths</span> : null}
+                    {s.beds != null ? <span>{s.beds} bd</span> : null}
+                    {s.baths != null ? <span>{s.baths} ba</span> : null}
+                    {s.sqft != null ? <span>{s.sqft.toLocaleString()} sqft</span> : null}
                     {s.hood ? <span>{s.hood}</span> : null}
                   </div>
                   <div className="text-sm mt-1.5" style={{ color: BLUEGRAY }}>{s.name}</div>
@@ -324,7 +319,7 @@ export default function McMullenHome() {
          card component rather than growing a second one that drifts from it. */
       const soonP = supabase
         .from('properties')
-        .select('slug, name, price, bedrooms, bathrooms, main_image, listing_stage, statuses(name), neighborhoods(name)')
+        .select('slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, statuses(name), neighborhoods(name)')
         .eq('listing_stage', 'coming_soon')
         .order('price', { ascending: false, nullsFirst: false })
         .limit(6)
@@ -355,6 +350,7 @@ export default function McMullenHome() {
           price: (r.price as number) ?? null,
           beds: (r.bedrooms as number) ?? null,
           baths: (r.bathrooms as number) ?? null,
+          sqft: null,
           hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
           img: ((r.main_image as { url?: string } | null)?.url) ?? null,
           badge: ((r.statuses as { name?: string } | null)?.name) ?? 'Sold',
@@ -375,6 +371,7 @@ export default function McMullenHome() {
         price: (r.price as number) ?? null,
         beds: (r.bedrooms as number) ?? null,
         baths: (r.bathrooms as number) ?? null,
+        sqft: (r.area_sqft as number) ?? null,
         hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
         img: ((r.main_image as { url?: string } | null)?.url) ?? null,
         badge: 'Coming Soon',
