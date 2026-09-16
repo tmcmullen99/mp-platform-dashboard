@@ -216,18 +216,11 @@ export default function PortfolioIndex() {
                 style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
               >
                 <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
-                  {/* Blurred, matching the treatment coming-soon cards already
-                      get in the portfolio grid — and matching the gate itself,
-                      which shows only a blurred hero until an email is given.
-                      A sharp photograph on a public card would hand over the
-                      thing the gate exists to hold back. */}
+                  {/* Sharp. The cover photograph is the invitation — the gate
+                      still holds the gallery and the detail behind an email. */}
                   {p.img ? (
-                    <img
-                      src={p.img}
-                      alt={p.name}
-                      className="w-full h-full object-cover transition-transform duration-500"
-                      style={{ filter: 'blur(8px)', transform: 'scale(1.08)' }}
-                    />
+                    <img src={p.img} alt={p.name}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
                       <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#7b8794]">
@@ -242,8 +235,9 @@ export default function PortfolioIndex() {
                 <div className="p-5">
                   <div className="mp-serif text-[22px] text-[#0d1b2a]">{money(p.price)}</div>
                   <div className="flex gap-3 text-[13px] mt-1.5 text-[#5a6578]">
-                    {p.beds != null ? <span>{p.beds} beds</span> : null}
-                    {p.baths != null ? <span>{p.baths} baths</span> : null}
+                    {p.beds != null ? <span>{p.beds} bd</span> : null}
+                    {p.baths != null ? <span>{p.baths} ba</span> : null}
+                    {p.area_sqft != null ? <span>{Math.round(p.area_sqft).toLocaleString()} sqft</span> : null}
                     {p.hood ? <span>{p.hood}</span> : null}
                   </div>
                   <div className="text-sm mt-1.5 text-[#7b8794]">{p.name}</div>
