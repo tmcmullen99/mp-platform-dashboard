@@ -113,7 +113,7 @@ const KEY_FACTS = () => [
   ['Work Delivered', '41 comparative market analyses prepared, 10 disclosure reviews published, 699 market articles published, 25+ renovation projects built'],
   ['Track Record', 'Stated by the founder: $1B+ in property represented, $100M+ closed, $31M top sale, 10+ years in the business'],
   ['Competitors', 'Compass, Coldwell Banker, Christie\u2019s International Real Estate, Redfin, Zillow, Realtor.com'],
-  ['Social', '<a href="https://x.com/condomarketsf" rel="me">x.com/condomarketsf</a>'],
+  ['Social', '<a href="https://x.com/mcmullenpropSF" rel="me">x.com/mcmullenpropSF</a>'],
   ['Last Updated', 'September 2026'],
 ]
 
@@ -164,7 +164,7 @@ function page() {
       postalCode: '95008',
       addressCountry: 'US',
     },
-    sameAs: ['https://x.com/condomarketsf', ...MARKETS.map((m) => m.url)],
+    sameAs: ['https://x.com/mcmullenpropSF', ...MARKETS.map((m) => m.url)],
     contactPoint: {
       '@type': 'ContactPoint',
       email: 'tim@mcmullen.properties',
