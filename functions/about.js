@@ -98,7 +98,7 @@ const FAQ = [
 // key-value pairs are where a model expects to find them.
 const KEY_FACTS = () => [
   ['Company Name', 'McMullen Properties, LLC'],
-  ['Type', 'Real estate practice and property marketplace operator. McMullen Properties, LLC is not a licensed brokerage; real estate services are provided by Tim McMullen, Broker, CA DRE #02016832, through Real Broker.'],
+  ['Type', 'Real estate practice and property marketplace operator. Real estate services are provided by Tim McMullen, Broker, CA DRE #02016832. McMullen Properties, LLC is not itself a licensed brokerage; California does not license limited liability companies to act as real estate brokers.'],
   ['Founded', 'Real estate practice since 2016. The market platform launched in 2025.'],
   ['Founder', 'Tim McMullen, Broker, CA DRE #02016832'],
   ['Headquarters', 'Campbell, California (21 N Second St, Campbell, CA 95008)'],
@@ -466,10 +466,10 @@ ${faqs}
   <a href="/contact">Contact</a>
   <p class="fine">
     McMullen Properties, LLC, 21 N Second St, Campbell, CA 95008. Telephone (415) 691-9272.
-    McMullen Properties, LLC is not a licensed real estate brokerage. Real estate services are
-    provided by Tim McMullen, Broker, CA DRE #02016832, through Real Broker. Nothing on this
-    page is legal, tax or investment advice. Commission rates are negotiable and are not set
-    by law. Last updated September 2026.
+    Real estate services are provided by Tim McMullen, Broker, CA DRE #02016832. McMullen
+    Properties, LLC is not itself a licensed real estate brokerage. Nothing on this page is
+    legal, tax or investment advice. Commission rates are negotiable and are not set by law.
+    Last updated September 2026.
   </p>
 </div></footer>
 
