@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>McMullen Properties</title>
+
+    <!-- Favicons -->
+    <link rel="icon" href="/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="theme-color" content="#0D1B2A" />
+    <meta name="description" content="McMullen Properties — Bay Area real estate. Buying, selling, and investing with a marketing-first approach. Led by Tim McMullen, Broker · CA DRE #02016832." />
+
+    <!-- ══════════════════════════════════════════════════════════════════════
+         SOCIAL SHARE (Open Graph + Twitter/X)
+
+         These tags are the GUARANTEED FLOOR for the whole site. Every route
+         that has no dedicated Pages Function falls through _redirects to this
+         index.html, so every URL on the domain ships a valid share image even
+         if nothing else knows about that page. Do not remove any tag below.
+
+         Four rules learned the hard way:
+         1. The image is served from THIS domain (/og/share.jpg), not from
+            Supabase storage. Same-origin, on Cloudflare's CDN, no third-party
+            hop for the crawler to time out on.
+         2. og:image:width/height are declared. Without them Facebook, LinkedIn
+            and X must download the whole file before they can lay the card
+            out, which is the classic cause of a blank card on first scrape.
+         3. The file is a REAL JPEG at 1200x630 and ~50KB. It was previously a
+            1.5MB PNG named .jpg — oversized and mistyped.
+         4. Absolute URLs only. Crawlers do not resolve relative paths.
+         ══════════════════════════════════════════════════════════════════════ -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="McMullen Properties" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="McMullen Properties" />
+    <meta property="og:description" content="Bay Area real estate, marketed like a campaign. Buying, selling, and investing with Tim McMullen." />
+    <meta property="og:url" content="https://mcmullenresidential.com/" />
+    <meta property="og:image" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta property="og:image:secure_url" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="McMullen Properties — Bay Area real estate, marketed like a campaign." />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@mcmullenpropSF" />
+    <meta name="twitter:creator" content="@mcmullenpropSF" />
+    <meta name="twitter:title" content="McMullen Properties" />
+    <meta name="twitter:description" content="Bay Area real estate, marketed like a campaign. Buying, selling, and investing with Tim McMullen." />
+    <meta name="twitter:image" content="https://mcmullenresidential.com/og/share.jpg" />
+    <meta name="twitter:image:alt" content="McMullen Properties — Bay Area real estate, marketed like a campaign." />
+
+    <link rel="canonical" href="https://mcmullenresidential.com/" />
+    <link rel="sitemap" type="application/xml" href="https://mcmullenresidential.com/sitemap.xml" />
+
+    <!-- Structured data (JSON-LD): tells search engines AND AI assistants exactly
+         who Tim is, his license, brokerage, service area, and offerings. Biggest AIO lever. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "RealEstateAgent",
+      "@id": "https://mcmullenresidential.com/#agent",
+      "name": "Tim McMullen — McMullen Properties",
+      "alternateName": "McMullen Properties",
+      "description": "Bay Area real estate agent specializing in buying, selling, luxury listings, 1031 exchanges, commercial acquisitions, and investment property. Marketing-first representation led by Tim McMullen, Broker · CA DRE #02016832.",
+      "url": "https://mcmullenresidential.com/",
+      "logo": "https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/og/share.jpg",
+      "image": "https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/og/share.jpg",
+      "telephone": "+1-415-691-9272",
+      "email": "tim@mcmullen.properties",
+      "priceRange": "$$$",
+      "areaServed": [
+        { "@type": "City", "name": "Campbell" },
+        { "@type": "City", "name": "San Jose" },
+        { "@type": "City", "name": "Los Gatos" },
+        { "@type": "City", "name": "San Francisco" },
+        { "@type": "AdministrativeArea", "name": "San Francisco Bay Area" },
+        { "@type": "AdministrativeArea", "name": "Silicon Valley" }
+      ],
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Campbell",
+        "addressRegion": "CA",
+        "addressCountry": "US"
+      },
+      "founder": {
+        "@type": "Person",
+        "name": "Tim McMullen",
+        "jobTitle": "Real Estate Agent",
+        "identifier": "CA DRE #02016832",
+        "telephone": "+1-415-691-9272",
+        "email": "tim@mcmullen.properties"
+      },
+      "memberOf": {
+        "@type": "Organization",
+        "name": "Tim McMullen, Broker"
+      },
+      "knowsAbout": [
+        "Residential real estate",
+        "Luxury home listings",
+        "1031 exchanges",
+        "Commercial real estate acquisition",
+        "Disclosure package review",
+        "Home improvement ROI",
+        "Property flips and off-market deals",
+        "Comparative market analysis"
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Real Estate Services",
+        "itemListElement": [
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Luxury Listing", "url": "https://mcmullenresidential.com/services/luxury-listing" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "1031 Exchange", "url": "https://mcmullenresidential.com/services/1031-exchange" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Commercial Real Estate", "url": "https://mcmullenresidential.com/services/commercial" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Disclosure Review", "url": "https://mcmullenresidential.com/services/disclosure-review" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Home Improvement", "url": "https://mcmullenresidential.com/services/home-improvement" } },
+          { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Flips & Off-Market", "url": "https://mcmullenresidential.com/services/flips" } }
+        ]
+      }
+    }
+    </script>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+    <script type="module" crossorigin src="/assets/index-Bs8I7hEJ.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-D-Rh5qye.css">
+  </head>
+  <body class="bg-cream text-ink-900 font-sans antialiased">
+    <div id="root"></div>
+  </body>
+</html>

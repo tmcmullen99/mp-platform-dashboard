@@ -91,7 +91,9 @@ export default function App() {
           <Route path="/listings/:slug" element={<PropertyDetail />} />
           <Route path="/meet-tim" element={<MeetTim />} />
           {/* Legacy /about path redirects to the renamed Meet Tim page. */}
-          <Route path="/about" element={<Navigate to="/meet-tim" replace />} />
+          {/* /about is rendered at the edge by functions/about.js as real HTML,
+              because AI crawlers do not run this app. The route stays out of the
+              SPA so an in-app link performs a full navigation to that document. */}
           <Route path="/buy" element={<CorePage slug="buy" />} />
           <Route path="/sell" element={<CorePage slug="sell" />} />
           <Route path="/services" element={<CorePage slug="services" />} />
