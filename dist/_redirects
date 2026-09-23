@@ -1,9 +1,10 @@
 # McMullen Properties — domain cutover redirect map (mcmullen.properties → Cloudflare Pages)
 # Rules are evaluated top-down; first match wins. SPA catch-all MUST stay last.
 
-# ---- SEO: serve the live sitemap + robots from the site domain ----
-# 200 = rewrite (proxy), so crawlers see mcmullenresidential.com/sitemap.xml
-/sitemap.xml   https://kumfuludrhoqirxvaqja.supabase.co/functions/v1/sitemap   200
+# ---- SEO: the sitemap is served by functions/sitemap.xml.js ----
+# It used to be a 200 rewrite to the Supabase function from here. Pages does not
+# proxy _redirects rules to another origin, so that returned the SPA shell as
+# text/html and the sitemap was unreadable. Do not restore the rewrite.
 
 # ---- canonical host: www → apex ----
 https://www.mcmullen.properties/* https://mcmullen.properties/:splat 301

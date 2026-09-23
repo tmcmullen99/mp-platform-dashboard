@@ -812,6 +812,11 @@ export default function McMullenHome() {
                   <li><a href="/listings" className="hover:text-white transition-colors">Portfolio</a></li>
                   <li><a href="/tools" className="hover:text-white transition-colors">Tools</a></li>
                   <li><a href="/blog" className="hover:text-white transition-colors">Market Insight</a></li>
+                  {/* The About page is the site's entity page. The SOP it is built
+                      to requires a link from the global footer of every page:
+                      crawlers read a site-wide footer link as "this page defines
+                      us", which a one-off link from the homepage body does not. */}
+                  <li><a href="/about" className="hover:text-white transition-colors">About Us</a></li>
                 </ul>
               </div>
               <div>

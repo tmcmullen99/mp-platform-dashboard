@@ -7,7 +7,8 @@
     "/expired/*",
     "/proposal/*",
     "/r/*",
-    "/about"
+    "/about",
+    "/sitemap.xml"
   ],
   "exclude": []
 }

@@ -101,6 +101,10 @@ export default function PublicLayout({
             <div className="font-display text-lg text-ink-900 mb-2">
               {brandName}
             </div>
+            {/* Site-wide link to the entity page. See functions/about.js. */}
+            <a href="/about" className="text-ink-600 text-xs hover:text-ink-900">
+              About Us
+            </a>
             {branding?.brokerage_affiliation && (
               <p className="text-ink-600 text-xs leading-relaxed">
                 {branding.brokerage_affiliation}
