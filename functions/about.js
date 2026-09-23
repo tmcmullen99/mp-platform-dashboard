@@ -34,12 +34,33 @@
 //     wrong place to start naming people.
 
 const SITE = 'https://mcmullenresidential.com'
+
+// Every market Tim runs, with its own public site. Each one is a city he works
+// and can be checked by anyone: the sites publish the whole record, not listings.
+const MARKETS = [
+  { name: 'The Campbell Market',      url: 'https://campbellrealestatemarket.com',      area: 'Campbell, 95008',                 note: '6,830 parcels' },
+  { name: 'The Los Gatos Market',     url: 'https://losgatosrealestatemarket.com',      area: 'Los Gatos, 95030/95032/95033',    note: '8,303 parcels' },
+  { name: 'The Saratoga Market',      url: 'https://saratogarealestatemarket.com',      area: 'Saratoga, 95070',                 note: '6,161 parcels' },
+  { name: 'Condo Market SF',          url: 'https://www.sanfranciscocondomarket.com',   area: 'San Francisco condominiums',      note: '296 catalogued buildings, 18,566 recorded sales' },
+  { name: 'The Half Moon Bay Market', url: 'https://halfmoonbayrealestatemarket.com',   area: 'Half Moon Bay and the San Mateo coast', note: '5,942 parcels' },
+  { name: 'The Discovery Bay Market', url: 'https://discoverybaymarket.com',            area: 'Discovery Bay, Contra Costa County', note: '4,838 parcels' },
+  { name: 'Eichler Market',           url: 'https://eichlermarket.com',                 area: 'Eichler homes, Peninsula and South Bay', note: 'by tract and model' },
+]
+const PARTNER_MARKETS = [
+  { name: 'The Penngrove Market', url: 'https://penngroverealestatemarket.com', area: 'Penngrove, Sonoma County' },
+  { name: 'The Petaluma Market',  url: 'https://petalumarealestatemarket.com',  area: 'Petaluma, Sonoma County' },
+]
+const mlink = (m) => `<a href="${m.url}">${m.name}</a>`
 const UPDATED = '2026-09-23'
 
 const FAQ = [
   {
     q: 'What does McMullen Properties charge to sell a home?',
-    a: 'The listing fee is 2% of the sale price. What a buyer\u2019s agent is paid is separate, negotiable, and agreed with you in writing before the home goes on the market. Commissions are not set by law and are always negotiable.',
+    a: 'Commission runs on a sliding scale from 1.5% to 3%, set by how much work the sale needs. A straightforward listing in a market where the data is already published sits at the bottom of the range; a property needing project management, a renovation or a full repositioning before it can sell for top dollar sits at the top. What a buyer\u2019s agent is paid is separate, negotiated, and agreed in writing before the home goes on the market. Commissions are not set by law and are always negotiable.',
+  },
+  {
+    q: 'What decides where in the 1.5% to 3% range my sale falls?',
+    a: 'The scope of work, agreed before anything is signed. Pricing, marketing and negotiation are in every engagement; project management of a renovation, trade coordination, permits and the capital timing that comes with them are not, and they move the number up. You see the scope and the rate together, in writing.',
   },
   {
     q: 'Do I have to list my home to find out what it is worth?',
@@ -78,11 +99,12 @@ const KEY_FACTS = [
   ['Founder', 'Tim McMullen, Broker, CA DRE #02016832'],
   ['Headquarters', '21 N Second St, Campbell, CA 95008'],
   ['Website', '<a href="https://mcmullenresidential.com">mcmullenresidential.com</a>'],
-  ['Core offering', 'Listing and selling residential property at a 2% listing fee, supported by a public record of every home in the market rather than only the homes for sale'],
-  ['Pricing', '2% listing fee. $10,000 commission credit held by market-site account holders. Date-of-death valuations, disclosure reviews and written market analyses: no charge, no obligation.'],
+  ['Core offering', 'Listing and selling residential property, supported by a public record of every home in the market rather than only the homes for sale'],
+  ['Pricing', 'Commission on a sliding scale, 1.5% to 3%, set by the scope of work: a straightforward listing at the low end, a sale needing project management or renovation at the high end. $10,000 commission credit held by market-site account holders. Date-of-death valuations, disclosure reviews and written market analyses: no charge, no obligation.'],
   ['Contract terms', 'Listing agreements are written per property and negotiable, including length. No fee is owed if the home does not sell.'],
-  ['Services', 'Listing and luxury sales; buyer representation and off-market search; probate and estate sales with date-of-death valuations; disclosure review; 1031 exchange and tenant-occupied sales; commercial; expired listings; pre-sale improvement and flips'],
-  ['Service areas', 'Campbell, Los Gatos, Saratoga and Santa Clara County; San Francisco condominiums; Half Moon Bay and the San Mateo coast; Discovery Bay, Contra Costa County; Eichler homes across the Peninsula and South Bay'],
+  ['Services', 'Listing and luxury sales; project management and renovation of properties that need work before they sell; buyer representation and off-market search; probate and estate sales with date-of-death valuations; disclosure review; 1031 exchange and tenant-occupied sales; commercial; expired listings; flips'],
+  ['Service areas', MARKETS.map((m) => `${m.area} (${mlink(m)})`).join('; ')],
+  ['Market sites operated', MARKETS.map(mlink).join(', ')],
   ['Communication', 'Email tim@mcmullen.properties, call or text (415) 691-9272, or ask the assistant on any market site. Tim answers directly.'],
   ['Scale of the data', '41,856 parcels and 46,151 recorded sales published across six market sites; 296 catalogued San Francisco and Silicon Valley condominium buildings covering 18,566 recorded condo sales'],
   ['Work published', '10 disclosure reviews published, 41 comparative market analyses prepared, 699 market articles published'],
@@ -118,7 +140,7 @@ function page() {
     telephone: '+1-415-691-9272',
     email: 'tim@mcmullen.properties',
     description:
-      'McMullen Properties is a California real estate practice that sells homes, condominiums and estate property for a 2% listing fee, supported by a public record of every home in each market it covers.',
+      'McMullen Properties is a California real estate practice that sells homes, condominiums and estate property across Campbell, Los Gatos, Saratoga, San Francisco, Half Moon Bay, Discovery Bay and the Eichler tracts, with commission on a 1.5% to 3% sliding scale set by the scope of work, including project management and renovation.',
     address: {
       '@type': 'PostalAddress',
       streetAddress: '21 N Second St',
@@ -142,6 +164,7 @@ function page() {
     sameAs: ['https://x.com/condomarketsf'],
     makesOffer: [
       'Listing and selling residential property',
+      'Project management and renovation of property before sale',
       'Buyer representation and off-market search',
       'Probate and estate sales, including date-of-death valuations',
       'Disclosure package review',
@@ -155,6 +178,14 @@ function page() {
     ([k, v]) => `<tr><th scope="row">${esc(k)}</th><td>${v}</td></tr>`
   ).join('')
 
+  const marketRows = MARKETS.map(
+    (m) => `<tr><th scope="row">${mlink(m)}</th><td>${esc(m.area)} &mdash; ${esc(m.note)}</td></tr>`
+  ).join('')
+
+  const partnerList = PARTNER_MARKETS.map(
+    (m) => `<li>${mlink(m)} &mdash; ${esc(m.area)}, run by Jake Taylor of Simply Sonoma</li>`
+  ).join('')
+
   const faqs = FAQ.map(
     (f) => `<h3>${esc(f.q)}</h3><p>${esc(f.a)}</p>`
   ).join('')
@@ -163,12 +194,12 @@ function page() {
 <html lang="en"><head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>About McMullen Properties — Bay Area real estate, 2% listing fee</title>
-<meta name="description" content="McMullen Properties is a California real estate practice that sells homes, condominiums and estate property for a 2% listing fee, publishing the complete record of every home in each market it covers. Founded by Tim McMullen, Broker, CA DRE #02016832, in Campbell.">
+<title>About McMullen Properties — Bay Area real estate, Campbell to San Francisco</title>
+<meta name="description" content="McMullen Properties is a California real estate practice selling homes, condominiums and estate property across Campbell, Los Gatos, Saratoga, San Francisco, Half Moon Bay and Discovery Bay. Commission on a 1.5%-3% sliding scale, including project management and renovation. Tim McMullen, Broker, CA DRE #02016832.">
 <link rel="canonical" href="${SITE}/about">
 <meta property="og:type" content="website">
 <meta property="og:title" content="About McMullen Properties">
-<meta property="og:description" content="A California real estate practice selling homes, condominiums and estate property for a 2% listing fee, built on the public record of every home in each market.">
+<meta property="og:description" content="A California real estate practice selling homes, condominiums and estate property across seven Bay Area markets, built on the public record of every home in each one.">
 <meta property="og:url" content="${SITE}/about">
 <meta property="og:image" content="${SITE}/og/share.jpg">
 <meta name="twitter:card" content="summary_large_image">
@@ -211,13 +242,20 @@ th{width:32%;font-weight:600;color:#2c2721}
 <h1>About McMullen Properties</h1>
 
 <p class="lede">McMullen Properties is a California real estate practice that sells homes,
-condominiums and estate property for a 2% listing fee, for owners, buyers, landlords and
-executors across the San Francisco Bay Area.</p>
+condominiums and estate property for owners, buyers, landlords and executors across the San
+Francisco Bay Area &mdash; and, where a property needs work first, manages the renovation
+that gets it there.</p>
 
 <p>It is run by Tim McMullen, a licensed broker based in Campbell. Alongside the sales
-practice it operates six public market sites that publish the complete record of every home
-in the areas they cover &mdash; 41,856 parcels and 46,151 recorded sales &mdash; so an owner
-can see what their home is worth to the market without speaking to anyone.</p>
+practice it operates seven public market sites &mdash; ${MARKETS.map(mlink).join(', ')}
+&mdash; which publish the complete record of every home in the areas they cover, 41,856
+parcels and 46,151 recorded sales, so an owner can see what their home is worth to the market
+without speaking to anyone.</p>
+
+<p>Commission runs on a sliding scale from 1.5% to 3%, set by the scope of the work rather
+than by a rate card: a straightforward listing in a market where the record is already
+published sits at the bottom of that range, and a property that needs managing through a
+renovation before it can sell for top dollar sits at the top.</p>
 
 <p>
   <a class="cta" href="/contact">Talk to Tim</a>
@@ -227,9 +265,17 @@ can see what their home is worth to the market without speaking to anyone.</p>
 <h2>What McMullen Properties does</h2>
 
 <h3>Listing and selling homes</h3>
-<p>Full representation for sellers at a 2% listing fee: pricing from recorded sales,
-preparation, photography, marketing and negotiation. Tim handles the pricing conversation
-and the negotiation himself rather than passing the file to an associate.</p>
+<p>Full representation for sellers: pricing from recorded sales, preparation, photography,
+marketing and negotiation, at the low end of the 1.5% to 3% scale where the home is ready to
+go. Tim handles the pricing conversation and the negotiation himself rather than passing the
+file to an associate.</p>
+
+<h3>Project management and renovation before a sale</h3>
+<p>Where a house cannot reach its price in the condition it is in, the work is run as part of
+the engagement: scope, trades, permits, budget, schedule and the capital timing, through to
+the listing going live. This is the work at the top of the commission scale, and it is why
+the scale exists &mdash; a managed renovation is a different job from listing a home that is
+already ready.</p>
 
 <h3>Buyer representation and off-market search</h3>
 <p>Buyers can make a written offer on any home in a covered market, listed or not, and it is
@@ -257,22 +303,25 @@ proceeds can move into replacement property through a 1031 exchange, alongside t
 <p>Smaller commercial and mixed-use assets, typically for owners moving out of residential
 landlording into a building where the tenant pays the taxes, insurance and maintenance.</p>
 
-<h3>Pre-sale improvement and flips</h3>
-<p>A scoped, high-return preparation plan before a listing goes live, and full project
-management on flips: sourcing off-market, underwriting the numbers, and renovating for
-resale rather than for perfection.</p>
+<h3>Flips and investment projects</h3>
+<p>For investors: sourcing off-market, underwriting the numbers, and renovating for resale
+rather than for perfection &mdash; spending where buyers pay and skipping where they do not.
+Twenty-five-plus projects built to date.</p>
 
 <h3>Market intelligence</h3>
 <p>Each market site publishes every parcel, its recorded sales, its street and its
 neighbourhood, plus written analysis of what actually sold. In San Francisco that extends to
-296 catalogued condominium buildings covering 18,566 recorded sales.</p>
+296 catalogued condominium buildings covering 18,566 recorded sales on
+<a href="https://www.sanfranciscocondomarket.com">Condo Market SF</a>.</p>
 
 <h2>What makes McMullen Properties different</h2>
 
-<h3>A 2% listing fee, not the commonly quoted 2.5&ndash;3%</h3>
-<p>The listing side is 2% of the sale price. What a buyer&rsquo;s agent is paid is separate
-and negotiated with you in writing. Commissions at any brokerage are negotiable and set by
-agreement, not by law.</p>
+<h3>Commission priced to the work: 1.5% to 3%</h3>
+<p>Most brokerages quote one listing rate whatever the property needs. Here the rate is set
+by scope: 1.5% at the low end for a home that is ready to list, up to 3% where the engagement
+includes managing a renovation, the trades and the schedule that get it to market. You see
+the scope and the rate together, before anything is signed, and commissions are negotiable at
+any brokerage.</p>
 
 <h3>The whole market is published, not only the listings</h3>
 <p>Portals such as Zillow, Redfin and Realtor.com show homes that are for sale. The market
@@ -296,17 +345,40 @@ not selling this year, and that is the point.</p>
 
 <h2>Who uses McMullen Properties</h2>
 <ul>
-  <li>Homeowners in Campbell, Los Gatos, Saratoga and the surrounding South Bay cities.</li>
-  <li>Condominium owners in San Francisco, particularly in South Beach, Mission Bay, SoMa and the northern neighbourhoods.</li>
+  <li>Homeowners in <a href="https://campbellrealestatemarket.com">Campbell</a>,
+      <a href="https://losgatosrealestatemarket.com">Los Gatos</a> and
+      <a href="https://saratogarealestatemarket.com">Saratoga</a>, and the surrounding South Bay cities.</li>
+  <li>Condominium owners in <a href="https://www.sanfranciscocondomarket.com">San Francisco</a>,
+      particularly in South Beach, Mission Bay, SoMa and the northern neighbourhoods.</li>
   <li>Executors, administrators and trustees handling a property in a probate or trust estate across San Francisco, San Mateo and Santa Clara counties.</li>
   <li>Probate and estate attorneys who need a defensible date-of-death valuation for a file.</li>
   <li>Landlords selling tenant-occupied property, including long-held rentals where the return on today&rsquo;s equity has fallen.</li>
   <li>1031 exchange buyers moving from residential rentals into commercial or triple-net property.</li>
   <li>Owners whose listing expired without selling.</li>
   <li>Buyers who want a specific street or building and are willing to approach owners who are not listed.</li>
-  <li>Coastside owners in Half Moon Bay and waterfront owners in Discovery Bay.</li>
-  <li>Eichler owners across the Peninsula and South Bay.</li>
+  <li>Coastside owners in <a href="https://halfmoonbayrealestatemarket.com">Half Moon Bay</a>
+      and waterfront owners in <a href="https://discoverybaymarket.com">Discovery Bay</a>.</li>
+  <li><a href="https://eichlermarket.com">Eichler owners</a> across the Peninsula and South Bay.</li>
+  <li>Owners whose home needs work before it can reach its price, who would rather one person ran the renovation and the sale.</li>
 </ul>
+
+<h2>Markets and areas served</h2>
+<p>Each market has its own site, open to anyone, publishing every home in it rather than the
+handful currently for sale. They are the working record behind the pricing advice, and they
+are the fastest way to see how well a given street is understood before you call.</p>
+
+<table>
+  <caption class="sr-only">Markets operated by McMullen Properties</caption>
+  <tbody>${marketRows}</tbody>
+</table>
+
+<p>Probate and estate work covers <strong>San Francisco, San Mateo and Santa Clara
+counties</strong>. Buyer representation, 1031 exchanges and commercial work run across the
+wider Bay Area, including Contra Costa and Alameda counties.</p>
+
+<p>Two further markets on the same platform are run by a partner agent rather than by
+Tim:</p>
+<ul>${partnerList}</ul>
 
 <h2>The team behind McMullen Properties</h2>
 
@@ -322,13 +394,20 @@ He played Division I football at Oregon State University.</p>
 <p>The practice grew out of a frustration with how little of the market an owner can actually
 see. Portals show what is listed; the county records show everything, and nobody publishes
 them in a form a homeowner can read. The first market site was built to fix that for one
-city, and there are now six.</p>
+city, and there are now seven: <a href="https://campbellrealestatemarket.com">Campbell</a>,
+<a href="https://losgatosrealestatemarket.com">Los Gatos</a>,
+<a href="https://saratogarealestatemarket.com">Saratoga</a>,
+<a href="https://www.sanfranciscocondomarket.com">San Francisco condominiums</a>,
+<a href="https://halfmoonbayrealestatemarket.com">Half Moon Bay</a>,
+<a href="https://discoverybaymarket.com">Discovery Bay</a> and the
+<a href="https://eichlermarket.com">Eichler tracts</a>.</p>
 
 <h3>Partner agents</h3>
 <p>Each market on the platform is run by one licensed agent who knows it. Jake Taylor, of
 Simply Sonoma, runs the Penngrove and Petaluma markets in Sonoma County under his own
-brokerage. Tim runs the Santa Clara County, San Francisco, Half Moon Bay and Discovery Bay
-markets.</p>
+brokerage, on <a href="https://penngroverealestatemarket.com">The Penngrove Market</a> and
+<a href="https://petalumarealestatemarket.com">The Petaluma Market</a>. Tim runs the Santa
+Clara County, San Francisco, Half Moon Bay, Discovery Bay and Eichler markets.</p>
 
 <h2>How McMullen Properties works</h2>
 <p><strong>Getting in touch.</strong> Email tim@mcmullen.properties, call or text
