@@ -737,8 +737,12 @@ export default function MeetTim() {
           Market; the section says what that gives his clients - one account that reaches every
           market the platform runs - with the brokerage's own film and a plain view of the four
           things a client can do. Public wording: "Comp Report", never "CMA". */}
-      <section id="the-market" className="py-16 md:py-24 scroll-mt-20">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
+      {/* Two full folds (Tim, 28 Sep 2026): the film and the promise on the first, the four
+          things a client can do on the second. "The machine behind every marketplace" was
+          removed to make room. */}
+      <section id="the-market" className="scroll-mt-20">
+        <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
+        <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
           <SectionHeader
             eyebrow="Founding broker · The Market"
             lead="One account."
@@ -773,21 +777,35 @@ export default function MeetTim() {
             </Reveal>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-14">
+        </div>
+        </div>
+
+        <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
+        <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
+          <Reveal>
+            <div className="flex items-center gap-3 mb-5">
+              <span className="w-8 h-px bg-white/15" />
+              <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">What your account opens</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl leading-tight text-white/95">
+              Four doors, <span className="mt2-serif text-white">every market.</span>
+            </h2>
+          </Reveal>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
             {MARKET_POWERS.map((c, i) => (
               <Reveal key={c.title} delay={0.06 * i}>
-                <div className="h-full rounded-3xl bg-[#141414] border border-white/10 p-6 md:p-7">
+                <div className="h-full flex flex-col rounded-3xl bg-[#141414] border border-white/10 p-5 md:p-6">
                   <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">{c.eyebrow}</p>
-                  <h3 className="mt2-serif text-2xl text-white mt-2">{c.title}</h3>
-                  <p className="text-[13px] text-white/50 mt-2 leading-relaxed">{c.body}</p>
-                  <div className="mt-5">{c.demo}</div>
+                  <h3 className="mt2-serif text-xl lg:text-[1.35rem] leading-snug text-white mt-2">{c.title}</h3>
+                  <p className="text-[12.5px] text-white/50 mt-2 leading-relaxed">{c.body}</p>
+                  <div className="mt-auto pt-5">{c.demo}</div>
                 </div>
               </Reveal>
             ))}
           </div>
 
           <Reveal delay={0.1}>
-            <div className="mt-12">
+            <div className="mt-10">
               <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">Live now, with more cities coming</p>
               <div className="flex flex-wrap gap-2 mt-4">
                 {MARKETPLACES.map(m => (
@@ -800,63 +818,6 @@ export default function MeetTim() {
             </div>
           </Reveal>
         </div>
-      </section>
-
-      {/* ----------------------- NEIGHBOR AUTOMATION ------------------------ */}
-      <section id="automation" className="py-16 md:py-24 scroll-mt-20">
-        <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
-          <SectionHeader
-            eyebrow="The machine behind every marketplace"
-            lead="When a home sells,"
-            accent="the neighborhood knows."
-            sub="Every McMullen marketplace watches its city's market in real time — and reports it to the people who live in it."
-          />
-
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center mt-10 lg:mt-12">
-            <Reveal className="order-2 lg:order-1">
-              <p className="text-sm md:text-base text-white/50 leading-relaxed">
-                When a home sells, the system finds it on the city record, identifies the
-                homeowners around it — the same street, or in a condo market, the same building —
-                verifies every address, and stages a neighborhood announcement: — validated addresses only, closest neighbors first, and a constantly growing list of buyers for a home in your neighborhood.
-              </p>
-              <p className="mt2-serif text-lg md:text-2xl text-white mt-5 md:mt-6">
-                The result isn't marketing mail. It's the market, reported to the people who live
-                in it, tracked by interested buyers, operated by McMullen Properties.
-              </p>
-              <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-x-8 sm:gap-x-10 gap-y-5 sm:gap-y-6 mt-8 md:mt-10">
-                <div>
-                  <div className="mt2-serif text-3xl text-white">6</div>
-                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">live marketplaces</div>
-                </div>
-                <div>
-                  <div className="mt2-serif text-3xl text-white">20,500+</div>
-                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">homes indexed</div>
-                </div>
-                <div>
-                  <div className="mt2-serif text-3xl text-white">2×</div>
-                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">daily sale detection</div>
-                </div>
-                <div>
-                  <div className="mt2-serif text-3xl text-white">100%</div>
-                  <div className="text-[11px] text-white/40 mt-1 uppercase tracking-[0.15em]">human-approved sends</div>
-                </div>
-              </div>
-              <p className="text-[10px] text-white/25 mt-6 uppercase tracking-[0.2em]">As of July 2026</p>
-            </Reveal>
-
-            <Reveal delay={0.1} className="order-1 lg:order-2">
-              {/* Animated radius diagram: street variant + condo variant */}
-              <div className="rounded-[2rem] bg-[#141414] border border-white/10 p-5 md:p-10">
-                <NeighborhoodSignal />
-                <div className="grid grid-cols-2 gap-3 sm:gap-4 mt-6 md:mt-8 text-[11px] sm:text-[12px] text-white/45 leading-relaxed">
-                  <div><span className="text-white/80">1 · Detect.</span> Sales surface from the city record, twice daily.</div>
-                  <div><span className="text-white/80">2 · Verify.</span> Neighbors located on the parcel record; every address validated.</div>
-                  <div><span className="text-white/80">3 · Approve.</span> One-click human gate — nothing sends without it.</div>
-                  <div><span className="text-white/80">4 · Report.</span> Real photo, real price, link to the permanent record.</div>
-                </div>
-              </div>
-            </Reveal>
-          </div>
         </div>
       </section>
 
