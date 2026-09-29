@@ -290,25 +290,49 @@ export default function Service1031() {
         </Reveal>
 
         <Reveal delay={0.1}>
-          <div className="mt-12 rounded-[24px] border border-black/[0.08] overflow-hidden" style={{ boxShadow: '0 24px 70px -44px rgba(13,27,42,0.35)' }}>
+          {/* Mobile first (Tim, 28 Sep 2026): on a phone each row is its own card, the question on
+              top and the two answers stacked beneath it at full width; the three-column table is
+              kept for tablets and desktops. */}
+          <div className="mt-10 md:hidden space-y-3">
+            {COMPARE.map(row => (
+              <div key={row.label} className="rounded-[18px] border border-black/[0.08] bg-white overflow-hidden" style={{ boxShadow: '0 14px 40px -30px rgba(13,27,42,0.35)' }}>
+                <div className="px-4 pt-4 pb-2 text-[15px] font-semibold" style={{ color: NAVY }}>{row.label}</div>
+                <div className="px-4 pb-3 flex items-start gap-2.5">
+                  <XIcon className="w-4 h-4 mt-[3px] shrink-0 opacity-40" />
+                  <div>
+                    <div className="mp-mono text-[9.5px] uppercase tracking-[0.14em] opacity-50" style={{ color: NAVY }}>Residential rental</div>
+                    <div className="text-[14px] leading-snug mt-0.5" style={{ color: INK }}>{row.res}</div>
+                  </div>
+                </div>
+                <div className="px-4 py-3 flex items-start gap-2.5" style={{ background: 'rgba(63,125,90,0.08)' }}>
+                  <Check className="w-4 h-4 mt-[3px] shrink-0" style={{ color: EMERALD }} />
+                  <div>
+                    <div className="mp-mono text-[9.5px] uppercase tracking-[0.14em]" style={{ color: EMERALD }}>Commercial asset</div>
+                    <div className="text-[14px] leading-snug mt-0.5 font-medium" style={{ color: NAVY }}>{row.com}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="hidden md:block mt-12 rounded-[24px] border border-black/[0.08] overflow-hidden" style={{ boxShadow: '0 24px 70px -44px rgba(13,27,42,0.35)' }}>
             {/* header row */}
             <div className="grid grid-cols-[1.1fr_1fr_1fr]" style={{ background: NAVY }}>
-              <div className="p-4 md:p-5" />
-              <div className="p-4 md:p-5 text-center">
+              <div className="p-5" />
+              <div className="p-5 text-center">
                 <div className="mp-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: 'rgba(255,255,255,0.5)' }}>Residential rental</div>
               </div>
-              <div className="p-4 md:p-5 text-center" style={{ background: 'rgba(63,125,90,0.25)' }}>
+              <div className="p-5 text-center" style={{ background: 'rgba(63,125,90,0.25)' }}>
                 <div className="mp-mono text-[10px] uppercase tracking-[0.16em]" style={{ color: '#c7ebd8' }}>Commercial asset</div>
               </div>
             </div>
             {COMPARE.map((row, i) => (
               <div key={row.label} className="grid grid-cols-[1.1fr_1fr_1fr] items-center" style={{ background: i % 2 ? '#f7faf8' : '#fff' }}>
-                <div className="p-4 md:p-5 text-sm font-medium" style={{ color: NAVY }}>{row.label}</div>
-                <div className="p-4 md:p-5 text-[13.5px] flex items-start gap-2" style={{ color: INK }}>
+                <div className="p-5 text-sm font-medium" style={{ color: NAVY }}>{row.label}</div>
+                <div className="p-5 text-[13.5px] flex items-start gap-2" style={{ color: INK }}>
                   <XIcon className="w-4 h-4 mt-0.5 shrink-0 opacity-40" />
                   <span>{row.res}</span>
                 </div>
-                <div className="p-4 md:p-5 text-[13.5px] flex items-start gap-2" style={{ background: 'rgba(63,125,90,0.06)', color: NAVY }}>
+                <div className="p-5 text-[13.5px] flex items-start gap-2 self-stretch" style={{ background: 'rgba(63,125,90,0.06)', color: NAVY }}>
                   <Check className="w-4 h-4 mt-0.5 shrink-0" style={{ color: EMERALD }} />
                   <span>{row.com}</span>
                 </div>
