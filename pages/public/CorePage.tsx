@@ -4,6 +4,7 @@
 // motionsites aesthetic. One component drives all four pages, so adding a
 // page is a data row, not new code.
 
+import { claims } from '@/lib/claims'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -159,7 +160,7 @@ export default function CorePage({ slug }: { slug: string }) {
         .eq('published', true)
         .maybeSingle()
       if (cancelled) return
-      setC((data?.content as CoreContent) ?? null)
+      setC(data?.content ? claims(data.content as CoreContent) : null)
       setLoading(false)
     }
     load()
