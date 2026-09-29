@@ -660,25 +660,6 @@ function AnalysisFold() {
             ))}
           </div>
         </Reveal>
-        <div className="hidden md:grid md:grid-cols-3 gap-4 mt-5">
-          {[
-            ['Eureka Valley · to live in', 'Every comparable closed over asking, averaging 140% in eight days. The two that ran hardest sold on lot size and outlook the house did not have, so the simple price-per-foot read overstated it, and the Comp Report says so.'],
-            ['Willow Glen · to build on', 'A teardown with a full plan set. At a 15% developer margin the land was worth about a third less than the asking price; only at zero margin did it reach the ask.'],
-            ['Willow Glen · a corner lot', 'Recorded at 7,225 sf, buildable like about 5,600 once the curved frontage and second street setback were measured. Keeping and renovating the house beat scrape-and-rebuild.'],
-          ].map(([t, b], i) => (
-            <Reveal key={t} delay={0.06 * i}>
-              <div className={lightCard + ' p-5 h-full'}>
-                <p className="text-[10px] uppercase tracking-[0.22em]" style={{ color: PERI }}>{t}</p>
-                <p className="text-[13px] text-[#4a5163] leading-relaxed mt-2">{b}</p>
-                {i === 0 && (
-                  <a href="https://mp-platform-dashboard.pages.dev/view/cma/420-eureka-street-san-francisco-b82e1f" target="_blank" rel="noopener noreferrer"
-                     className="inline-flex items-center gap-1 text-[12px] font-medium mt-3" style={{ color: PERI }}>
-                    Open the 420 Eureka Comp Report <ArrowUpRight size={13} />
-                  </a>)}
-              </div>
-            </Reveal>
-          ))}
-        </div>
       </div>
     </div>
   )
