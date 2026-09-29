@@ -16,6 +16,7 @@
 // Brand: canonical navy is #0D1B2A (not the #1a1f2e in the original paste);
 // blue-gray #91a1ba accent; #4f82b9 logo-blue; Playfair Display + DM Sans.
 
+import { claims } from '@/lib/claims'
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
@@ -334,7 +335,7 @@ export default function McMullenHome() {
         await Promise.all([contentP, soldP, devP, soonP])
       if (cancelled) return
 
-      setContent((cData?.content as HomeContent) ?? null)
+      setContent(cData?.content ? claims(cData.content as HomeContent) : null)
 
       const dmap: Record<string, string> = {}
       ;(dData ?? []).forEach((r: Record<string, unknown>) => {
@@ -644,7 +645,8 @@ export default function McMullenHome() {
             </p>
             <div className="mt-6 grid sm:grid-cols-2 gap-x-6 gap-y-3">
               {[
-                '$100M+ in closed transactions',
+                '$1.3B+ in property represented',
+                '25+ projects completed',
                 'Off-market & private exclusives',
                 'Development & renovation expertise',
                 'Factory-direct material sourcing',
