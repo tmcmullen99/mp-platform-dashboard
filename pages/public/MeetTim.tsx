@@ -1088,7 +1088,7 @@ export default function MeetTim() {
           </p>
           <p className="mt2-blur text-sm md:text-base text-white/45 max-w-md mx-auto mb-12" style={{ animationDelay: '.55s' }}>
             Six live marketplaces, a platform that does the analytical work agents used to gatekeep,
-            and $100M+ in closed transactions.
+            and $1.3B+ in property represented.
           </p>
           <div className="mt2-blur inline-flex gap-4" style={{ animationDelay: '.65s' }}>
             <a
