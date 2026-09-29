@@ -418,6 +418,114 @@ function RotatingRole() {
 
 /* ---------------------------------- page ---------------------------------- */
 
+/* ------------------------- The Market: film + demos ----------------------- */
+const TM_FILM = 'https://themarketbrokerage.com/assets/films/the-market'
+
+function MarketFilm() {
+  const ref = useRef<HTMLVideoElement>(null)
+  const [playing, setPlaying] = useState(false)
+  const small = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:760px)').matches
+  return (
+    <div className="relative rounded-[2rem] overflow-hidden border border-white/10 bg-[#0e1118]" style={{ aspectRatio: '16 / 9' }}>
+      <video
+        ref={ref}
+        src={TM_FILM + (small ? '-720.mp4' : '-1080.mp4')}
+        poster={TM_FILM + '-poster.jpg'}
+        controls={playing}
+        playsInline
+        preload="metadata"
+        className="absolute inset-0 w-full h-full object-cover"
+        onEnded={() => setPlaying(false)}
+      />
+      {!playing && (
+        <button
+          type="button"
+          aria-label="Play the film: The Market"
+          onClick={() => { setPlaying(true); ref.current?.play().catch(() => {}) }}
+          className="absolute inset-0 flex items-end justify-start p-6 md:p-8 text-left"
+          style={{ background: 'linear-gradient(to top, rgba(10,12,16,.85), rgba(10,12,16,.1) 60%)' }}
+        >
+          <span className="flex items-center gap-4">
+            <span className="flex items-center justify-center rounded-full bg-white/95 w-14 h-14 md:w-16 md:h-16 shadow-xl">
+              <span style={{ width: 0, height: 0, marginLeft: 4, borderLeft: '16px solid #111', borderTop: '10px solid transparent', borderBottom: '10px solid transparent' }} />
+            </span>
+            <span>
+              <span className="block text-[10px] uppercase tracking-[0.25em] text-white/60">Watch · The Market</span>
+              <span className="block mt2-serif text-xl md:text-2xl text-white">Every home. Every market.</span>
+            </span>
+          </span>
+        </button>
+      )}
+    </div>
+  )
+}
+
+/* The four demos are drawn, not screenshots: a sample home, labelled as one. */
+const demoBox = 'rounded-2xl bg-black/40 border border-white/10 p-4 text-[12px] text-white/70'
+const demoRow = 'flex items-center justify-between py-1.5 border-b border-white/[0.06] last:border-0'
+const MARKET_POWERS: { eyebrow: string; title: string; body: string; demo: JSX.Element }[] = [
+  {
+    eyebrow: 'For owners',
+    title: 'Make Me Move',
+    body: 'Name the price that would make you move. No sign, no showings, no public record: only account holders see it, and a buyer who meets it makes a written offer.',
+    demo: (
+      <div className={demoBox}>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample home</div>
+        <div className="mt2-serif text-lg text-white mt-1">1187 Linden Way</div>
+        <div className="flex gap-6 mt-3">
+          <div><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">Your number</div><div className="text-white mt-0.5">The price that moves you</div></div>
+          <div><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">Seen by</div><div className="text-white mt-0.5">Account holders</div></div>
+        </div>
+        <div className="flex flex-wrap gap-1.5 mt-3">{['No sign', 'No showings', 'Not on the MLS'].map(t =>
+          <span key={t} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10.5px]">{t}</span>)}</div>
+      </div>
+    ),
+  },
+  {
+    eyebrow: 'For rental owners and investors',
+    title: 'Investor Exchange',
+    body: 'Rentals offered privately to local investors with the tenant in place, and a way to move the equity through a 1031 exchange. Investors see the rent, the asking price and the yield.',
+    demo: (
+      <div className={demoBox}>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">On the Exchange now</div>
+        <div className="mt2-serif text-lg text-white mt-1">133 Union Ave Unit F</div>
+        <div className="grid grid-cols-3 gap-3 mt-3">
+          {[['Asking', '$899,000'], ['Rent', '$3,500/mo'], ['Gross yield', '4.67%']].map(([k, v]) =>
+            <div key={k}><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">{k}</div><div className="text-white mt-0.5">{v}</div></div>)}
+        </div>
+        <div className="text-[11px] text-white/40 mt-3">Tenant stays · no sign · no showings</div>
+      </div>
+    ),
+  },
+  {
+    eyebrow: 'Before you decide anything',
+    title: 'Comp Reports & disclosure reviews',
+    body: 'A Comp Report on any home, built from recorded sales with the sample behind every number, and a plain-English review of the disclosure package before you write an offer.',
+    demo: (
+      <div className={demoBox}>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample Comp Report · recorded sales</div>
+        {[['Comparable A', '0.2 mi', '$1,228/sf'], ['Comparable B', '0.4 mi', '$1,196/sf'], ['Comparable C', '0.5 mi', '$1,251/sf']].map(([a, d, v]) =>
+          <div key={a} className={demoRow}><span className="text-white/80">{a}</span><span className="text-white/40">{d}</span><span className="text-white">{v}</span></div>)}
+        <div className="flex items-center gap-2 mt-3 text-[11px]"><span className="text-green-400">&#10003;</span> Disclosures reviewed: HOA reserves, inspections, permits</div>
+      </div>
+    ),
+  },
+  {
+    eyebrow: 'For buyers',
+    title: 'Write an offer on any home',
+    body: 'Listed or not, in any market The Market runs. The owner receives a written offer from a licensed broker, and nothing is agreed until they sign.',
+    demo: (
+      <div className={demoBox}>
+        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample offer · home not for sale</div>
+        <div className="mt2-serif text-lg text-white mt-1">418 Merrill Ct</div>
+        <div className={demoRow + ' mt-2'}><span className="text-white/50">Status</span><span className="text-white">Not listed</span></div>
+        <div className={demoRow}><span className="text-white/50">Your offer</span><span className="text-white">Written, with terms</span></div>
+        <div className={demoRow}><span className="text-white/50">Delivered by</span><span className="text-white">Tim, as your broker</span></div>
+      </div>
+    ),
+  },
+]
+
 export default function MeetTim() {
   const [loading, setLoading] = useState(true)
   useEffect(() => {
@@ -456,8 +564,8 @@ export default function MeetTim() {
             </span>
           </a>
           <span className="hidden sm:block w-px h-5 bg-white/10 mx-1" />
-          <a href="#pursuits" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors">
-            Pursuits
+          <a href="#the-market" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors">
+            The Market
           </a>
           <a href="#sales" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors">
             Sales
@@ -624,45 +732,73 @@ export default function MeetTim() {
         </div>
       </section>
 
-      {/* --------------------- ENTREPRENEURIAL PURSUITS -------------------- */}
-      <section id="pursuits" className="py-16 md:py-24 scroll-mt-20">
+      {/* ----------------------- THE MARKET BROKERAGE ----------------------- */}
+      {/* Tim, 28 Sep 2026: replaces "Six marketplaces". Tim is the founding broker of The
+          Market; the section says what that gives his clients - one account that reaches every
+          market the platform runs - with the brokerage's own film and a plain view of the four
+          things a client can do. Public wording: "Comp Report", never "CMA". */}
+      <section id="the-market" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-[1200px] mx-auto px-6 md:px-10 lg:px-16">
           <SectionHeader
-            eyebrow="Entrepreneurial pursuits"
-            lead="Six marketplaces, built on"
-            accent="local expertise."
-            sub="Owner-side marketplaces and complete city records — every building, every street, every verified sale, published and free. All live. Click through."
+            eyebrow="Founding broker · The Market"
+            lead="One account."
+            accent="Every market."
+            sub="Tim is the founding broker of The Market, the brokerage built on the platform behind every marketplace below. His clients are not limited to what happens to be listed: they reach every home in every market it runs."
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
-            {MARKETPLACES.map((m, i) => (
-              <Reveal key={m.name} delay={0.08 * i}>
-                <a
-                  href={m.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="group block rounded-3xl bg-[#141414] border border-white/10 overflow-hidden hover:border-white/25 transition-colors h-full"
-                >
-                  <div className="relative aspect-[16/9] overflow-hidden">
-                    <img
-                      src={m.image}
-                      alt={m.name}
-                      loading="lazy"
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#141414] via-transparent to-transparent" />
-                  </div>
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <h3 className="mt2-serif text-xl text-white">{m.name}</h3>
-                      <ArrowUpRight size={18} className="text-white/30 group-hover:text-white transition-colors shrink-0 mt-1" />
-                    </div>
-                    <p className="text-[13px] text-white/45 mt-2 leading-relaxed">{m.tagline}</p>
-                    <p className="text-[10px] uppercase tracking-[0.25em] text-white/35 mt-4">{m.stat}</p>
-                  </div>
+
+          <div className="grid lg:grid-cols-[1.35fr_1fr] gap-8 lg:gap-12 items-center mt-10 lg:mt-12">
+            <Reveal>
+              <MarketFilm />
+            </Reveal>
+            <Reveal delay={0.1}>
+              <p className="text-sm md:text-base text-white/50 leading-relaxed">
+                Most buyers see the homes a portal shows them, and most owners find out what their
+                home is worth by moving out and listing it. The Market turns both around: every
+                home is open to a written offer, listed or not, and every owner can test a price
+                without a sign, a showing or a public record.
+              </p>
+              <p className="mt2-serif text-lg md:text-2xl text-white mt-5 md:mt-6">
+                One free account, with Tim as your broker, opens all of it.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-8">
+                <a href="https://themarketbrokerage.com" target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-2 rounded-full bg-white text-black px-5 py-2.5 text-sm font-medium hover:bg-white/90 transition-colors">
+                  Visit The Market <ArrowUpRight size={16} />
                 </a>
+                <a href="#work-with-tim"
+                   className="inline-flex items-center gap-2 rounded-full border border-white/20 text-white px-5 py-2.5 text-sm hover:border-white/50 transition-colors">
+                  Work with Tim <ArrowRight size={16} />
+                </a>
+              </div>
+            </Reveal>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-14">
+            {MARKET_POWERS.map((c, i) => (
+              <Reveal key={c.title} delay={0.06 * i}>
+                <div className="h-full rounded-3xl bg-[#141414] border border-white/10 p-6 md:p-7">
+                  <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">{c.eyebrow}</p>
+                  <h3 className="mt2-serif text-2xl text-white mt-2">{c.title}</h3>
+                  <p className="text-[13px] text-white/50 mt-2 leading-relaxed">{c.body}</p>
+                  <div className="mt-5">{c.demo}</div>
+                </div>
               </Reveal>
             ))}
           </div>
+
+          <Reveal delay={0.1}>
+            <div className="mt-12">
+              <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">Live now, with more cities coming</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {MARKETPLACES.map(m => (
+                  <a key={m.name} href={m.url} target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.03] px-3.5 py-1.5 text-[12px] text-white/70 hover:text-white hover:border-white/35 transition-colors">
+                    {m.name} <ArrowUpRight size={13} className="text-white/35" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
