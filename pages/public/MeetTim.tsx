@@ -512,93 +512,71 @@ const DISCLOSURE_SAMPLES: { eyebrow: string; title: string; line: string; stats:
 ]
 
 function BuyerFold() {
+  /* Rebuilt to one screen (Tim, 28 Sep 2026): the promise on the left, the two downloadable
+     reviews as the proof, and the Campbell reviews as a single line of links underneath. */
   return (
-    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
+    <div className="min-h-[100svh] flex flex-col justify-center py-14 md:py-16">
       <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
         <FoldHead eyebrow="If you're buying" lead="Every home is open to you." accent="Even the ones not for sale."
-          sub="With Tim as your broker you can write an offer on any home in any market The Market runs, listed or not. And every home you look at seriously comes with a Comp Report and a review of its disclosures, before you commit to anything." />
-        <div className="grid lg:grid-cols-[1fr_2fr] gap-5 mt-10">
+          sub="Write an offer on any home in any market The Market runs, listed or not. Every home you look at seriously comes with a Comp Report and a review of its disclosures." />
+        <div className="grid lg:grid-cols-[0.8fr_1fr_1fr] gap-4 mt-8">
           <Reveal>
-            <div className={lightCard + ' p-6 h-full flex flex-col'}>
+            <div className={lightCard + ' p-5 h-full flex flex-col'}>
               <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Any home, any market</p>
-              <h3 className="mt2-serif text-2xl mt-2">Write an offer on the house you actually want</h3>
-              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">Not only what a portal happens to show. The owner receives a written offer from a licensed broker, and nothing is agreed until they sign.</p>
-              <div className="mt-auto pt-5 grid grid-cols-3 gap-2 text-center">
-                {[['Listed', 'Active listings'], ['Coming Soon', 'Before the MLS'], ['Not for sale', 'Any address']].map(([a, b]) => (
-                  <div key={a} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-3">
-                    <div className="text-[13px] font-medium">{a}</div><div className="text-[11px] text-[#6b7285] mt-0.5">{b}</div>
+              <h3 className="mt2-serif text-[1.55rem] leading-snug mt-2">Write an offer on the house you actually want</h3>
+              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">The owner receives a written offer from a licensed broker. Nothing is agreed until they sign.</p>
+              <div className="mt-4 space-y-2">
+                {[['Listed', 'Every active listing'], ['Coming Soon', 'Before it reaches the MLS'], ['Not for sale', 'Any address, any owner']].map(([a, b]) => (
+                  <div key={a} className="flex items-center justify-between rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-3.5 py-2.5">
+                    <span className="text-[13.5px] font-medium">{a}</span><span className="text-[11.5px] text-[#6b7285]">{b}</span>
                   </div>))}
               </div>
-            </div>
-          </Reveal>
-          <Reveal delay={0.08}>
-            <div className={lightCard + ' p-6'}>
-              <div className="flex items-baseline justify-between gap-3 flex-wrap">
-                <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Recent work · Campbell</p>
-                <p className="text-[11px] text-[#6b7285]">You get this on every home you look at</p>
-              </div>
-              <div className="grid sm:grid-cols-2 gap-3 mt-4">
-                {REPORTS.map(r => (
-                  <a key={r.address} href={r.href} target="_blank" rel="noopener noreferrer"
-                     className="group rounded-2xl border border-[#d9e2f1] bg-[#F9FBFE] p-4 hover:border-[#4f82b9] transition-colors">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="mt2-serif text-lg leading-tight">{r.address}</div>
-                      <div className="shrink-0 text-center">
-                        <div className="text-xl font-semibold" style={{ color: PERI }}>{r.score}</div>
-                        <div className="text-[9px] uppercase tracking-[0.15em] text-[#6b7285]">condition</div>
-                      </div>
-                    </div>
-                    <p className="text-[12px] text-[#4a5163] leading-relaxed mt-2">{r.line}</p>
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {(r.comps ? [r.comps + ' recorded sales'] : []).concat([r.findings + ' findings', r.questions + ' questions to ask', r.flags + ' cost items']).map(t =>
-                        <span key={t} className="rounded-full bg-white border border-[#d9e2f1] px-2.5 py-0.5 text-[10.5px] text-[#4a5163]">{t}</span>)}
-                    </div>
-                    <div className="text-[11px] mt-3 inline-flex items-center gap-1" style={{ color: PERI }}>
-                      {r.comps ? 'Open the Comp Report' : 'Open the home record'} <ArrowUpRight size={12} />
-                    </div>
-                  </a>
-                ))}
+              <div className="mt-auto pt-5 rounded-2xl p-4 text-[12.5px] leading-relaxed text-white" style={{ background: PERI }}>
+                Every home you tour comes with a Comp Report and a disclosure review. Here are two, word for word.
               </div>
             </div>
           </Reveal>
-        </div>
-        <Reveal delay={0.12}>
-          <div className="mt-5">
-            <div className="flex items-baseline justify-between gap-3 flex-wrap">
-              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Real disclosure reviews · download them</p>
-              <p className="text-[11px] text-[#6b7285]">Hundreds of pages of disclosures, read for you in four</p>
-            </div>
-            <div className="grid lg:grid-cols-2 gap-4 mt-3">
-              {DISCLOSURE_SAMPLES.map(d => (
-                <div key={d.title} className={lightCard + ' p-5 grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr] gap-5 items-start'}>
-                  <a href={d.pdf} target="_blank" rel="noopener noreferrer"
-                     className="block rounded-lg overflow-hidden border border-[#d9e2f1] shadow-[0_8px_24px_rgba(26,31,46,.10)] hover:-translate-y-0.5 transition-transform">
-                    <img src={d.preview} alt={'Page one of the ' + d.title + ' disclosure review'} loading="lazy" className="w-full block" />
-                  </a>
-                  <div>
-                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">{d.eyebrow}</p>
-                    <h3 className="mt2-serif text-xl leading-snug mt-1">{d.title}</h3>
-                    <p className="text-[12.5px] text-[#4a5163] mt-2 leading-relaxed">{d.line}</p>
-                    <div className="flex flex-wrap gap-1.5 mt-3">
-                      {d.stats.map(([v, k]) => (
-                        <span key={k} className="rounded-full bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-1 text-[11px] text-[#4a5163]">
-                          <b style={{ color: PERI }}>{v}</b> {k}
-                        </span>))}
-                    </div>
-                    <div className="flex flex-wrap items-center gap-4 mt-4">
-                      <a href={d.pdf} target="_blank" rel="noopener noreferrer" download
-                         className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-white" style={{ background: PERI }}>
-                        Download the PDF <ArrowRight size={14} />
-                      </a>
-                      {d.cma && (
-                        <a href={d.cma} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium" style={{ color: PERI }}>
-                          Open the Comp Report <ArrowUpRight size={14} />
-                        </a>)}
-                    </div>
+          {DISCLOSURE_SAMPLES.map((d, i) => (
+            <Reveal key={d.title} delay={0.06 * (i + 1)}>
+              <div className={lightCard + ' h-full flex flex-col overflow-hidden'}>
+                <a href={d.pdf} target="_blank" rel="noopener noreferrer" className="block h-[150px] overflow-hidden border-b border-[#d9e2f1] bg-[#F4F7FC]">
+                  <img src={d.preview} alt={'Page one of the ' + d.title + ' disclosure review'} loading="lazy" className="w-full object-cover object-top" />
+                </a>
+                <div className="p-5 flex-1 flex flex-col">
+                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">{d.eyebrow}</p>
+                  <h3 className="mt2-serif text-xl leading-snug mt-1">{d.title}</h3>
+                  <p className="text-[12.5px] text-[#4a5163] mt-2 leading-relaxed">{d.line}</p>
+                  <div className="grid grid-cols-2 gap-1.5 mt-3">
+                    {d.stats.map(([v, k]) => (
+                      <div key={k} className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-1.5">
+                        <div className="text-[14px] font-semibold" style={{ color: PERI }}>{v}</div>
+                        <div className="text-[10.5px] text-[#6b7285] leading-tight">{k}</div>
+                      </div>))}
+                  </div>
+                  <div className="mt-auto pt-4 flex flex-wrap items-center gap-3">
+                    <a href={d.pdf} target="_blank" rel="noopener noreferrer" download
+                       className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-medium text-white" style={{ background: PERI }}>
+                      Download the PDF <ArrowRight size={14} />
+                    </a>
+                    {d.cma && (
+                      <a href={d.cma} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium" style={{ color: PERI }}>
+                        Comp Report <ArrowUpRight size={13} />
+                      </a>)}
                   </div>
                 </div>
-              ))}
-            </div>
+              </div>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={0.2}>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.22em] mr-1" style={{ color: PERI }}>More reviews · Campbell</span>
+            {REPORTS.map(r => (
+              <a key={r.address} href={r.href} target="_blank" rel="noopener noreferrer"
+                 className="inline-flex items-center gap-2 rounded-full bg-white border border-[#d9e2f1] px-3 py-1.5 text-[12px] text-[#1a1f2e] hover:border-[#4f82b9] transition-colors">
+                {r.address} <b style={{ color: PERI }}>{r.score}</b> <ArrowUpRight size={12} className="text-[#6b7285]" />
+              </a>
+            ))}
           </div>
         </Reveal>
       </div>
@@ -676,36 +654,37 @@ function MakeMeMoveTool() {
   const [addr, setAddr] = useState('')
   const [num, setNum] = useState(2400000)
   const [mkt, setMkt] = useState(0)
+  const field = 'mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]'
   return (
-    <div className={lightCard + ' p-6 h-full flex flex-col'}>
+    <div className={lightCard + ' p-5 md:p-6 h-full flex flex-col'}>
       <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For homeowners · try it</p>
-      <h3 className="mt2-serif text-2xl mt-2">Set your Make Me Move price</h3>
-      <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">The price that would actually make you move. No sign, no showings, no public record: only account holders see it, and a buyer who meets it makes a written offer.</p>
-      <div className="grid sm:grid-cols-2 gap-3 mt-5">
+      <h3 className="mt2-serif text-2xl mt-1.5">Set your Make Me Move price</h3>
+      <p className="text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">No sign, no showings, no public record. Only account holders see it; a buyer who meets it writes an offer.</p>
+      <div className="grid grid-cols-2 gap-3 mt-4">
         <label className="text-[11px] text-[#6b7285]">Your street address
-          <input value={addr} onChange={e => setAddr(e.target.value)} placeholder="e.g. 1187 Linden Way"
-            className="mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]" /></label>
+          <input value={addr} onChange={e => setAddr(e.target.value)} placeholder="e.g. 1187 Linden Way" className={field} /></label>
         <label className="text-[11px] text-[#6b7285]">Market
-          <select value={mkt} onChange={e => setMkt(Number(e.target.value))}
-            className="mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]">
+          <select value={mkt} onChange={e => setMkt(Number(e.target.value))} className={field}>
             {MMM_MARKETS.map(([n], i) => <option key={n} value={i}>{n}</option>)}
           </select></label>
       </div>
-      <label className="text-[11px] text-[#6b7285] mt-4">Your number: <b className="text-[#1a1f2e] text-[15px]">{money(num)}</b>
+      <label className="text-[11px] text-[#6b7285] mt-4 block">Your number
         <input type="range" min={500000} max={8000000} step={25000} value={num} onChange={e => setNum(Number(e.target.value))}
           className="w-full mt-2" style={{ accentColor: PERI }} /></label>
-      <div className="mt-4 rounded-2xl border border-[#d9e2f1] bg-[#F4F7FC] p-4">
-        <div className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">Your home, as buyers would see it</div>
-        <div className="mt2-serif text-xl mt-1">{addr.trim() || 'Your address'}</div>
-        <div className="flex flex-wrap gap-5 mt-2 text-[13px]">
-          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Make Me Move</div><b>{money(num)}</b></div>
-          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Seen by</div>Account holders</div>
-          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Public listing</div>None</div>
+      <div className="mt-3 rounded-2xl p-4 text-white flex items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg,#1a1f2e,#2c3a55)' }}>
+        <div className="min-w-0">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-white/55">As buyers would see it</div>
+          <div className="mt2-serif text-lg truncate">{addr.trim() || 'Your address'}</div>
+          <div className="text-[11px] text-white/60 mt-0.5">Account holders only · no public listing</div>
+        </div>
+        <div className="text-right shrink-0">
+          <div className="text-[10px] uppercase tracking-[0.2em] text-white/55">Make Me Move</div>
+          <div className="text-2xl font-semibold" style={{ color: '#9fbde4' }}>{money(num)}</div>
         </div>
       </div>
       <a href={MMM_MARKETS[mkt][1]} target="_blank" rel="noopener noreferrer"
-         className="mt-5 self-start inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white" style={{ background: PERI }}>
-        Set it for real <ArrowUpRight size={16} />
+         className="mt-auto pt-4 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
+        Set it for real in {MMM_MARKETS[mkt][0]} <ArrowUpRight size={15} />
       </a>
     </div>
   )
@@ -719,52 +698,60 @@ function ExchangeTool() {
   const incomeNow = rent * 12 * 0.65
   const incomeAt7 = value * 0.94 * 0.07   // after roughly 6% in selling costs
   return (
-    <div className={lightCard + ' p-6 h-full flex flex-col'}>
+    <div className={lightCard + ' p-5 md:p-6 h-full flex flex-col'}>
       <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For rental owners · try it</p>
-      <h3 className="mt2-serif text-2xl mt-2">Is your rental pulling its weight?</h3>
-      <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">Enter what the house is worth and what it rents for. On the Investor Exchange it goes to local investors with the tenant in place, and the equity can move through a 1031 exchange into property that pays more and asks less of you.</p>
-      <label className="text-[11px] text-[#6b7285] mt-5">What it is worth today: <b className="text-[#1a1f2e] text-[15px]">{money(value)}</b>
-        <input type="range" min={500000} max={5000000} step={25000} value={value} onChange={e => setValue(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
-      <label className="text-[11px] text-[#6b7285] mt-3">Monthly rent: <b className="text-[#1a1f2e] text-[15px]">{money(rent)}</b>
-        <input type="range" min={1500} max={15000} step={100} value={rent} onChange={e => setRent(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
-      <div className="grid grid-cols-3 gap-2 mt-4 text-center">
-        {[['Gross yield', gross.toFixed(2) + '%'], ['After costs', net.toFixed(2) + '%'], ['Net a year', money(incomeNow)]].map(([k, v]) => (
-          <div key={k} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-3">
-            <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">{k}</div><div className="text-[15px] font-semibold mt-1">{v}</div></div>))}
+      <h3 className="mt2-serif text-2xl mt-1.5">Is your rental pulling its weight?</h3>
+      <p className="text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Offered to local investors with the tenant in place, the equity can move through a 1031 exchange into property that pays more.</p>
+      <div className="grid grid-cols-2 gap-4 mt-4">
+        <label className="text-[11px] text-[#6b7285]">Worth today <b className="text-[#1a1f2e] text-[14px]">{money(value)}</b>
+          <input type="range" min={500000} max={5000000} step={25000} value={value} onChange={e => setValue(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
+        <label className="text-[11px] text-[#6b7285]">Monthly rent <b className="text-[#1a1f2e] text-[14px]">{money(rent)}</b>
+          <input type="range" min={1500} max={15000} step={100} value={rent} onChange={e => setRent(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
       </div>
-      <div className="mt-3 rounded-2xl border px-4 py-3 text-[12.5px] leading-relaxed" style={{ borderColor: PERI, background: '#EAF0FA' }}>
-        The same equity at a <b>7% cap rate</b>, the rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought, would pay about <b>{money(incomeAt7)}</b> a year after roughly 6% in selling costs, with the tenant covering taxes, insurance and repairs.
+      <div className="mt-3 rounded-2xl overflow-hidden border border-[#d9e2f1]">
+        <div className="grid grid-cols-2">
+          <div className="p-3.5 bg-[#F4F7FC]">
+            <div className="text-[10px] uppercase tracking-[0.18em] text-[#6b7285]">As a rental</div>
+            <div className="text-xl font-semibold mt-0.5">{money(incomeNow)}<span className="text-[11px] font-normal text-[#6b7285]"> a year</span></div>
+            <div className="text-[11px] text-[#6b7285] mt-0.5">{gross.toFixed(2)}% gross · {net.toFixed(2)}% after costs</div>
+          </div>
+          <div className="p-3.5 text-white" style={{ background: PERI }}>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/70">Exchanged at a 7% cap</div>
+            <div className="text-xl font-semibold mt-0.5">{money(incomeAt7)}<span className="text-[11px] font-normal text-white/70"> a year</span></div>
+            <div className="text-[11px] text-white/75 mt-0.5">Tenant pays taxes, insurance, repairs</div>
+          </div>
+        </div>
       </div>
-      <p className="text-[10.5px] text-[#6b7285] mt-2">Illustration only. Running costs assumed at 35% of rent. Taxes, debt and the 1031 rules change the picture: talk to your CPA before you act.</p>
+      <p className="text-[10.5px] text-[#6b7285] mt-2 leading-relaxed">7% is the cap rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought. Illustration only: running costs at 35% of rent, roughly 6% selling costs; taxes, debt and 1031 rules change it. Talk to your CPA.</p>
       <a href="https://campbellrealestatemarket.com/investor-exchange/" target="_blank" rel="noopener noreferrer"
-         className="mt-auto pt-4 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
-        See the Investor Exchange <ArrowUpRight size={16} />
+         className="mt-auto pt-3 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
+        See the Investor Exchange <ArrowUpRight size={15} />
       </a>
     </div>
   )
 }
 
 function SellerFold() {
+  /* Rebuilt to one screen (Tim, 28 Sep 2026): shorter copy, the two tools side by side with
+     their result in a single band, and the market links as one line. */
   return (
-    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20 border-t border-[#d9e2f1]">
+    <div className="min-h-[100svh] flex flex-col justify-center py-14 md:py-16 border-t border-[#d9e2f1]">
       <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
         <FoldHead eyebrow="If you're selling" lead="Test your price" accent="without moving out."
-          sub="Most owners find out what their home is worth by listing it. With Tim you can name your number privately and let buyers come to it, or offer a rental to investors without disturbing the tenant." />
-        <div className="grid lg:grid-cols-2 gap-5 mt-10">
+          sub="Name your number privately and let buyers come to it, or offer a rental to investors without disturbing the tenant." />
+        <div className="grid lg:grid-cols-2 gap-4 mt-8">
           <Reveal><MakeMeMoveTool /></Reveal>
           <Reveal delay={0.08}><ExchangeTool /></Reveal>
         </div>
         <Reveal delay={0.1}>
-          <div className="mt-10">
-            <p className="text-[10px] uppercase tracking-[0.25em] text-[#6b7285]">Live now, with more cities coming</p>
-            <div className="flex flex-wrap gap-2 mt-4">
-              {MARKETPLACES.map(m => (
-                <a key={m.name} href={m.url} target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-1.5 rounded-full border border-[#d9e2f1] bg-white px-3.5 py-1.5 text-[12px] text-[#1a1f2e] hover:border-[#4f82b9] transition-colors">
-                  {m.name} <ArrowUpRight size={13} className="text-[#6b7285]" />
-                </a>
-              ))}
-            </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-[10px] uppercase tracking-[0.22em] mr-1" style={{ color: PERI }}>Live now</span>
+            {MARKETPLACES.map(m => (
+              <a key={m.name} href={m.url} target="_blank" rel="noopener noreferrer"
+                 className="inline-flex items-center gap-1.5 rounded-full border border-[#d9e2f1] bg-white px-3 py-1.5 text-[12px] text-[#1a1f2e] hover:border-[#4f82b9] transition-colors">
+                {m.name} <ArrowUpRight size={12} className="text-[#6b7285]" />
+              </a>
+            ))}
           </div>
         </Reveal>
       </div>
