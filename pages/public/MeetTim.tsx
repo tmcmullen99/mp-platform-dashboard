@@ -1158,7 +1158,7 @@ export default function MeetTim() {
             eyebrow="Founding Broker"
             lead="Building 1 Top Agent"
             accent="in every market in California"
-            sub="Tim is the founding broker of The Market, the brokerage built on the platform behind every marketplace below. His clients are not limited to what happens to be listed: they reach every home in every market it runs."
+            sub="Tim is the founding broker of The Market. His clients are not limited to what is listed: every home in every market it runs is open to a written offer, and every owner can test a price without a sign, a showing or a public record. One free account, with Tim as your broker, opens all of it."
           />
 
           <div className="grid lg:grid-cols-[1.35fr_1fr] gap-8 lg:gap-12 items-center mt-10 lg:mt-12">
@@ -1166,16 +1166,7 @@ export default function MeetTim() {
               <MarketFilm />
             </Reveal>
             <Reveal delay={0.1}>
-              <p className="text-sm md:text-base text-white/50 leading-relaxed">
-                Most buyers see the homes a portal shows them, and most owners find out what their
-                home is worth by moving out and listing it. The Market turns both around: every
-                home is open to a written offer, listed or not, and every owner can test a price
-                without a sign, a showing or a public record.
-              </p>
-              <p className="mt2-serif text-lg md:text-2xl text-white mt-5 md:mt-6">
-                One free account, with Tim as your broker, opens all of it.
-              </p>
-              <div className="flex flex-wrap gap-3 mt-8">
+              <div className="flex flex-wrap gap-3">
                 <a href="https://themarketbrokerage.com" target="_blank" rel="noopener noreferrer"
                    className="inline-flex items-center gap-2 rounded-full bg-white text-black px-5 py-2.5 text-sm font-medium hover:bg-white/90 transition-colors">
                   Visit The Market <ArrowUpRight size={16} />
