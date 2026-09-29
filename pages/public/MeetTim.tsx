@@ -19,8 +19,9 @@
 // files are ever re-uploaded with corrected contents, swap these paths back.
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Check, ChevronDown, MapPin, Search } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, MapPin, Search, X } from 'lucide-react'
 import { cityMarket } from '@/lib/cityMarket'
+import { condoMarket } from '@/lib/condoMarket'
 
 /* --------------------------------- data ---------------------------------- */
 
@@ -718,7 +719,11 @@ const MMM_MARKETS: MmmMarket[] = [
     mmm: (a, p) => { const q = new URLSearchParams(); if (a) q.set('address', a); if (p) q.set('price', String(p)); return `https://eichlermarket.com/make-me-move/?${q.toString()}` }, prefill: true },
 ]
 const money = (n: number) => '$' + Math.round(n).toLocaleString('en-US')
-type Hit = { address: string; city: string; zip: string | null; slug: string | null; beds: number | null; baths: number | null; sqft: number | null; market_id: number }
+type Hit = {
+  kind: 'home' | 'building'; address: string; city: string; zip?: string | null; slug: string | null
+  beds?: number | null; baths?: number | null; sqft?: number | null; market_id: number
+  name?: string | null; units?: number | null; neighborhood?: string | null
+}
 
 function MarketMenu({ value, onChange }: { value: number; onChange: (id: number) => void }) {
   const [open, setOpen] = useState(false)
@@ -727,34 +732,24 @@ function MarketMenu({ value, onChange }: { value: number; onChange: (id: number)
   useEffect(() => {
     if (!open) return
     const off = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
-    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', off); document.addEventListener('keydown', esc)
-    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', esc) }
+    document.addEventListener('mousedown', off); return () => document.removeEventListener('mousedown', off)
   }, [open])
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="relative inline-block">
       <button type="button" onClick={() => setOpen(o => !o)} aria-haspopup="listbox" aria-expanded={open}
-        className="mt-1 w-full flex items-center justify-between gap-2 rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-left hover:border-[#4f82b9] focus:border-[#4f82b9] outline-none">
-        <span className="min-w-0">
-          <span className="block text-[14px] text-[#1a1f2e] truncate">{cur.name}</span>
-          <span className="block text-[10.5px] text-[#6b7285] truncate">{cur.region}</span>
-        </span>
-        <ChevronDown size={16} className={'text-[#6b7285] shrink-0 transition-transform ' + (open ? 'rotate-180' : '')} />
+        className="inline-flex items-center gap-1.5 rounded-full border border-[#d9e2f1] bg-white px-3 py-1.5 text-[12.5px] text-[#1a1f2e] hover:border-[#4f82b9]">
+        <MapPin size={13} style={{ color: PERI }} /> {cur.name} <ChevronDown size={13} className={'text-[#6b7285] transition-transform ' + (open ? 'rotate-180' : '')} />
       </button>
       {open && (
-        <div role="listbox" className="absolute z-30 left-0 right-0 mt-1.5 rounded-2xl bg-white border border-[#d9e2f1] shadow-[0_18px_48px_rgba(26,31,46,.18)] p-1.5 max-h-[320px] overflow-auto">
+        <div role="listbox" className="absolute z-30 left-0 mt-1.5 w-[260px] rounded-2xl bg-white border border-[#d9e2f1] shadow-[0_18px_48px_rgba(26,31,46,.18)] p-1.5 max-h-[300px] overflow-auto">
           {(['City markets', 'Condo & type markets'] as const).map(g => (
             <div key={g}>
               <div className="px-2.5 pt-2 pb-1 text-[9.5px] uppercase tracking-[0.2em]" style={{ color: PERI }}>{g}</div>
               {MMM_MARKETS.filter(m => m.group === g).map(m => (
-                <button key={m.id} type="button" role="option" aria-selected={m.id === value}
-                  onClick={() => { onChange(m.id); setOpen(false) }}
-                  className={'w-full flex items-center justify-between gap-2 rounded-xl px-2.5 py-2 text-left hover:bg-[#EEF2F9] ' + (m.id === value ? 'bg-[#EEF2F9]' : '')}>
-                  <span className="min-w-0">
-                    <span className="block text-[13.5px] text-[#1a1f2e]">{m.name}</span>
-                    <span className="block text-[10.5px] text-[#6b7285]">{m.region}</span>
-                  </span>
-                  {m.id === value && <Check size={15} style={{ color: PERI }} className="shrink-0" />}
+                <button key={m.id} type="button" role="option" aria-selected={m.id === value} onClick={() => { onChange(m.id); setOpen(false) }}
+                  className={'w-full flex items-center justify-between gap-2 rounded-xl px-2.5 py-1.5 text-left hover:bg-[#EEF2F9] ' + (m.id === value ? 'bg-[#EEF2F9]' : '')}>
+                  <span><span className="block text-[13px] text-[#1a1f2e]">{m.name}</span><span className="block text-[10.5px] text-[#6b7285]">{m.region}</span></span>
+                  {m.id === value && <Check size={14} style={{ color: PERI }} />}
                 </button>
               ))}
             </div>
@@ -765,105 +760,136 @@ function MarketMenu({ value, onChange }: { value: number; onChange: (id: number)
   )
 }
 
+/* Redesigned (Tim, 28 Sep 2026): one full-width search that finds homes in the city markets
+   and buildings in the condo markets ("401 Harrison St" or "The Harrison"); a picked building
+   asks for the unit; the market is detected and shown as a small chip you can change. */
 function MakeMeMoveTool() {
-  const [addr, setAddr] = useState('')
+  const [q, setQ] = useState('')
   const [num, setNum] = useState(2400000)
   const [mkt, setMkt] = useState(1)
   const [hits, setHits] = useState<Hit[]>([])
   const [picked, setPicked] = useState<Hit | null>(null)
+  const [unit, setUnit] = useState('')
   const [looking, setLooking] = useState(false)
-  const [showHits, setShowHits] = useState(false)
+  const [open, setOpen] = useState(false)
   const box = useRef<HTMLDivElement>(null)
   const market = MMM_MARKETS.find(m => m.id === mkt) || MMM_MARKETS[0]
 
-  /* Look the address up across every market as they type. */
   useEffect(() => {
-    const q = addr.trim()
-    if (picked && picked.address === q) return
-    setPicked(null)
-    if (q.length < 4) { setHits([]); return }
+    const t0 = q.trim()
+    if (picked) return
+    if (t0.length < 3) { setHits([]); setOpen(false); return }
     let live = true
-    setLooking(true)
+    setLooking(true); setOpen(true)
     const t = setTimeout(async () => {
-      const { data } = await cityMarket.rpc('mmm_address_lookup', { p_q: q })
+      const [b, h] = await Promise.all([
+        condoMarket.rpc('mmm_building_lookup', { p_q: t0 }).then(r => (Array.isArray(r.data) ? r.data : []) as Hit[], () => [] as Hit[]),
+        t0.length >= 4 ? cityMarket.rpc('mmm_address_lookup', { p_q: t0 }).then(r => (Array.isArray(r.data) ? r.data : []) as Hit[], () => [] as Hit[]) : Promise.resolve([] as Hit[]),
+      ])
       if (!live) return
-      setHits(Array.isArray(data) ? (data as Hit[]) : [])
-      setShowHits(true); setLooking(false)
-    }, 250)
+      /* Buildings first; then homes, leaving out single units of a building already shown. */
+      const bAddr = new Set(b.map(x => x.address.toLowerCase()))
+      const homes = h.filter(x => !bAddr.has(x.address.toLowerCase().replace(/\s*(#|unit)\s*\S+$/i, '')))
+      setHits([...b.map(x => ({ ...x, kind: 'building' as const })), ...homes.map(x => ({ ...x, kind: 'home' as const }))].slice(0, 8))
+      setLooking(false)
+    }, 220)
     return () => { live = false; clearTimeout(t) }
-  }, [addr])
+  }, [q, picked])
   useEffect(() => {
-    const off = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setShowHits(false) }
+    const off = (e: MouseEvent) => { if (box.current && !box.current.contains(e.target as Node)) setOpen(false) }
     document.addEventListener('mousedown', off); return () => document.removeEventListener('mousedown', off)
   }, [])
 
-  const pick = (h: Hit) => { setPicked(h); setAddr(h.address); setShowHits(false); if (MMM_MARKETS.some(m => m.id === h.market_id)) setMkt(h.market_id) }
+  const pick = (h: Hit) => {
+    setPicked(h); setOpen(false)
+    const m = q.match(/(?:#|unit|apt)\s*([a-z0-9-]+)\s*$/i); setUnit(h.kind === 'building' && m ? m[1].toUpperCase() : '')
+    if (MMM_MARKETS.some(x => x.id === h.market_id)) setMkt(h.market_id)
+  }
+  const clear = () => { setPicked(null); setQ(''); setUnit(''); setHits([]) }
   const nameOf = (id: number) => (MMM_MARKETS.find(m => m.id === id) || { name: '' }).name
-  const href = market.mmm(addr.trim(), num, picked ? { slug: picked.slug, beds: picked.beds, baths: picked.baths, sqft: picked.sqft } : undefined)
-  const field = 'mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]'
+  const fullAddress = picked ? (picked.kind === 'building' && unit.trim() ? `${picked.address} #${unit.trim().replace(/^#/, '')}` : picked.address) : q.trim()
+  const href = market.mmm(fullAddress, num, picked && picked.kind === 'home' ? { slug: picked.slug, beds: picked.beds, baths: picked.baths, sqft: picked.sqft } : undefined)
 
   return (
     <div className={lightCard + ' p-5 md:p-6 h-full flex flex-col'}>
       <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For homeowners · try it</p>
       <h3 className="mt2-serif text-2xl mt-1.5">Set your Make Me Move price</h3>
-      <p className="hidden sm:block text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Type your address: if it is in one of our marketplaces we find it, and your address and number go straight into its Make Me Move form.</p>
-      <div className="grid grid-cols-[1.25fr_1fr] gap-3 mt-4">
-        <div ref={box} className="relative">
-          <label className="text-[11px] text-[#6b7285]">Your street address</label>
+
+      {/* 1 · the home */}
+      <div ref={box} className="relative mt-4">
+        {!picked ? (
           <div className="relative">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 mt-0.5 text-[#6b7285]" />
-            <input value={addr} onChange={e => setAddr(e.target.value)} onFocus={() => hits.length && setShowHits(true)}
-              placeholder="Start typing your address" className={field + ' pl-8'} autoComplete="off" />
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#6b7285]" />
+            <input value={q} onChange={e => setQ(e.target.value)} onFocus={() => hits.length && setOpen(true)}
+              placeholder="Your address, or your building's name" autoComplete="off"
+              className="w-full rounded-2xl border border-[#d9e2f1] bg-[#F9FBFE] pl-10 pr-3 py-3 text-[15px] text-[#1a1f2e] outline-none focus:border-[#4f82b9] focus:bg-white" />
           </div>
-          {showHits && addr.trim().length >= 4 && !picked && (
-            <div className="absolute z-30 left-0 right-0 mt-1.5 rounded-2xl bg-white border border-[#d9e2f1] shadow-[0_18px_48px_rgba(26,31,46,.18)] p-1.5 max-h-[280px] overflow-auto">
-              {hits.length ? hits.map(h => (
-                <button key={h.market_id + ':' + h.address} type="button" onClick={() => pick(h)}
-                  className="w-full flex items-start gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-[#EEF2F9]">
-                  <MapPin size={15} className="mt-0.5 shrink-0" style={{ color: PERI }} />
-                  <span className="min-w-0">
-                    <span className="block text-[13.5px] text-[#1a1f2e]">{h.address}</span>
-                    <span className="block text-[10.5px] text-[#6b7285]">{[h.city, h.zip].filter(Boolean).join(' ')} · {nameOf(h.market_id)}</span>
-                  </span>
-                </button>
-              )) : (
-                <div className="px-3 py-2.5 text-[12px] text-[#6b7285]">{looking ? 'Looking…' : 'Not in one of our marketplaces yet. Pick the closest market and Tim sets it up by hand.'}</div>
-              )}
-            </div>
-          )}
-        </div>
-        <div>
-          <label className="text-[11px] text-[#6b7285]">Market</label>
-          <MarketMenu value={mkt} onChange={id => setMkt(id)} />
-        </div>
+        ) : (
+          <div className="flex items-center gap-3 rounded-2xl border px-3.5 py-3" style={{ borderColor: PERI, background: '#F4F7FC' }}>
+            <span className="w-9 h-9 rounded-xl flex items-center justify-center text-white shrink-0" style={{ background: PERI }}>
+              {picked.kind === 'building' ? <Building2 size={17} /> : <Home size={17} />}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[14.5px] font-medium text-[#1a1f2e] truncate">{picked.kind === 'building' && picked.name && !/^\d/.test(picked.name) ? picked.name + ' · ' : ''}{picked.address}</span>
+              <span className="block text-[11.5px] text-[#6b7285] truncate">
+                {[picked.kind === 'building' ? (picked.neighborhood || picked.city) : [picked.city, picked.zip].filter(Boolean).join(' '),
+                  picked.kind === 'building' && picked.units ? picked.units + ' units' : null,
+                  picked.beds ? picked.beds + ' bd' : null, picked.baths ? picked.baths + ' ba' : null,
+                  picked.sqft ? picked.sqft.toLocaleString('en-US') + ' sf' : null].filter(Boolean).join(' · ')}
+              </span>
+            </span>
+            <button type="button" onClick={clear} aria-label="Change address" className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-white text-[#6b7285]"><X size={16} /></button>
+          </div>
+        )}
+        {open && !picked && (
+          <div className="absolute z-30 left-0 right-0 mt-1.5 rounded-2xl bg-white border border-[#d9e2f1] shadow-[0_18px_48px_rgba(26,31,46,.18)] p-1.5 max-h-[300px] overflow-auto">
+            {hits.map(h => (
+              <button key={h.kind + ':' + h.market_id + ':' + (h.slug || h.address)} type="button" onClick={() => pick(h)}
+                className="w-full flex items-center gap-3 rounded-xl px-2.5 py-2 text-left hover:bg-[#EEF2F9]">
+                <span className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-[#EEF2F9]" style={{ color: PERI }}>
+                  {h.kind === 'building' ? <Building2 size={15} /> : <Home size={15} />}
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[13.5px] text-[#1a1f2e] truncate">{h.kind === 'building' && h.name && !/^\d/.test(h.name) ? <><b className="font-medium">{h.name}</b> · </> : null}{h.address}</span>
+                  <span className="block text-[11px] text-[#6b7285] truncate">{h.kind === 'building' ? [h.neighborhood || h.city, h.units ? h.units + ' units' : null, nameOf(h.market_id)].filter(Boolean).join(' · ') : [[h.city, h.zip].filter(Boolean).join(' '), nameOf(h.market_id)].join(' · ')}</span>
+                </span>
+              </button>
+            ))}
+            {!hits.length && (
+              <div className="px-3 py-3 text-[12.5px] text-[#6b7285]">{looking ? 'Searching every marketplace…' : 'No match yet. Keep typing, or choose a market below and Tim sets it up for you.'}</div>
+            )}
+          </div>
+        )}
       </div>
-      {picked && (
-        <div className="mt-2 inline-flex items-center gap-1.5 self-start rounded-full bg-[#EAF0FA] px-3 py-1 text-[11.5px]" style={{ color: PERI }}>
-          <Check size={13} /> Found in {nameOf(picked.market_id)}
-          {picked.beds ? ` · ${picked.beds} bd` : ''}{picked.baths ? ` · ${picked.baths} ba` : ''}{picked.sqft ? ` · ${picked.sqft.toLocaleString('en-US')} sf` : ''}
-        </div>
+
+      {/* building → unit */}
+      {picked && picked.kind === 'building' && (
+        <label className="mt-3 flex items-center gap-3">
+          <span className="text-[12px] text-[#6b7285] shrink-0">Your unit</span>
+          <input value={unit} onChange={e => setUnit(e.target.value)} placeholder="e.g. 8G"
+            className="w-28 rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] outline-none focus:border-[#4f82b9]" />
+        </label>
       )}
-      <label className="text-[11px] text-[#6b7285] mt-4 block">Your number
+      <div className="mt-3 flex items-center gap-2 text-[11.5px] text-[#6b7285]">
+        <span>{picked ? 'Found in' : 'Market'}</span> <MarketMenu value={mkt} onChange={setMkt} />
+      </div>
+
+      {/* 2 · the number */}
+      <div className="mt-5">
+        <div className="flex items-baseline justify-between">
+          <span className="text-[11px] uppercase tracking-[0.18em] text-[#6b7285]">Your number</span>
+          <span className="text-2xl font-semibold" style={{ color: PERI }}>{money(num)}</span>
+        </div>
         <input type="range" min={500000} max={8000000} step={25000} value={num} onChange={e => setNum(Number(e.target.value))}
-          className="w-full mt-2" style={{ accentColor: PERI }} /></label>
-      <div className="mt-3 rounded-2xl p-4 text-white flex items-center justify-between gap-4" style={{ background: 'linear-gradient(135deg,#1a1f2e,#2c3a55)' }}>
-        <div className="min-w-0">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/55">As buyers would see it</div>
-          <div className="mt2-serif text-lg truncate">{addr.trim() || 'Your address'}</div>
-          <div className="text-[11px] text-white/60 mt-0.5">{market.name} · account holders only</div>
-        </div>
-        <div className="text-right shrink-0">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/55">Make Me Move</div>
-          <div className="text-2xl font-semibold" style={{ color: '#9fbde4' }}>{money(num)}</div>
-        </div>
+          className="w-full mt-2" style={{ accentColor: PERI }} aria-label="Your Make Me Move price" />
+        <div className="flex justify-between text-[10.5px] text-[#6b7285]"><span>$500K</span><span>$8M</span></div>
       </div>
-      <div className="mt-auto pt-4 flex flex-wrap items-center gap-3">
-        <a href={href} target="_blank" rel="noopener noreferrer"
-           className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-white" style={{ background: PERI }}>
-          Set it for real on {market.name} <ArrowUpRight size={14} />
-        </a>
-        <span className="text-[11px] text-[#6b7285]">{market.prefill ? 'Your address and number go with you.' : 'Opens the selling page; enter your details there.'}</span>
-      </div>
+
+      <a href={href} target="_blank" rel="noopener noreferrer"
+         className="mt-5 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[14px] font-medium text-white w-full sm:w-auto sm:self-start" style={{ background: PERI }}>
+        Set it for real on {market.name} <ArrowUpRight size={15} />
+      </a>
+      <p className="text-[11px] text-[#6b7285] mt-2">{market.prefill ? 'Your address and number go with you. Only account holders see your price.' : 'Opens the selling page; enter your details there.'}</p>
     </div>
   )
 }
