@@ -187,6 +187,71 @@ const COUNTIES = [
   { name: 'Santa Clara', slug: 'santa-clara', court: 'Santa Clara County Superior Court · Probate' },
 ]
 
+/* The Probate explainer film (Tim, 28 Sep 2026): permanent, in the first fold, the
+   same card the expired and rental owner pages carry. Every probate letter's code
+   opens this page, so the film is the first thing the petitioner sees. The file sits
+   on the Campbell site's assets beside the other two films. A branded cover shows
+   until the film can play; a press before it exists says so rather than doing nothing. */
+const PROBATE_FILM = 'https://campbellrealestatemarket.com/assets/probate-explainer'
+const PROBATE_FILM_TITLE = 'How I Help With The Estate Home'
+
+function ProbateFilm() {
+  const [ready, setReady] = useState(false)
+  const [playing, setPlaying] = useState(false)
+  const [note, setNote] = useState('The Market · 1 minute')
+  const [src, setSrc] = useState(() => {
+    const small = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:760px)').matches
+    return PROBATE_FILM + (small ? '-720.mp4' : '-1080.mp4')
+  })
+  return (
+    <div id="how" className="mt-8 max-w-3xl rounded-[14px] overflow-hidden"
+      style={{ background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.14)' }}>
+      <div className="relative" style={{ aspectRatio: '16 / 9', background: '#0e1118' }}>
+        <video
+          id="probate-film"
+          src={src}
+          controls
+          playsInline
+          preload="metadata"
+          className="absolute inset-0 w-full h-full"
+          style={{ objectFit: 'contain', background: '#0e1118' }}
+          onLoadedMetadata={() => setReady(true)}
+          onError={() => { if (src.endsWith('-720.mp4')) setSrc(PROBATE_FILM + '-1080.mp4') }}
+        />
+        {!playing && (
+          <button
+            type="button"
+            aria-label={'Play the video: ' + PROBATE_FILM_TITLE}
+            className="absolute inset-0 flex items-center gap-5 text-left px-[8%]"
+            style={{ background: 'radial-gradient(120% 90% at 20% 30%,#2a3142 0%,#12151d 70%)', cursor: 'pointer' }}
+            onClick={() => {
+              if (!ready) { setNote('The video is being added · back shortly'); return }
+              setPlaying(true)
+              const v = document.getElementById('probate-film') as HTMLVideoElement | null
+              if (v) v.play().catch(() => {})
+            }}
+          >
+            <span className="flex-none rounded-full flex items-center justify-center"
+              style={{ width: 'clamp(56px,9vw,84px)', height: 'clamp(56px,9vw,84px)', background: '#b06f24', boxShadow: '0 10px 30px rgba(0,0,0,.35)' }}>
+              <span style={{ width: 0, height: 0, marginLeft: 5, borderLeft: 'clamp(16px,2.6vw,24px) solid #fff',
+                borderTop: 'clamp(10px,1.6vw,15px) solid transparent', borderBottom: 'clamp(10px,1.6vw,15px) solid transparent' }} />
+            </span>
+            <span className="font-serif text-white" style={{ fontSize: 'clamp(1.3rem,3.4vw,2.2rem)', lineHeight: 1.1 }}>
+              <small className="block font-mono uppercase mb-2" style={{ fontSize: 'clamp(9px,1.3vw,11px)', letterSpacing: '.18em', color: '#d9b37a' }}>{note}</small>
+              {PROBATE_FILM_TITLE}
+            </span>
+          </button>
+        )}
+      </div>
+      <div className="px-4 pt-3 pb-4">
+        <span className="block font-mono uppercase text-[10px] tracking-[0.16em] mb-1" style={{ color: '#d9b37a' }}>How This Works</span>
+        <span className="block text-[14px] text-white/80">1 Minute Video</span>
+        <b className="block font-serif text-white text-[1.25rem] font-semibold">{PROBATE_FILM_TITLE}</b>
+      </div>
+    </div>
+  )
+}
+
 export default function ServiceProbate() {
   const [open, setOpen] = useState<number | null>(0)
 
@@ -212,6 +277,9 @@ export default function ServiceProbate() {
               <br />
               <span style={{ color: ACCENT }}>you did not ask for.</span>
             </h1>
+          </Reveal>
+          <Reveal delay={140}>
+            <ProbateFilm />
           </Reveal>
           <Reveal delay={180}>
             <p className="mt-7 text-[17px] leading-relaxed text-white/80 max-w-2xl">
