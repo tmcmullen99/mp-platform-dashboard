@@ -496,6 +496,21 @@ const REPORTS: { address: string; score: number; findings: number; questions: nu
     href: 'https://campbellrealestatemarket.com/home/204-hardy-ave/' },
 ]
 
+/* Real disclosure reviews, published with Tim's approval (28 Sep 2026). 420 Eureka was a
+   public listing and the review names no client; the seller's name and file numbers were
+   removed. The Bernal Heights review is shown without its address or the buyers' names. */
+const DISCLOSURE_SAMPLES: { eyebrow: string; title: string; line: string; stats: [string, string][]; pdf: string; preview: string; cma?: string }[] = [
+  { eyebrow: 'Eureka Valley · 1940 · buyer review', title: '420 Eureka Street',
+    line: 'A well-kept house with no structural findings. The money is in the original galvanised pipes, ungrounded outlets and the garage fire wall, and the review turns that into a bidding rule: deduct the work from your ceiling, not from your offer.',
+    stats: [['80', 'condition'], ['289', 'pages read'], ['$31.9–91.2k', 'all open items'], ['6', 'questions to ask']],
+    pdf: '/meet-tim/420-Eureka-Street-Disclosure-Review.pdf', preview: '/meet-tim/420-eureka-disclosure-review-p1.jpg',
+    cma: 'https://mp-platform-dashboard.pages.dev/view/cma/420-eureka-street-san-francisco-b82e1f' },
+  { eyebrow: 'Bernal Heights · 1909 · buyer review', title: 'A 1909 house in Bernal Heights',
+    line: 'A Section 1 pest report reaching the load path, and a downstairs bedroom the City has no permit for. The review priced the work, named what nobody had seen, and set out what to confirm before removing contingencies.',
+    stats: [['68', 'condition'], ['241', 'pages read'], ['$29–76k', 'to make it sound'], ['4', 'things to confirm first']],
+    pdf: '/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf', preview: '/meet-tim/sample-disclosure-review-p1.jpg' },
+]
+
 function BuyerFold() {
   return (
     <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
@@ -548,25 +563,41 @@ function BuyerFold() {
           </Reveal>
         </div>
         <Reveal delay={0.12}>
-          <div className={lightCard + ' mt-5 p-5 md:p-6 grid md:grid-cols-[220px_1fr] gap-6 items-center'}>
-            <a href="/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf" target="_blank" rel="noopener noreferrer"
-               className="block rounded-xl overflow-hidden border border-[#d9e2f1] shadow-[0_8px_24px_rgba(26,31,46,.10)] hover:-translate-y-0.5 transition-transform">
-              <img src="/meet-tim/sample-disclosure-review-p1.jpg" alt="Page one of a disclosure review" loading="lazy" className="w-full block" />
-            </a>
-            <div>
-              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>A real disclosure review · names and address removed</p>
-              <h3 className="mt2-serif text-2xl mt-2">241 pages of disclosures, read for you in four</h3>
-              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed max-w-2xl">A 1909 Bernal Heights house. The package ran to 241 pages across 14 documents. The review found the two things that mattered: a Section 1 pest report reaching the load path, and a downstairs bedroom the City has no permit for. It priced the work, named what nobody had seen, and listed the four things to confirm before removing contingencies.</p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {[['68', 'condition score'], ['$29–76k', 'to make it sound'], ['6', 'Section 1 pest findings'], ['4', 'things to confirm first']].map(([v, k]) => (
-                  <div key={k} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-3.5 py-2">
-                    <span className="text-[15px] font-semibold" style={{ color: PERI }}>{v}</span> <span className="text-[11.5px] text-[#4a5163]">{k}</span>
-                  </div>))}
-              </div>
-              <a href="/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf" target="_blank" rel="noopener noreferrer" download
-                 className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white" style={{ background: PERI }}>
-                Download the PDF <ArrowRight size={16} />
-              </a>
+          <div className="mt-5">
+            <div className="flex items-baseline justify-between gap-3 flex-wrap">
+              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Real disclosure reviews · download them</p>
+              <p className="text-[11px] text-[#6b7285]">Hundreds of pages of disclosures, read for you in four</p>
+            </div>
+            <div className="grid lg:grid-cols-2 gap-4 mt-3">
+              {DISCLOSURE_SAMPLES.map(d => (
+                <div key={d.title} className={lightCard + ' p-5 grid grid-cols-[120px_1fr] sm:grid-cols-[150px_1fr] gap-5 items-start'}>
+                  <a href={d.pdf} target="_blank" rel="noopener noreferrer"
+                     className="block rounded-lg overflow-hidden border border-[#d9e2f1] shadow-[0_8px_24px_rgba(26,31,46,.10)] hover:-translate-y-0.5 transition-transform">
+                    <img src={d.preview} alt={'Page one of the ' + d.title + ' disclosure review'} loading="lazy" className="w-full block" />
+                  </a>
+                  <div>
+                    <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">{d.eyebrow}</p>
+                    <h3 className="mt2-serif text-xl leading-snug mt-1">{d.title}</h3>
+                    <p className="text-[12.5px] text-[#4a5163] mt-2 leading-relaxed">{d.line}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {d.stats.map(([v, k]) => (
+                        <span key={k} className="rounded-full bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-1 text-[11px] text-[#4a5163]">
+                          <b style={{ color: PERI }}>{v}</b> {k}
+                        </span>))}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-4 mt-4">
+                      <a href={d.pdf} target="_blank" rel="noopener noreferrer" download
+                         className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[13px] font-medium text-white" style={{ background: PERI }}>
+                        Download the PDF <ArrowRight size={14} />
+                      </a>
+                      {d.cma && (
+                        <a href={d.cma} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium" style={{ color: PERI }}>
+                          Open the Comp Report <ArrowUpRight size={14} />
+                        </a>)}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </Reveal>
@@ -610,7 +641,7 @@ function AnalysisFold() {
         </Reveal>
         <div className="grid md:grid-cols-3 gap-4 mt-5">
           {[
-            ['Eureka Valley · to live in', 'Every comparable closed over asking, averaging 140% in eight days. The two that ran hardest sold on lot size and outlook the house did not have, so the simple price-per-foot read overstated it, and the review said so.'],
+            ['Eureka Valley · to live in', 'Every comparable closed over asking, averaging 140% in eight days. The two that ran hardest sold on lot size and outlook the house did not have, so the simple price-per-foot read overstated it, and the Comp Report says so.'],
             ['Willow Glen · to build on', 'A teardown with a full plan set. At a 15% developer margin the land was worth about a third less than the asking price; only at zero margin did it reach the ask.'],
             ['Willow Glen · a corner lot', 'Recorded at 7,225 sf, buildable like about 5,600 once the curved frontage and second street setback were measured. Keeping and renovating the house beat scrape-and-rebuild.'],
           ].map(([t, b], i) => (
@@ -618,6 +649,11 @@ function AnalysisFold() {
               <div className={lightCard + ' p-5 h-full'}>
                 <p className="text-[10px] uppercase tracking-[0.22em]" style={{ color: PERI }}>{t}</p>
                 <p className="text-[13px] text-[#4a5163] leading-relaxed mt-2">{b}</p>
+                {i === 0 && (
+                  <a href="https://mp-platform-dashboard.pages.dev/view/cma/420-eureka-street-san-francisco-b82e1f" target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-1 text-[12px] font-medium mt-3" style={{ color: PERI }}>
+                    Open the 420 Eureka Comp Report <ArrowUpRight size={13} />
+                  </a>)}
               </div>
             </Reveal>
           ))}
