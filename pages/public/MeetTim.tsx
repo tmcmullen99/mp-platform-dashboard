@@ -881,9 +881,9 @@ function ExchangeTool() {
       <h3 className="mt2-serif text-2xl mt-1.5">Is your rental pulling its weight?</h3>
       <p className="hidden sm:block text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Offered to local investors with the tenant in place, the equity can move through a 1031 exchange into property that pays more.</p>
       <div className="grid grid-cols-2 gap-4 mt-4">
-        <label className="text-[11px] text-[#6b7285]">Worth today <b className="text-[#1a1f2e] text-[14px]">{money(value)}</b>
+        <label className="text-[11px] text-[#6b7285]">Worth today<b className="block text-[#1a1f2e] text-[15px] mt-0.5">{money(value)}</b>
           <input type="range" min={500000} max={5000000} step={25000} value={value} onChange={e => setValue(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
-        <label className="text-[11px] text-[#6b7285]">Monthly rent <b className="text-[#1a1f2e] text-[14px]">{money(rent)}</b>
+        <label className="text-[11px] text-[#6b7285]">Monthly rent<b className="block text-[#1a1f2e] text-[15px] mt-0.5">{money(rent)}</b>
           <input type="range" min={1500} max={15000} step={100} value={rent} onChange={e => setRent(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
       </div>
       <div className="mt-3 rounded-2xl overflow-hidden border border-[#d9e2f1]">
@@ -918,18 +918,18 @@ function ExchangeTool() {
             <div className="mt-1.5 text-2xl sm:text-[1.75rem] font-semibold" style={{ color: up ? '#2f6b4f' : '#9a3b2f' }}>
               {up ? '+' : '−'}{money(Math.abs(gain))}<span className="text-[13px] font-normal text-[#6b7285]"> a year</span>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-3">
-              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">Return</div>
-                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{net.toFixed(1)}% → 7.0%</div>
+            <div className="grid grid-cols-[1.3fr_0.9fr_1.15fr] gap-2 mt-3">
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2 min-w-0">
+                <div className="text-[9.5px] sm:text-[10px] uppercase tracking-[0.08em] text-[#6b7285]">Return</div>
+                <div className="text-[12px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap tracking-tight">{net.toFixed(1)}% → 7.0%</div>
               </div>
-              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">Income</div>
-                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{multiple ? multiple.toFixed(1) + '×' : '—'}</div>
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2 min-w-0">
+                <div className="text-[9.5px] sm:text-[10px] uppercase tracking-[0.08em] text-[#6b7285]">Income</div>
+                <div className="text-[12px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap tracking-tight">{multiple ? multiple.toFixed(1) + '×' : '—'}</div>
               </div>
-              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
-                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">10 years</div>
-                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{up ? '+' : '−'}{money(Math.abs(gain) * 10)}</div>
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2 min-w-0">
+                <div className="text-[9.5px] sm:text-[10px] uppercase tracking-[0.08em] text-[#6b7285]">10 years</div>
+                <div className="text-[12px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap tracking-tight">{up ? '+' : '−'}{money(Math.abs(gain) * 10)}</div>
               </div>
             </div>
             <p className="text-[11.5px] text-[#4a5163] mt-3 leading-relaxed">
