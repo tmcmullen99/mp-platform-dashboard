@@ -967,9 +967,9 @@ function ExchangeTool() {
         )
       })()}
       <p className="text-[10.5px] text-[#6b7285] mt-2 leading-relaxed"><span className="hidden sm:inline">7% is the cap rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought. </span>Illustration only: costs at 35% of rent, about 6% to sell; taxes and 1031 rules change it. Talk to your CPA.</p>
-      <a href="https://campbellrealestatemarket.com/investor-exchange/" target="_blank" rel="noopener noreferrer"
-         className="mt-auto pt-3 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
-        See the Investor Exchange <ArrowUpRight size={15} />
+      <a href="/services/1031-exchange"
+         className="mt-4 inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-[14px] font-medium text-white w-full sm:w-auto sm:self-start" style={{ background: PERI }}>
+        How a 1031 exchange works with Tim <ArrowRight size={15} />
       </a>
     </div>
   )
