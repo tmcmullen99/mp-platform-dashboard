@@ -890,16 +890,56 @@ function ExchangeTool() {
         <div className="grid grid-cols-2">
           <div className="p-3.5 bg-[#F4F7FC]">
             <div className="text-[10px] uppercase tracking-[0.18em] text-[#6b7285]">As a rental</div>
-            <div className="text-xl font-semibold mt-0.5">{money(incomeNow)}<span className="text-[11px] font-normal text-[#6b7285]"> a year</span></div>
-            <div className="text-[11px] text-[#6b7285] mt-0.5">{gross.toFixed(2)}% gross · {net.toFixed(2)}% after costs</div>
+            <div className="text-lg sm:text-xl font-semibold mt-0.5">{money(incomeNow)}</div>
+            <div className="text-[11px] text-[#6b7285]">a year · {net.toFixed(2)}% on your equity</div>
+            <div className="text-[10.5px] text-[#6b7285] mt-1">{gross.toFixed(2)}% gross, before costs</div>
           </div>
           <div className="p-3.5 text-white" style={{ background: PERI }}>
-            <div className="text-[10px] uppercase tracking-[0.18em] text-white/70">Exchanged at a 7% cap</div>
-            <div className="text-xl font-semibold mt-0.5">{money(incomeAt7)}<span className="text-[11px] font-normal text-white/70"> a year</span></div>
-            <div className="text-[11px] text-white/75 mt-0.5">Tenant pays taxes, insurance, repairs</div>
+            <div className="text-[10px] uppercase tracking-[0.18em] text-white/75">Exchanged at 7%</div>
+            <div className="text-lg sm:text-xl font-semibold mt-0.5">{money(incomeAt7)}</div>
+            <div className="text-[11px] text-white/80">a year · 7.00% on your equity</div>
+            <div className="text-[10.5px] text-white/75 mt-1">Tenant pays taxes, insurance, repairs</div>
           </div>
         </div>
       </div>
+      {/* The value of the exchange, on its own card (Tim, 28 Sep 2026): the gap in income, the
+          return on the same equity before and after, and what the gap adds up to. Arithmetic on
+          the owner's own two numbers; no opinion of what the house is worth. */}
+      {(() => {
+        const gain = incomeAt7 - incomeNow
+        const multiple = incomeNow > 0 ? incomeAt7 / incomeNow : 0
+        const up = gain >= 0
+        return (
+          <div className="mt-3 rounded-2xl border border-[#d9e2f1] bg-white p-4">
+            <div className="flex items-baseline justify-between gap-3 flex-wrap">
+              <div className="text-[10px] uppercase tracking-[0.18em]" style={{ color: PERI }}>What the exchange changes</div>
+              <div className="text-[10.5px] text-[#6b7285]">same equity, put to work differently</div>
+            </div>
+            <div className="mt-1.5 text-2xl sm:text-[1.75rem] font-semibold" style={{ color: up ? '#2f6b4f' : '#9a3b2f' }}>
+              {up ? '+' : '−'}{money(Math.abs(gain))}<span className="text-[13px] font-normal text-[#6b7285]"> a year</span>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-3">
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">Return</div>
+                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{net.toFixed(1)}% → 7.0%</div>
+              </div>
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">Income</div>
+                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{multiple ? multiple.toFixed(1) + '×' : '—'}</div>
+              </div>
+              <div className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-2">
+                <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">10 years</div>
+                <div className="text-[12.5px] sm:text-[13.5px] font-semibold mt-0.5 whitespace-nowrap">{up ? '+' : '−'}{money(Math.abs(gain) * 10)}</div>
+              </div>
+            </div>
+            <p className="text-[11.5px] text-[#4a5163] mt-3 leading-relaxed">
+              {up
+                ? <>Your equity earns <b>{net.toFixed(1)}%</b> as a rental. Moved through a 1031 exchange into a triple-net property at 7%, the same equity earns <b>{money(gain)}</b> more a year, and the tenant carries the running costs.</>
+                : <>At these numbers the rental already out-earns a 7% cap on the same equity. An exchange would be about something else: less work, less risk, or a different market.</>}
+            </p>
+          </div>
+        )
+      })()}
       <p className="text-[10.5px] text-[#6b7285] mt-2 leading-relaxed"><span className="hidden sm:inline">7% is the cap rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought. </span>Illustration only: costs at 35% of rent, about 6% to sell; taxes and 1031 rules change it. Talk to your CPA.</p>
       <a href="https://campbellrealestatemarket.com/investor-exchange/" target="_blank" rel="noopener noreferrer"
          className="mt-auto pt-3 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
