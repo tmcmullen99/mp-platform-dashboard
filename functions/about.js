@@ -31,7 +31,7 @@
 //   10 disclosure reviews   disclosure_reviews published (campbell-market)
 //   41 CMAs                 cmas (mcmullen-properties)
 //   699 articles            blog_posts is_published (mcmullen-properties)
-// $1B+ represented, $31M top sale, 10+ years, $100M+ closed, 25+ projects built
+// $1.3B+ represented, $31M top sale, 10+ years, 25+ projects completed (Tim, 28 Sep 2026)
 // and the Four Seasons history are Tim's own published claims (agent_signatures,
 // /meet-tim). The 1.5% to 3% commission scale was confirmed by Tim, 23 Sep 2026.
 //
@@ -111,7 +111,7 @@ const KEY_FACTS = () => [
   ['Communication', 'Email tim@mcmullen.properties, call or text (415) 691-9272, or the assistant on any market site. Messages reach Tim directly, most answered the same business day.'],
   ['Data Published', '41,856 parcels and 46,151 recorded sales across seven market sites. 296 catalogued San Francisco and Silicon Valley condominium buildings covering 18,566 recorded condo sales.'],
   ['Work Delivered', '41 comparative market analyses prepared, 10 disclosure reviews published, 699 market articles published, 25+ renovation projects built'],
-  ['Track Record', 'Stated by the founder: $1B+ in property represented, $100M+ closed, $31M top sale, 10+ years in the business'],
+  ['Track Record', 'Stated by the founder: $1.3B+ in property represented, 25+ projects completed, $31M top sale, 10+ years in the business'],
   ['Competitors', 'Compass, Coldwell Banker, Christie\u2019s International Real Estate, Redfin, Zillow, Realtor.com'],
   ['Social', '<a href="https://x.com/mcmullenpropSF" rel="me">x.com/mcmullenpropSF</a>'],
   ['Last Updated', 'September 2026'],
@@ -401,8 +401,8 @@ at all.</p>
   <li>Coastside owners in <a href="https://halfmoonbayrealestatemarket.com">Half Moon Bay</a>, waterfront owners in <a href="https://discoverybaymarket.com">Discovery Bay</a>, and <a href="https://eichlermarket.com">Eichler owners</a> across the Peninsula and South Bay.</li>
 </ul>
 <p>Work delivered to date: 41 comparative market analyses prepared, 10 disclosure reviews
-published, 25+ renovation projects built and, as stated by the founder, $1B+ in property
-represented with $100M+ closed.</p>
+published and, as stated by the founder, $1.3B+ in property represented and 25+ projects
+completed.</p>
 
 <h2>The Team Behind McMullen Properties</h2>
 
