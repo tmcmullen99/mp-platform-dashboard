@@ -501,72 +501,113 @@ const REPORTS: { address: string; score: number; findings: number; questions: nu
    removed. The Bernal Heights review is shown without its address or the buyers' names. */
 const DISCLOSURE_SAMPLES: { eyebrow: string; title: string; line: string; stats: [string, string][]; pdf: string; preview: string; cma?: string }[] = [
   { eyebrow: 'Eureka Valley · 1940 · buyer review', title: '420 Eureka Street',
-    line: 'A well-kept house with no structural findings. The money is in the original galvanised pipes, ungrounded outlets and the garage fire wall, and the review turns that into a bidding rule: deduct the work from your ceiling, not from your offer.',
+    line: 'No structural findings. The money is in the original pipes, ungrounded outlets and the garage fire wall, turned into a bidding rule: deduct the work from your ceiling, not your offer.',
     stats: [['80', 'condition'], ['289', 'pages read'], ['$31.9–91.2k', 'all open items'], ['6', 'questions to ask']],
     pdf: '/meet-tim/420-Eureka-Street-Disclosure-Review.pdf', preview: '/meet-tim/420-eureka-disclosure-review-p1.jpg',
     cma: 'https://mp-platform-dashboard.pages.dev/view/cma/420-eureka-street-san-francisco-b82e1f' },
   { eyebrow: 'Bernal Heights · 1909 · buyer review', title: 'A 1909 house in Bernal Heights',
-    line: 'A Section 1 pest report reaching the load path, and a downstairs bedroom the City has no permit for. The review priced the work, named what nobody had seen, and set out what to confirm before removing contingencies.',
+    line: 'A Section 1 pest report reaching the load path and a downstairs bedroom with no permit. The review priced the work and set out what to confirm before removing contingencies.',
     stats: [['68', 'condition'], ['241', 'pages read'], ['$29–76k', 'to make it sound'], ['4', 'things to confirm first']],
     pdf: '/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf', preview: '/meet-tim/sample-disclosure-review-p1.jpg' },
 ]
 
+/* Developer feasibility reports (Tim, 28 Sep 2026). Both were public listings and both read
+   "Prepared for a developer": no client is named. */
+const PLANS = 'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos'
+const DEVELOPER_SAMPLES: { eyebrow: string; title: string; line: string; stats: [string, string][]; href: string; image: string }[] = [
+  { eyebrow: 'Willow Glen · teardown with plans', title: '1173 Malone Road',
+    line: 'A full plan set for a new house and ADU. Land sales and finished new homes feed an 11-slider residual model: at a 15% margin the land is worth about a third less than the ask.',
+    stats: [['$3.80M', 'after-build value'], ['$1.91M', 'all-in build'], ['$1.13M', 'land at 15% margin'], ['11', 'live sliders']],
+    href: 'https://mp-platform-dashboard.pages.dev/view/cma/1173-malone-road-san-jose-66ee36',
+    image: PLANS + '/1173-malone-road-san-jose-66ee36/plan-elevations.webp' },
+  { eyebrow: 'Los Gatos · entitled hillside land', title: '16497 South Kennedy Road',
+    line: '2.57 acres on a 45% slope with a final Town approval, read from a 269-page package. Priced for someone who builds it themselves, not for a merchant developer.',
+    stats: [['2.57 ac', 'at a 45% slope'], ['269', 'pages read'], ['$6.55M', 'after-build value the ask needs'], ['5', 'scenarios modelled']],
+    href: 'https://mp-platform-dashboard.pages.dev/view/cma/16497-s-kennedy-road-los-gatos-13b902',
+    image: PLANS + '/16497-s-kennedy-road-los-gatos-13b902/rendering-approved-design.webp' },
+]
+
+function ReportCard({ eyebrow, title, line, stats, image, primary, secondary }: {
+  eyebrow: string; title: string; line: string; stats: [string, string][]; image: string
+  primary: { href: string; label: string; download?: boolean }; secondary?: { href: string; label: string }
+}) {
+  return (
+    <div className={lightCard + ' h-full flex flex-col overflow-hidden'}>
+      <a href={primary.href} target="_blank" rel="noopener noreferrer" className="block h-[118px] overflow-hidden border-b border-[#d9e2f1] bg-[#F4F7FC]">
+        <img src={image} alt={title} loading="lazy" className="w-full h-full object-cover object-top" />
+      </a>
+      <div className="p-4 flex-1 flex flex-col">
+        <p className="text-[9.5px] uppercase tracking-[0.18em] text-[#6b7285]">{eyebrow}</p>
+        <h3 className="mt2-serif text-[1.15rem] leading-snug mt-1">{title}</h3>
+        <p className="text-[12px] text-[#4a5163] mt-1.5 leading-relaxed">{line}</p>
+        <div className="grid grid-cols-2 gap-1.5 mt-3">
+          {stats.map(([v, k]) => (
+            <div key={k} className="rounded-lg bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-1.5">
+              <div className="text-[13px] font-semibold" style={{ color: PERI }}>{v}</div>
+              <div className="text-[10px] text-[#6b7285] leading-tight">{k}</div>
+            </div>))}
+        </div>
+        <div className="mt-auto pt-3 flex flex-wrap items-center gap-3">
+          <a href={primary.href} target="_blank" rel="noopener noreferrer" {...(primary.download ? { download: true } : {})}
+             className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-white" style={{ background: PERI }}>
+            {primary.label} <ArrowRight size={13} />
+          </a>
+          {secondary && (
+            <a href={secondary.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] font-medium" style={{ color: PERI }}>
+              {secondary.label} <ArrowUpRight size={12} />
+            </a>)}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function BuyerFold() {
-  /* Rebuilt to one screen (Tim, 28 Sep 2026): the promise on the left, the two downloadable
-     reviews as the proof, and the Campbell reviews as a single line of links underneath. */
+  /* Tim, 28 Sep 2026: the buying screen shows both kinds of buyer side by side: the two
+     disclosure reviews for buying to live in, the two feasibility reports for buying to build. */
   return (
     <div className="min-h-[100svh] flex flex-col justify-center py-14 md:py-16">
       <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
         <FoldHead eyebrow="If you're buying" lead="Every home is open to you." accent="Even the ones not for sale."
-          sub="Write an offer on any home in any market The Market runs, listed or not. Every home you look at seriously comes with a Comp Report and a review of its disclosures." />
-        <div className="grid lg:grid-cols-[0.8fr_1fr_1fr] gap-4 mt-8">
-          <Reveal>
-            <div className={lightCard + ' p-5 h-full flex flex-col'}>
-              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Any home, any market</p>
-              <h3 className="mt2-serif text-[1.55rem] leading-snug mt-2">Write an offer on the house you actually want</h3>
-              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">The owner receives a written offer from a licensed broker. Nothing is agreed until they sign.</p>
-              <div className="mt-4 space-y-2">
-                {[['Listed', 'Every active listing'], ['Coming Soon', 'Before it reaches the MLS'], ['Not for sale', 'Any address, any owner']].map(([a, b]) => (
-                  <div key={a} className="flex items-center justify-between rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-3.5 py-2.5">
-                    <span className="text-[13.5px] font-medium">{a}</span><span className="text-[11.5px] text-[#6b7285]">{b}</span>
-                  </div>))}
-              </div>
-              <div className="mt-auto pt-5 rounded-2xl p-4 text-[12.5px] leading-relaxed text-white" style={{ background: PERI }}>
-                Every home you tour comes with a Comp Report and a disclosure review. Here are two, word for word.
-              </div>
+          sub="Write an offer on any home in any market The Market runs, listed or not. Whatever you are buying it for, the analysis is built around your question. Here are four, as delivered." />
+        <Reveal>
+          <div className="mt-7 rounded-2xl bg-white border border-[#d9e2f1] px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span className="mt2-serif text-lg">Write an offer on the house you actually want</span>
+            {[['Listed', 'every active listing'], ['Coming Soon', 'before the MLS'], ['Not for sale', 'any address']].map(([a, b]) => (
+              <span key={a} className="text-[12.5px] text-[#4a5163]"><b className="text-[#1a1f2e]">{a}</b> · {b}</span>))}
+            <span className="text-[12px] text-[#6b7285] lg:ml-auto">Nothing is agreed until the owner signs.</span>
+          </div>
+        </Reveal>
+        <div className="grid lg:grid-cols-2 gap-6 mt-6">
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-2 h-2 rounded-full" style={{ background: PERI }} />
+              <span className="text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: PERI }}>Buying to live in it · disclosure reviews</span>
             </div>
-          </Reveal>
-          {DISCLOSURE_SAMPLES.map((d, i) => (
-            <Reveal key={d.title} delay={0.06 * (i + 1)}>
-              <div className={lightCard + ' h-full flex flex-col overflow-hidden'}>
-                <a href={d.pdf} target="_blank" rel="noopener noreferrer" className="block h-[150px] overflow-hidden border-b border-[#d9e2f1] bg-[#F4F7FC]">
-                  <img src={d.preview} alt={'Page one of the ' + d.title + ' disclosure review'} loading="lazy" className="w-full object-cover object-top" />
-                </a>
-                <div className="p-5 flex-1 flex flex-col">
-                  <p className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">{d.eyebrow}</p>
-                  <h3 className="mt2-serif text-xl leading-snug mt-1">{d.title}</h3>
-                  <p className="text-[12.5px] text-[#4a5163] mt-2 leading-relaxed">{d.line}</p>
-                  <div className="grid grid-cols-2 gap-1.5 mt-3">
-                    {d.stats.map(([v, k]) => (
-                      <div key={k} className="rounded-xl bg-[#F4F7FC] border border-[#d9e2f1] px-2.5 py-1.5">
-                        <div className="text-[14px] font-semibold" style={{ color: PERI }}>{v}</div>
-                        <div className="text-[10.5px] text-[#6b7285] leading-tight">{k}</div>
-                      </div>))}
-                  </div>
-                  <div className="mt-auto pt-4 flex flex-wrap items-center gap-3">
-                    <a href={d.pdf} target="_blank" rel="noopener noreferrer" download
-                       className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-[12.5px] font-medium text-white" style={{ background: PERI }}>
-                      Download the PDF <ArrowRight size={14} />
-                    </a>
-                    {d.cma && (
-                      <a href={d.cma} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12.5px] font-medium" style={{ color: PERI }}>
-                        Comp Report <ArrowUpRight size={13} />
-                      </a>)}
-                  </div>
-                </div>
-              </div>
-            </Reveal>
-          ))}
+            <div className="grid sm:grid-cols-2 gap-4">
+              {DISCLOSURE_SAMPLES.map((d, i) => (
+                <Reveal key={d.title} delay={0.05 * i}>
+                  <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.preview}
+                    primary={{ href: d.pdf, label: 'Download PDF', download: true }}
+                    secondary={d.cma ? { href: d.cma, label: 'Comp Report' } : undefined} />
+                </Reveal>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="w-2 h-2 rounded-full bg-[#1a1f2e]" />
+              <span className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[#1a1f2e]">Buying to build on it · feasibility reports</span>
+            </div>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {DEVELOPER_SAMPLES.map((d, i) => (
+                <Reveal key={d.title} delay={0.05 * (i + 2)}>
+                  <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.image}
+                    primary={{ href: d.href, label: 'Open the report' }} />
+                </Reveal>
+              ))}
+            </div>
+          </div>
         </div>
         <Reveal delay={0.2}>
           <div className="mt-5 flex flex-wrap items-center gap-2">
