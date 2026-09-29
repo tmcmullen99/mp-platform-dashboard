@@ -475,7 +475,7 @@ function FoldHead({ eyebrow, lead, accent, sub }: { eyebrow: string; lead: strin
       <h2 className="text-3xl md:text-5xl leading-tight text-[#1a1f2e]">
         {lead} <span className="mt2-serif" style={{ color: PERI }}>{accent}</span>
       </h2>
-      <p className="text-sm md:text-base text-[#4a5163] mt-4 max-w-2xl leading-relaxed">{sub}</p>
+      <p className="hidden sm:block text-sm md:text-base text-[#4a5163] mt-4 max-w-2xl leading-relaxed">{sub}</p>
     </Reveal>
   )
 }
@@ -540,7 +540,7 @@ function ReportCard({ eyebrow, title, line, stats, image, primary, secondary }: 
       <div className="p-4 flex-1 flex flex-col">
         <p className="text-[9.5px] uppercase tracking-[0.18em] text-[#6b7285]">{eyebrow}</p>
         <h3 className="mt2-serif text-[1.15rem] leading-snug mt-1">{title}</h3>
-        <p className="text-[12px] text-[#4a5163] mt-1.5 leading-relaxed">{line}</p>
+        <p className="hidden sm:block text-[12px] text-[#4a5163] mt-1.5 leading-relaxed">{line}</p>
         <div className="grid grid-cols-2 gap-1.5 mt-3">
           {stats.map(([v, k]) => (
             <div key={k} className="rounded-lg bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-1.5">
@@ -576,7 +576,7 @@ function BuyerFold() {
             <span className="mt2-serif text-lg">Write an offer on the house you actually want</span>
             {[['Listed', 'every active listing'], ['Coming Soon', 'before the MLS'], ['Not for sale', 'any address']].map(([a, b]) => (
               <span key={a} className="text-[12.5px] text-[#4a5163]"><b className="text-[#1a1f2e]">{a}</b> · {b}</span>))}
-            <span className="text-[12px] text-[#6b7285] lg:ml-auto">Nothing is agreed until the owner signs.</span>
+            <span className="hidden sm:inline text-[12px] text-[#6b7285] lg:ml-auto">Nothing is agreed until the owner signs.</span>
           </div>
         </Reveal>
         <div className="grid lg:grid-cols-2 gap-6 mt-6">
@@ -585,9 +585,9 @@ function BuyerFold() {
               <span className="w-2 h-2 rounded-full" style={{ background: PERI }} />
               <span className="text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: PERI }}>Buying to live in it · disclosure reviews</span>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-6 -mx-6 px-6 sm:mx-0 sm:px-0 pb-2 sm:pb-0">
               {DISCLOSURE_SAMPLES.map((d, i) => (
-                <Reveal key={d.title} delay={0.05 * i}>
+                <Reveal key={d.title} delay={0.05 * i} className="shrink-0 w-[78%] sm:w-auto snap-start">
                   <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.preview}
                     primary={{ href: d.pdf, label: 'Download PDF', download: true }}
                     secondary={d.cma ? { href: d.cma, label: 'Comp Report' } : undefined} />
@@ -600,9 +600,9 @@ function BuyerFold() {
               <span className="w-2 h-2 rounded-full bg-[#1a1f2e]" />
               <span className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[#1a1f2e]">Buying to build on it · feasibility reports</span>
             </div>
-            <div className="grid sm:grid-cols-2 gap-4">
+            <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-6 -mx-6 px-6 sm:mx-0 sm:px-0 pb-2 sm:pb-0">
               {DEVELOPER_SAMPLES.map((d, i) => (
-                <Reveal key={d.title} delay={0.05 * (i + 2)}>
+                <Reveal key={d.title} delay={0.05 * (i + 2)} className="shrink-0 w-[78%] sm:w-auto snap-start">
                   <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.image}
                     primary={{ href: d.href, label: 'Open the report' }} />
                 </Reveal>
@@ -651,7 +651,7 @@ function AnalysisFold() {
               <div className="p-4 font-semibold text-[#1a1f2e]">Buying to build on it</div>
             </div>
             {ANALYSIS_ROWS.map(([k, a, b]) => (
-              <div key={k} className="grid md:grid-cols-[180px_1fr_1fr] border-b border-[#eef2f9] last:border-0">
+              <div key={k} className={'grid md:grid-cols-[180px_1fr_1fr] border-b border-[#eef2f9] last:border-0 ' + (k === 'The question' || k === 'The output' ? '' : 'hidden md:grid')}>
                 <div className="px-4 pt-4 md:py-4 text-[11px] uppercase tracking-[0.18em] text-[#6b7285]">{k}</div>
                 <div className="px-4 py-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1" style={{ color: PERI }}>To live in</span>{a}</div>
                 <div className="px-4 pb-4 pt-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed md:bg-[#F9FBFE]"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1 text-[#6b7285]">To build on</span>{b}</div>
@@ -659,7 +659,7 @@ function AnalysisFold() {
             ))}
           </div>
         </Reveal>
-        <div className="grid md:grid-cols-3 gap-4 mt-5">
+        <div className="hidden md:grid md:grid-cols-3 gap-4 mt-5">
           {[
             ['Eureka Valley · to live in', 'Every comparable closed over asking, averaging 140% in eight days. The two that ran hardest sold on lot size and outlook the house did not have, so the simple price-per-foot read overstated it, and the Comp Report says so.'],
             ['Willow Glen · to build on', 'A teardown with a full plan set. At a 15% developer margin the land was worth about a third less than the asking price; only at zero margin did it reach the ask.'],
@@ -688,10 +688,20 @@ function AnalysisFold() {
    /make-me-move accepts ?address=&price=&slug= and opens pre-filled (sign-in keeps the query);
    Eichler's public page opens its form pre-filled; Silicon Valley has no Make Me Move form
    yet, so it goes to its selling page and says so. */
-type MmmMarket = { id: number; name: string; region: string; group: 'City markets' | 'Condo & type markets'; mmm: (a: string, p: number, slug?: string | null) => string; prefill: boolean }
-const appMmm = (domain: string) => (a: string, p: number, slug?: string | null) => {
-  const q = new URLSearchParams(); if (a) q.set('address', a); if (p) q.set('price', String(p)); if (slug) q.set('slug', slug)
-  q.set('utm_source', 'meet_tim'); return `https://app.${domain}/make-me-move?${q.toString()}`
+type MmmMarket = { id: number; name: string; region: string; group: 'City markets' | 'Condo & type markets'; mmm: (a: string, p: number, x?: { slug?: string | null; beds?: number | null; baths?: number | null; sqft?: number | null }) => string; prefill: boolean }
+/* Public pages, never the account sign-in (Tim, 28 Sep 2026). City markets: the public
+   /make-me-move/ page fills its own form from ?address=&price=&slug= (cb-act.js); the owner
+   is asked for an account only when they press the button. Condo markets: /owner-signup/,
+   which already reads ?address=&value=. */
+type Extra = { slug?: string | null; beds?: number | null; baths?: number | null; sqft?: number | null }
+const appMmm = (domain: string) => (a: string, p: number, x?: Extra) => {
+  const q = new URLSearchParams(); if (a) q.set('address', a); if (p) q.set('price', String(p))
+  if (x?.slug) q.set('slug', x.slug); if (x?.beds) q.set('beds', String(x.beds)); if (x?.baths) q.set('baths', String(x.baths)); if (x?.sqft) q.set('sqft', String(x.sqft))
+  q.set('utm_source', 'meet_tim'); return `https://${domain}/make-me-move/?${q.toString()}`
+}
+const condoMmm = (domain: string) => (a: string, p: number) => {
+  const q = new URLSearchParams(); if (a) q.set('address', a); if (p) q.set('value', String(Math.min(5000000, Math.max(500000, p))))
+  q.set('utm_source', 'meet_tim'); return `https://${domain}/owner-signup/?${q.toString()}`
 }
 const MMM_MARKETS: MmmMarket[] = [
   { id: 1, name: 'Campbell', region: 'Santa Clara County', group: 'City markets', mmm: appMmm('campbellrealestatemarket.com'), prefill: true },
@@ -701,9 +711,9 @@ const MMM_MARKETS: MmmMarket[] = [
   { id: 9, name: 'Discovery Bay', region: 'Contra Costa County', group: 'City markets', mmm: appMmm('discoverybaymarket.com'), prefill: true },
   { id: 4, name: 'Penngrove', region: 'Sonoma County', group: 'City markets', mmm: appMmm('penngroverealestatemarket.com'), prefill: true },
   { id: 10, name: 'Petaluma', region: 'Sonoma County', group: 'City markets', mmm: appMmm('petalumarealestatemarket.com'), prefill: true },
-  { id: 5, name: 'San Francisco condos', region: 'Every catalogued building', group: 'Condo & type markets', mmm: appMmm('sanfranciscocondomarket.com'), prefill: true },
+  { id: 5, name: 'San Francisco condos', region: 'Every catalogued building', group: 'Condo & type markets', mmm: condoMmm('sanfranciscocondomarket.com'), prefill: true },
   { id: 6, name: 'Silicon Valley condos', region: 'Santa Clara County buildings', group: 'Condo & type markets',
-    mmm: () => 'https://siliconvalleycondomarket.com/sell/', prefill: false },
+    mmm: condoMmm('siliconvalleycondomarket.com'), prefill: true },
   { id: 7, name: 'Eichler homes', region: 'Peninsula and South Bay', group: 'Condo & type markets',
     mmm: (a, p) => { const q = new URLSearchParams(); if (a) q.set('address', a); if (p) q.set('price', String(p)); return `https://eichlermarket.com/make-me-move/?${q.toString()}` }, prefill: true },
 ]
@@ -789,14 +799,14 @@ function MakeMeMoveTool() {
 
   const pick = (h: Hit) => { setPicked(h); setAddr(h.address); setShowHits(false); if (MMM_MARKETS.some(m => m.id === h.market_id)) setMkt(h.market_id) }
   const nameOf = (id: number) => (MMM_MARKETS.find(m => m.id === id) || { name: '' }).name
-  const href = market.mmm(addr.trim(), num, picked ? picked.slug : null)
+  const href = market.mmm(addr.trim(), num, picked ? { slug: picked.slug, beds: picked.beds, baths: picked.baths, sqft: picked.sqft } : undefined)
   const field = 'mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]'
 
   return (
     <div className={lightCard + ' p-5 md:p-6 h-full flex flex-col'}>
       <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For homeowners · try it</p>
       <h3 className="mt2-serif text-2xl mt-1.5">Set your Make Me Move price</h3>
-      <p className="text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Type your address: if it is in one of our marketplaces we find it, and your address and number go straight into its Make Me Move form.</p>
+      <p className="hidden sm:block text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Type your address: if it is in one of our marketplaces we find it, and your address and number go straight into its Make Me Move form.</p>
       <div className="grid grid-cols-[1.25fr_1fr] gap-3 mt-4">
         <div ref={box} className="relative">
           <label className="text-[11px] text-[#6b7285]">Your street address</label>
@@ -869,7 +879,7 @@ function ExchangeTool() {
     <div className={lightCard + ' p-5 md:p-6 h-full flex flex-col'}>
       <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For rental owners · try it</p>
       <h3 className="mt2-serif text-2xl mt-1.5">Is your rental pulling its weight?</h3>
-      <p className="text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Offered to local investors with the tenant in place, the equity can move through a 1031 exchange into property that pays more.</p>
+      <p className="hidden sm:block text-[12.5px] text-[#4a5163] mt-1.5 leading-relaxed">Offered to local investors with the tenant in place, the equity can move through a 1031 exchange into property that pays more.</p>
       <div className="grid grid-cols-2 gap-4 mt-4">
         <label className="text-[11px] text-[#6b7285]">Worth today <b className="text-[#1a1f2e] text-[14px]">{money(value)}</b>
           <input type="range" min={500000} max={5000000} step={25000} value={value} onChange={e => setValue(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
@@ -890,7 +900,7 @@ function ExchangeTool() {
           </div>
         </div>
       </div>
-      <p className="text-[10.5px] text-[#6b7285] mt-2 leading-relaxed">7% is the cap rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought. Illustration only: running costs at 35% of rent, roughly 6% selling costs; taxes, debt and 1031 rules change it. Talk to your CPA.</p>
+      <p className="text-[10.5px] text-[#6b7285] mt-2 leading-relaxed"><span className="hidden sm:inline">7% is the cap rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought. </span>Illustration only: costs at 35% of rent, about 6% to sell; taxes and 1031 rules change it. Talk to your CPA.</p>
       <a href="https://campbellrealestatemarket.com/investor-exchange/" target="_blank" rel="noopener noreferrer"
          className="mt-auto pt-3 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
         See the Investor Exchange <ArrowUpRight size={15} />
@@ -934,7 +944,7 @@ export default function MeetTim() {
   }, [])
 
   return (
-    <div className="mt2 min-h-screen bg-[#0a0a0a] text-white/95" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="mt2 min-h-screen bg-[#0a0a0a] text-white/95 overflow-x-clip" style={{ fontFamily: "'Inter', sans-serif" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@1&display=swap');
         .mt2-serif { font-family: 'Instrument Serif', Georgia, serif; font-style: italic; font-weight: 400; }
@@ -1200,7 +1210,7 @@ export default function MeetTim() {
           />
           <div className="grid grid-cols-1 md:grid-cols-12 gap-5 md:gap-6 mt-12">
             {SALES.map((s, i) => (
-              <Reveal key={s.name} delay={0.08 * i} className={s.span}>
+              <Reveal key={s.name} delay={0.08 * i} className={s.span + ' min-w-0'}>
                 <a
                   href={s.href}
                   className={`group relative block rounded-3xl bg-[#141414] border border-white/10 overflow-hidden ${s.aspect} h-full min-h-[260px]`}
