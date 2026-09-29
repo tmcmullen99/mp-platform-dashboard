@@ -879,9 +879,9 @@ export default function MeetTim() {
         <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
         <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
           <SectionHeader
-            eyebrow="Founding broker · The Market"
-            lead="One account."
-            accent="Every market."
+            eyebrow="Founding Broker"
+            lead="Building 1 Top Agent"
+            accent="in every market in California"
             sub="Tim is the founding broker of The Market, the brokerage built on the platform behind every marketplace below. His clients are not limited to what happens to be listed: they reach every home in every market it runs."
           />
 
