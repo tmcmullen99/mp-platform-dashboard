@@ -201,7 +201,7 @@ function ProbateFilm() {
   const [note, setNote] = useState('The Market · 1 minute')
   const [src, setSrc] = useState(() => {
     const small = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:760px)').matches
-    return PROBATE_FILM + (small ? '-720.mp4' : '-1080.mp4')
+    return PROBATE_FILM + (small ? '-720.mp4' : '-1080.mp4') + '?v=20260929a'
   })
   return (
     <div id="how" className="mt-8 max-w-3xl rounded-[14px] overflow-hidden"
@@ -216,7 +216,7 @@ function ProbateFilm() {
           className="absolute inset-0 w-full h-full"
           style={{ objectFit: 'contain', background: '#0e1118' }}
           onLoadedMetadata={() => setReady(true)}
-          onError={() => { if (src.endsWith('-720.mp4')) setSrc(PROBATE_FILM + '-1080.mp4') }}
+          onError={() => { if (src.includes('-720.mp4')) setSrc(PROBATE_FILM + '-1080.mp4?v=20260929a') }}
         />
         {!playing && (
           <button
