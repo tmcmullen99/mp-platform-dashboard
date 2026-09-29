@@ -547,6 +547,81 @@ function BuyerFold() {
             </div>
           </Reveal>
         </div>
+        <Reveal delay={0.12}>
+          <div className={lightCard + ' mt-5 p-5 md:p-6 grid md:grid-cols-[220px_1fr] gap-6 items-center'}>
+            <a href="/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf" target="_blank" rel="noopener noreferrer"
+               className="block rounded-xl overflow-hidden border border-[#d9e2f1] shadow-[0_8px_24px_rgba(26,31,46,.10)] hover:-translate-y-0.5 transition-transform">
+              <img src="/meet-tim/sample-disclosure-review-p1.jpg" alt="Page one of a disclosure review" loading="lazy" className="w-full block" />
+            </a>
+            <div>
+              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>A real disclosure review · names and address removed</p>
+              <h3 className="mt2-serif text-2xl mt-2">241 pages of disclosures, read for you in four</h3>
+              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed max-w-2xl">A 1909 Bernal Heights house. The package ran to 241 pages across 14 documents. The review found the two things that mattered: a Section 1 pest report reaching the load path, and a downstairs bedroom the City has no permit for. It priced the work, named what nobody had seen, and listed the four things to confirm before removing contingencies.</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                {[['68', 'condition score'], ['$29–76k', 'to make it sound'], ['6', 'Section 1 pest findings'], ['4', 'things to confirm first']].map(([v, k]) => (
+                  <div key={k} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-3.5 py-2">
+                    <span className="text-[15px] font-semibold" style={{ color: PERI }}>{v}</span> <span className="text-[11.5px] text-[#4a5163]">{k}</span>
+                  </div>))}
+              </div>
+              <a href="/meet-tim/Sample-Disclosure-Review-Bernal-Heights.pdf" target="_blank" rel="noopener noreferrer" download
+                 className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white" style={{ background: PERI }}>
+                Download the PDF <ArrowRight size={16} />
+              </a>
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </div>
+  )
+}
+
+/* Owner occupant vs developer (Tim, 28 Sep 2026): the same market, two different questions.
+   Drawn from Tim's San Francisco buyer CMAs and his Willow Glen and Los Gatos developer
+   studies. No client names, no addresses, and no value conclusions for a client's home. */
+const ANALYSIS_ROWS: [string, string, string][] = [
+  ['The question', 'What should I write, and what will it cost me to live in it?', 'What is the land worth once I have built on it and been paid for the risk?'],
+  ['Comparable sales', 'Recorded sales matched on what this buyer is paying for: lot, outlook, condition. List prices set aside when every comp closed over asking.', 'Two sets: as-is land sales priced per square foot of lot, and finished new sales that set the after-build value.'],
+  ['The lot', 'Size and outlook, because in San Francisco they move the price more than square footage does.', 'The buildable envelope, not the recorded area: setbacks, slope, corner and curve, measured against what neighbouring projects actually got built.'],
+  ['The house', 'Condition from the disclosure package, with the cost to make it sound stated as cash you will need.', 'Often a cost to remove, and sometimes worth keeping: renovating can beat scrape-and-rebuild once cost per foot rises with size.'],
+  ['The output', 'A supported range, an opening number and the most worth paying, with an offer model for all-in cost and first-year tax.', 'A residual land value with a slider for every input: after-build value, build cost, supervision, contingency, margin.'],
+]
+
+function AnalysisFold() {
+  return (
+    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20 border-t border-[#d9e2f1]">
+      <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
+        <FoldHead eyebrow="Same market, different buyer" lead="An owner and a builder" accent="need different answers."
+          sub="A Comp Report is not one template. Tim builds it around the question the buyer is actually asking, which is why the same street can produce two very different numbers." />
+        <Reveal delay={0.06}>
+          <div className={lightCard + ' mt-10 overflow-hidden'}>
+            <div className="hidden md:grid grid-cols-[180px_1fr_1fr] text-[11px] uppercase tracking-[0.2em] border-b border-[#d9e2f1]">
+              <div className="p-4" />
+              <div className="p-4 font-semibold" style={{ color: PERI }}>Buying to live in it</div>
+              <div className="p-4 font-semibold text-[#1a1f2e]">Buying to build on it</div>
+            </div>
+            {ANALYSIS_ROWS.map(([k, a, b]) => (
+              <div key={k} className="grid md:grid-cols-[180px_1fr_1fr] border-b border-[#eef2f9] last:border-0">
+                <div className="px-4 pt-4 md:py-4 text-[11px] uppercase tracking-[0.18em] text-[#6b7285]">{k}</div>
+                <div className="px-4 py-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1" style={{ color: PERI }}>To live in</span>{a}</div>
+                <div className="px-4 pb-4 pt-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed md:bg-[#F9FBFE]"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1 text-[#6b7285]">To build on</span>{b}</div>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+        <div className="grid md:grid-cols-3 gap-4 mt-5">
+          {[
+            ['Eureka Valley · to live in', 'Every comparable closed over asking, averaging 140% in eight days. The two that ran hardest sold on lot size and outlook the house did not have, so the simple price-per-foot read overstated it, and the review said so.'],
+            ['Willow Glen · to build on', 'A teardown with a full plan set. At a 15% developer margin the land was worth about a third less than the asking price; only at zero margin did it reach the ask.'],
+            ['Willow Glen · a corner lot', 'Recorded at 7,225 sf, buildable like about 5,600 once the curved frontage and second street setback were measured. Keeping and renovating the house beat scrape-and-rebuild.'],
+          ].map(([t, b], i) => (
+            <Reveal key={t} delay={0.06 * i}>
+              <div className={lightCard + ' p-5 h-full'}>
+                <p className="text-[10px] uppercase tracking-[0.22em]" style={{ color: PERI }}>{t}</p>
+                <p className="text-[13px] text-[#4a5163] leading-relaxed mt-2">{b}</p>
+              </div>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -918,6 +993,7 @@ export default function MeetTim() {
         {/* Buyer and seller, on a light band in the McMullen blue (Tim, 28 Sep 2026). */}
         <div className="bg-[#EEF2F9] text-[#1a1f2e]">
           <BuyerFold />
+          <AnalysisFold />
           <SellerFold />
         </div>
       </section>
