@@ -460,71 +460,206 @@ function MarketFilm() {
   )
 }
 
-/* The four demos are drawn, not screenshots: a sample home, labelled as one. */
-const demoBox = 'rounded-2xl bg-black/40 border border-white/10 p-4 text-[12px] text-white/70'
-const demoRow = 'flex items-center justify-between py-1.5 border-b border-white/[0.06] last:border-0'
-const MARKET_POWERS: { eyebrow: string; title: string; body: string; demo: JSX.Element }[] = [
-  {
-    eyebrow: 'For owners',
-    title: 'Make Me Move',
-    body: 'Name the price that would make you move. No sign, no showings, no public record: only account holders see it, and a buyer who meets it makes a written offer.',
-    demo: (
-      <div className={demoBox}>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample home</div>
-        <div className="mt2-serif text-lg text-white mt-1">1187 Linden Way</div>
-        <div className="flex gap-6 mt-3">
-          <div><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">Your number</div><div className="text-white mt-0.5">The price that moves you</div></div>
-          <div><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">Seen by</div><div className="text-white mt-0.5">Account holders</div></div>
-        </div>
-        <div className="flex flex-wrap gap-1.5 mt-3">{['No sign', 'No showings', 'Not on the MLS'].map(t =>
-          <span key={t} className="rounded-full bg-white/[0.06] px-2.5 py-1 text-[10.5px]">{t}</span>)}</div>
+/* ---------------------- Buyer and seller folds (light) ---------------------- */
+const PERI = '#4f82b9'  // McMullen blue (LOGO_BLUE)
+const lightCard = 'rounded-3xl bg-white border border-[#d9e2f1] shadow-[0_1px_0_rgba(26,31,46,.04)]'
+
+function FoldHead({ eyebrow, lead, accent, sub }: { eyebrow: string; lead: string; accent: string; sub: string }) {
+  return (
+    <Reveal>
+      <div className="flex items-center gap-3 mb-5">
+        <span className="w-8 h-px" style={{ background: PERI }} />
+        <span className="text-[11px] uppercase tracking-[0.3em]" style={{ color: PERI }}>{eyebrow}</span>
       </div>
-    ),
-  },
-  {
-    eyebrow: 'For rental owners and investors',
-    title: 'Investor Exchange',
-    body: 'Rentals offered privately to local investors with the tenant in place, and a way to move the equity through a 1031 exchange. Investors see the rent, the asking price and the yield.',
-    demo: (
-      <div className={demoBox}>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">On the Exchange now</div>
-        <div className="mt2-serif text-lg text-white mt-1">133 Union Ave Unit F</div>
-        <div className="grid grid-cols-3 gap-3 mt-3">
-          {[['Asking', '$899,000'], ['Rent', '$3,500/mo'], ['Gross yield', '4.67%']].map(([k, v]) =>
-            <div key={k}><div className="text-[10px] uppercase tracking-[0.15em] text-white/35">{k}</div><div className="text-white mt-0.5">{v}</div></div>)}
-        </div>
-        <div className="text-[11px] text-white/40 mt-3">Tenant stays · no sign · no showings</div>
-      </div>
-    ),
-  },
-  {
-    eyebrow: 'Before you decide anything',
-    title: 'Comp Reports & disclosure reviews',
-    body: 'A Comp Report on any home, built from recorded sales with the sample behind every number, and a plain-English review of the disclosure package before you write an offer.',
-    demo: (
-      <div className={demoBox}>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample Comp Report · recorded sales</div>
-        {[['Comparable A', '0.2 mi', '$1,228/sf'], ['Comparable B', '0.4 mi', '$1,196/sf'], ['Comparable C', '0.5 mi', '$1,251/sf']].map(([a, d, v]) =>
-          <div key={a} className={demoRow}><span className="text-white/80">{a}</span><span className="text-white/40">{d}</span><span className="text-white">{v}</span></div>)}
-        <div className="flex items-center gap-2 mt-3 text-[11px]"><span className="text-green-400">&#10003;</span> Disclosures reviewed: HOA reserves, inspections, permits</div>
-      </div>
-    ),
-  },
-  {
-    eyebrow: 'For buyers',
-    title: 'Write an offer on any home',
-    body: 'Listed or not, in any market The Market runs. The owner receives a written offer from a licensed broker, and nothing is agreed until they sign.',
-    demo: (
-      <div className={demoBox}>
-        <div className="text-[10px] uppercase tracking-[0.2em] text-white/35">Sample offer · home not for sale</div>
-        <div className="mt2-serif text-lg text-white mt-1">418 Merrill Ct</div>
-        <div className={demoRow + ' mt-2'}><span className="text-white/50">Status</span><span className="text-white">Not listed</span></div>
-        <div className={demoRow}><span className="text-white/50">Your offer</span><span className="text-white">Written, with terms</span></div>
-        <div className={demoRow}><span className="text-white/50">Delivered by</span><span className="text-white">Tim, as your broker</span></div>
-      </div>
-    ),
-  },
+      <h2 className="text-3xl md:text-5xl leading-tight text-[#1a1f2e]">
+        {lead} <span className="mt2-serif" style={{ color: PERI }}>{accent}</span>
+      </h2>
+      <p className="text-sm md:text-base text-[#4a5163] mt-4 max-w-2xl leading-relaxed">{sub}</p>
+    </Reveal>
+  )
+}
+
+/* Real published work, not samples. Values are left out on purpose: what a specific home
+   is worth is Tim's opinion to give a client, not a headline on a profile page. */
+const REPORTS: { address: string; score: number; findings: number; questions: number; flags: number; comps?: number; line: string; href: string }[] = [
+  { address: '4765 Del Loma Court', score: 68, findings: 11, questions: 10, flags: 7, comps: 3,
+    line: 'Gut-renovated by an investor who never lived in it: permits and plans included, and a seller who warrants none of it.',
+    href: 'https://campbellrealestatemarket.com/cma/4765-del-loma-court-844fc3/' },
+  { address: '1180 Fewtrell Drive', score: 66, findings: 12, questions: 10, flags: 7, comps: 5,
+    line: 'Half the house is effectively new after a 2020 mold event. Open threads: grading that still pools water, a $4,640 termite bid, an unpermitted bath.',
+    href: 'https://campbellrealestatemarket.com/cma/1180-fewtrell-drive-866c88/' },
+  { address: '244 Darryl Drive', score: 64, findings: 13, questions: 10, flags: 11,
+    line: 'A $0 pest report, paired with an active supply-pipe leak, roof ponding, and no smoke or CO detectors.',
+    href: 'https://campbellrealestatemarket.com/home/244-darryl-dr/' },
+  { address: '204 Hardy Avenue', score: 61, findings: 16, questions: 10, flags: 12,
+    line: 'Home, termite, roofing and HVAC reports on a 73-year-old house: $3,115 of termite work and two suspected asbestos materials.',
+    href: 'https://campbellrealestatemarket.com/home/204-hardy-ave/' },
 ]
+
+function BuyerFold() {
+  return (
+    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
+      <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
+        <FoldHead eyebrow="If you're buying" lead="Every home is open to you." accent="Even the ones not for sale."
+          sub="With Tim as your broker you can write an offer on any home in any market The Market runs, listed or not. And every home you look at seriously comes with a Comp Report and a review of its disclosures, before you commit to anything." />
+        <div className="grid lg:grid-cols-[1fr_2fr] gap-5 mt-10">
+          <Reveal>
+            <div className={lightCard + ' p-6 h-full flex flex-col'}>
+              <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Any home, any market</p>
+              <h3 className="mt2-serif text-2xl mt-2">Write an offer on the house you actually want</h3>
+              <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">Not only what a portal happens to show. The owner receives a written offer from a licensed broker, and nothing is agreed until they sign.</p>
+              <div className="mt-auto pt-5 grid grid-cols-3 gap-2 text-center">
+                {[['Listed', 'Active listings'], ['Coming Soon', 'Before the MLS'], ['Not for sale', 'Any address']].map(([a, b]) => (
+                  <div key={a} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-3">
+                    <div className="text-[13px] font-medium">{a}</div><div className="text-[11px] text-[#6b7285] mt-0.5">{b}</div>
+                  </div>))}
+              </div>
+            </div>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className={lightCard + ' p-6'}>
+              <div className="flex items-baseline justify-between gap-3 flex-wrap">
+                <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>Recent work · Campbell</p>
+                <p className="text-[11px] text-[#6b7285]">You get this on every home you look at</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3 mt-4">
+                {REPORTS.map(r => (
+                  <a key={r.address} href={r.href} target="_blank" rel="noopener noreferrer"
+                     className="group rounded-2xl border border-[#d9e2f1] bg-[#F9FBFE] p-4 hover:border-[#4f82b9] transition-colors">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="mt2-serif text-lg leading-tight">{r.address}</div>
+                      <div className="shrink-0 text-center">
+                        <div className="text-xl font-semibold" style={{ color: PERI }}>{r.score}</div>
+                        <div className="text-[9px] uppercase tracking-[0.15em] text-[#6b7285]">condition</div>
+                      </div>
+                    </div>
+                    <p className="text-[12px] text-[#4a5163] leading-relaxed mt-2">{r.line}</p>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {(r.comps ? [r.comps + ' recorded sales'] : []).concat([r.findings + ' findings', r.questions + ' questions to ask', r.flags + ' cost items']).map(t =>
+                        <span key={t} className="rounded-full bg-white border border-[#d9e2f1] px-2.5 py-0.5 text-[10.5px] text-[#4a5163]">{t}</span>)}
+                    </div>
+                    <div className="text-[11px] mt-3 inline-flex items-center gap-1" style={{ color: PERI }}>
+                      {r.comps ? 'Open the Comp Report' : 'Open the home record'} <ArrowUpRight size={12} />
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </div>
+          </Reveal>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const MMM_MARKETS: [string, string][] = [
+  ['Campbell', 'https://campbellrealestatemarket.com/make-me-move/'],
+  ['Los Gatos', 'https://losgatosrealestatemarket.com/make-me-move/'],
+  ['Saratoga', 'https://saratogarealestatemarket.com/make-me-move/'],
+  ['San Francisco condo', 'https://sanfranciscocondomarket.com/sell/'],
+  ['Eichler', 'https://eichlermarket.com/make-me-move/'],
+]
+const money = (n: number) => '$' + Math.round(n).toLocaleString('en-US')
+
+function MakeMeMoveTool() {
+  const [addr, setAddr] = useState('')
+  const [num, setNum] = useState(2400000)
+  const [mkt, setMkt] = useState(0)
+  return (
+    <div className={lightCard + ' p-6 h-full flex flex-col'}>
+      <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For homeowners · try it</p>
+      <h3 className="mt2-serif text-2xl mt-2">Set your Make Me Move price</h3>
+      <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">The price that would actually make you move. No sign, no showings, no public record: only account holders see it, and a buyer who meets it makes a written offer.</p>
+      <div className="grid sm:grid-cols-2 gap-3 mt-5">
+        <label className="text-[11px] text-[#6b7285]">Your street address
+          <input value={addr} onChange={e => setAddr(e.target.value)} placeholder="e.g. 1187 Linden Way"
+            className="mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]" /></label>
+        <label className="text-[11px] text-[#6b7285]">Market
+          <select value={mkt} onChange={e => setMkt(Number(e.target.value))}
+            className="mt-1 w-full rounded-xl border border-[#d9e2f1] bg-[#F9FBFE] px-3 py-2 text-[14px] text-[#1a1f2e] outline-none focus:border-[#4f82b9]">
+            {MMM_MARKETS.map(([n], i) => <option key={n} value={i}>{n}</option>)}
+          </select></label>
+      </div>
+      <label className="text-[11px] text-[#6b7285] mt-4">Your number: <b className="text-[#1a1f2e] text-[15px]">{money(num)}</b>
+        <input type="range" min={500000} max={8000000} step={25000} value={num} onChange={e => setNum(Number(e.target.value))}
+          className="w-full mt-2" style={{ accentColor: PERI }} /></label>
+      <div className="mt-4 rounded-2xl border border-[#d9e2f1] bg-[#F4F7FC] p-4">
+        <div className="text-[10px] uppercase tracking-[0.2em] text-[#6b7285]">Your home, as buyers would see it</div>
+        <div className="mt2-serif text-xl mt-1">{addr.trim() || 'Your address'}</div>
+        <div className="flex flex-wrap gap-5 mt-2 text-[13px]">
+          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Make Me Move</div><b>{money(num)}</b></div>
+          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Seen by</div>Account holders</div>
+          <div><div className="text-[10px] uppercase tracking-[0.15em] text-[#6b7285]">Public listing</div>None</div>
+        </div>
+      </div>
+      <a href={MMM_MARKETS[mkt][1]} target="_blank" rel="noopener noreferrer"
+         className="mt-5 self-start inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium text-white" style={{ background: PERI }}>
+        Set it for real <ArrowUpRight size={16} />
+      </a>
+    </div>
+  )
+}
+
+function ExchangeTool() {
+  const [value, setValue] = useState(1800000)
+  const [rent, setRent] = useState(4500)
+  const gross = rent * 12 / value * 100
+  const net = rent * 12 * 0.65 / value * 100
+  const incomeNow = rent * 12 * 0.65
+  const incomeAt7 = value * 0.94 * 0.07   // after roughly 6% in selling costs
+  return (
+    <div className={lightCard + ' p-6 h-full flex flex-col'}>
+      <p className="text-[10px] uppercase tracking-[0.25em]" style={{ color: PERI }}>For rental owners · try it</p>
+      <h3 className="mt2-serif text-2xl mt-2">Is your rental pulling its weight?</h3>
+      <p className="text-[13px] text-[#4a5163] mt-2 leading-relaxed">Enter what the house is worth and what it rents for. On the Investor Exchange it goes to local investors with the tenant in place, and the equity can move through a 1031 exchange into property that pays more and asks less of you.</p>
+      <label className="text-[11px] text-[#6b7285] mt-5">What it is worth today: <b className="text-[#1a1f2e] text-[15px]">{money(value)}</b>
+        <input type="range" min={500000} max={5000000} step={25000} value={value} onChange={e => setValue(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
+      <label className="text-[11px] text-[#6b7285] mt-3">Monthly rent: <b className="text-[#1a1f2e] text-[15px]">{money(rent)}</b>
+        <input type="range" min={1500} max={15000} step={100} value={rent} onChange={e => setRent(Number(e.target.value))} className="w-full mt-2" style={{ accentColor: PERI }} /></label>
+      <div className="grid grid-cols-3 gap-2 mt-4 text-center">
+        {[['Gross yield', gross.toFixed(2) + '%'], ['After costs', net.toFixed(2) + '%'], ['Net a year', money(incomeNow)]].map(([k, v]) => (
+          <div key={k} className="rounded-2xl bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-3">
+            <div className="text-[10px] uppercase tracking-[0.12em] text-[#6b7285]">{k}</div><div className="text-[15px] font-semibold mt-1">{v}</div></div>))}
+      </div>
+      <div className="mt-3 rounded-2xl border px-4 py-3 text-[12.5px] leading-relaxed" style={{ borderColor: PERI, background: '#EAF0FA' }}>
+        The same equity at a <b>7% cap rate</b>, the rate on the triple-net warehouse in Modesto Tim&rsquo;s buyer bought, would pay about <b>{money(incomeAt7)}</b> a year after roughly 6% in selling costs, with the tenant covering taxes, insurance and repairs.
+      </div>
+      <p className="text-[10.5px] text-[#6b7285] mt-2">Illustration only. Running costs assumed at 35% of rent. Taxes, debt and the 1031 rules change the picture: talk to your CPA before you act.</p>
+      <a href="https://campbellrealestatemarket.com/investor-exchange/" target="_blank" rel="noopener noreferrer"
+         className="mt-auto pt-4 self-start inline-flex items-center gap-2 text-sm font-medium" style={{ color: PERI }}>
+        See the Investor Exchange <ArrowUpRight size={16} />
+      </a>
+    </div>
+  )
+}
+
+function SellerFold() {
+  return (
+    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20 border-t border-[#d9e2f1]">
+      <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
+        <FoldHead eyebrow="If you're selling" lead="Test your price" accent="without moving out."
+          sub="Most owners find out what their home is worth by listing it. With Tim you can name your number privately and let buyers come to it, or offer a rental to investors without disturbing the tenant." />
+        <div className="grid lg:grid-cols-2 gap-5 mt-10">
+          <Reveal><MakeMeMoveTool /></Reveal>
+          <Reveal delay={0.08}><ExchangeTool /></Reveal>
+        </div>
+        <Reveal delay={0.1}>
+          <div className="mt-10">
+            <p className="text-[10px] uppercase tracking-[0.25em] text-[#6b7285]">Live now, with more cities coming</p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {MARKETPLACES.map(m => (
+                <a key={m.name} href={m.url} target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-1.5 rounded-full border border-[#d9e2f1] bg-white px-3.5 py-1.5 text-[12px] text-[#1a1f2e] hover:border-[#4f82b9] transition-colors">
+                  {m.name} <ArrowUpRight size={13} className="text-[#6b7285]" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </Reveal>
+      </div>
+    </div>
+  )
+}
 
 export default function MeetTim() {
   const [loading, setLoading] = useState(true)
@@ -780,44 +915,10 @@ export default function MeetTim() {
         </div>
         </div>
 
-        <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
-        <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
-          <Reveal>
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-8 h-px bg-white/15" />
-              <span className="text-[11px] uppercase tracking-[0.3em] text-white/40">What your account opens</span>
-            </div>
-            <h2 className="text-3xl md:text-5xl leading-tight text-white/95">
-              Four doors, <span className="mt2-serif text-white">every market.</span>
-            </h2>
-          </Reveal>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            {MARKET_POWERS.map((c, i) => (
-              <Reveal key={c.title} delay={0.06 * i}>
-                <div className="h-full flex flex-col rounded-3xl bg-[#141414] border border-white/10 p-5 md:p-6">
-                  <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">{c.eyebrow}</p>
-                  <h3 className="mt2-serif text-xl lg:text-[1.35rem] leading-snug text-white mt-2">{c.title}</h3>
-                  <p className="text-[12.5px] text-white/50 mt-2 leading-relaxed">{c.body}</p>
-                  <div className="mt-auto pt-5">{c.demo}</div>
-                </div>
-              </Reveal>
-            ))}
-          </div>
-
-          <Reveal delay={0.1}>
-            <div className="mt-10">
-              <p className="text-[10px] uppercase tracking-[0.25em] text-white/35">Live now, with more cities coming</p>
-              <div className="flex flex-wrap gap-2 mt-4">
-                {MARKETPLACES.map(m => (
-                  <a key={m.name} href={m.url} target="_blank" rel="noopener noreferrer"
-                     className="inline-flex items-center gap-1.5 rounded-full border border-white/12 bg-white/[0.03] px-3.5 py-1.5 text-[12px] text-white/70 hover:text-white hover:border-white/35 transition-colors">
-                    {m.name} <ArrowUpRight size={13} className="text-white/35" />
-                  </a>
-                ))}
-              </div>
-            </div>
-          </Reveal>
-        </div>
+        {/* Buyer and seller, on a light band in the McMullen blue (Tim, 28 Sep 2026). */}
+        <div className="bg-[#EEF2F9] text-[#1a1f2e]">
+          <BuyerFold />
+          <SellerFold />
         </div>
       </section>
 
