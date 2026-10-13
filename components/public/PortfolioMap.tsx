@@ -35,6 +35,7 @@ export type MapHome = {
   highlight: string | null
   lat: number
   lng: number
+  kind: 'sfh' | 'condo' | null
 }
 
 const GOLD = '#C9A44C'
@@ -146,11 +147,24 @@ function cardHtml(h: MapHome): string {
 }
 
 /* -------------------------------- component ----------------------------- */
-export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
+type Kind = 'all' | 'sfh' | 'condo'
+const KIND_LABEL: Record<Kind, string> = { all: 'All homes', sfh: 'Single family', condo: 'Condo & TIC' }
+
+export default function PortfolioMap({ homes: allHomes }: { homes: MapHome[] }) {
+  /* Single family vs condo (TICs included). Only the map filters; the grid below is
+     unchanged. */
+  const [kind, setKind] = useState<Kind>('all')
+  const counts = useMemo(() => ({
+    all: allHomes.length,
+    sfh: allHomes.filter((h) => h.kind === 'sfh').length,
+    condo: allHomes.filter((h) => h.kind === 'condo').length,
+  }), [allHomes])
+  const homes = useMemo(() => (kind === 'all' ? allHomes : allHomes.filter((h) => h.kind === kind)), [allHomes, kind])
   const navigate = useNavigate()
   const hostRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<LeafletNS>(null)
   const layerRef = useRef<LeafletNS>(null)
+  const markersRef = useRef<Record<string, LeafletNS>>({})
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const [scope, setScope] = useState<'core' | 'all'>('core')
   const { core, far } = useMemo(() => splitCore(homes), [homes])
@@ -223,6 +237,10 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
     if (layerRef.current) { map.removeLayer(layerRef.current); layerRef.current = null }
     const group = L.markerClusterGroup({
       maxClusterRadius: 46, showCoverageOnHover: false, spiderfyOnMaxZoom: true, disableClusteringAtZoom: 17,
+      /* Keep every pin in the DOM. With the default, a card taller than a phone's map
+         panned its own pin out of view, the cluster layer dropped the pin, and the card
+         closed with it. 53 pins cost nothing to keep. */
+      removeOutsideVisibleBounds: false,
       iconCreateFunction: (c: LeafletNS) => {
         const n = c.getChildCount()
         const size = n < 10 ? 38 : n < 25 ? 44 : 50
@@ -230,11 +248,12 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
           className: 'mpm-cluster-wrap', iconSize: L.point(size, size) })
       },
     })
+    markersRef.current = {}
     homes.forEach((h) => {
       const icon = L.divIcon({ className: 'mpm-pin', html: PIN_SVG, iconSize: [30, 40], iconAnchor: [15, 39], popupAnchor: [0, -34] })
-      L.marker([h.lat, h.lng], { icon, title: h.name, keyboard: true, riseOnHover: true })
+      markersRef.current[h.slug] = L.marker([h.lat, h.lng], { icon, title: h.name, keyboard: true, riseOnHover: true })
         .bindPopup(cardHtml(h), { className: 'mpm-popup', maxWidth: 264, minWidth: 264, closeButton: true,
-          autoPanPaddingTopLeft: L.point(24, 90), autoPanPaddingBottomRight: L.point(24, 24) })
+          autoPanPaddingTopLeft: L.point(16, 16), autoPanPaddingBottomRight: L.point(16, 16) })
         .addTo(group)
     })
     group.addTo(map)
@@ -244,7 +263,19 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
     else if (pts.length > 1) map.fitBounds(pts, { padding: [36, 36], maxZoom: 15 })
   }, [homes, core, scope, state])
 
-  const farNames = far.length ? far.map((h) => h.hood || h.name).filter((v, i, a) => a.indexOf(v) === i) : []
+  /* The homes outside the Bay Area each get a button under the map: it flies to the
+     pin and opens its card, so Tahoe, Jackson Hole and Melbourne are one click away
+     rather than hidden behind a world-wide view (Tim, 13 Oct 2026). */
+  function goTo(h: MapHome) {
+    const map = mapRef.current
+    const m = markersRef.current[h.slug]
+    if (!map || !m) return
+    hostRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    map.setView([h.lat, h.lng], 15)
+    const group = layerRef.current
+    if (group && group.zoomToShowLayer) group.zoomToShowLayer(m, () => m.openPopup())
+    else m.openPopup()
+  }
 
   return (
     <div>
@@ -279,11 +310,25 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
         .mpm-hl { font: italic 13px/1.35 'Playfair Display', Georgia, serif; margin-top: 7px; color: ${NAVY}; }
         .mpm-cta { margin-top: 10px; font: 600 11px/1 ui-monospace, 'SF Mono', Menlo, monospace; letter-spacing: .12em; text-transform: uppercase; color: ${GOLD_DEEP}; }
         .mpm-host .leaflet-control-attribution { font-size: 10px; }
+        @media (max-width: 640px) { .mpm-img { height: 112px; } .mpm-popup .leaflet-popup-content { width: 240px !important; } }
       `}</style>
 
       <div className="flex flex-wrap items-end justify-between gap-3 mb-4">
-        <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46]">
-          On the map · {homes.length} {homes.length === 1 ? 'home' : 'homes'}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46]">
+            On the map · {homes.length} {homes.length === 1 ? 'home' : 'homes'}
+          </div>
+          <div className="inline-flex rounded-full p-1 border" role="group" aria-label="Home type"
+            style={{ borderColor: 'rgba(13,27,42,0.12)', background: '#f6f7f9' }}>
+            {(['all', 'sfh', 'condo'] as const).map((k) => (
+              <button key={k} type="button" onClick={() => setKind(k)} aria-pressed={kind === k}
+                disabled={k !== 'all' && counts[k] === 0}
+                className="whitespace-nowrap rounded-full px-2.5 sm:px-3.5 py-1 text-[12px] sm:text-[12.5px] font-medium transition-colors disabled:opacity-40"
+                style={kind === k ? { background: '#fff', color: NAVY, boxShadow: '0 1px 3px rgba(13,27,42,0.15)' } : { color: '#5a6578' }}>
+                {KIND_LABEL[k]} <span style={{ color: kind === k ? GOLD_DEEP : '#9aa3b2' }}>{counts[k]}</span>
+              </button>
+            ))}
+          </div>
         </div>
         {far.length > 0 && (
           <div className="flex gap-2" role="group" aria-label="Map area">
@@ -310,11 +355,23 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
           </div>
         )}
       </div>
-      <div className="mt-3 text-[12px] text-[#7b8794]">
-        Select a pin to see the home.{' '}
-        <span className="md:hidden">Use two fingers to move the map.</span>
-        {scope === 'core' && farNames.length > 0 && (
-          <span className="hidden md:inline">Also further afield: {farNames.join(', ')}.</span>
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[12px] text-[#7b8794]">
+        <span>
+          Select a pin to see the home.{' '}
+          <span className="md:hidden">Use two fingers to move the map.</span>
+        </span>
+        {far.length > 0 && (
+          <span className="flex flex-wrap items-center gap-2">
+            <span>Further afield:</span>
+            {far.map((h) => (
+              <button key={h.slug} type="button" onClick={() => goTo(h)}
+                className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[12px] text-[#0D1B2A] transition-colors hover:border-[#0D1B2A]"
+                style={{ borderColor: 'rgba(13,27,42,0.15)', background: '#fff' }}>
+                <svg width="9" height="12" viewBox="0 0 30 40" aria-hidden="true"><path d="M15 38.5s12-13.4 12-22.9A12 12 0 0 0 3 15.6c0 9.5 12 22.9 12 22.9z" fill={GOLD} /></svg>
+                {h.hood || h.name}
+              </button>
+            ))}
+          </span>
         )}
       </div>
     </div>

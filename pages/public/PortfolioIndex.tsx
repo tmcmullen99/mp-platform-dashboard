@@ -26,6 +26,7 @@ type PropertyRow = {
   represented_side: string | null
   latitude: number | null
   longitude: number | null
+  property_type: string | null
 }
 
 /* 'Coming Soon' and 'Pending' are not chips. Each has its own row above the
@@ -51,6 +52,16 @@ function statusTone(status: string | null): { fg: string; bg: string } {
       return { fg: '#0D1B2A', bg: 'rgba(145,161,186,0.35)' }
     default:
       return { fg: '#273C46', bg: 'rgba(39,60,70,0.08)' }
+  }
+}
+
+/* The map's Single family / Condo toggle (Tim, 13 Oct 2026): TICs count as condos,
+   and so do co-ops and lofts. Multi-family and homes with no type set show under All. */
+function homeKind(t: string | null): MapHome['kind'] {
+  switch (t) {
+    case 'Single Family Home': return 'sfh'
+    case 'Condo': case 'TIC': case 'Co-op': case 'Loft': return 'condo'
+    default: return null
   }
 }
 
@@ -167,7 +178,7 @@ export default function PortfolioIndex() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, highlight, represented_side, latitude, longitude, statuses(name), neighborhoods(name)'
+          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, highlight, represented_side, latitude, longitude, statuses(name), neighborhoods(name), property_types(name)'
         )
         .order('price', { ascending: false, nullsFirst: false })
       if (cancelled) return
@@ -186,6 +197,7 @@ export default function PortfolioIndex() {
         represented_side: (r.represented_side as string) ?? null,
         latitude: (r.latitude as number) ?? null,
         longitude: (r.longitude as number) ?? null,
+        property_type: ((r.property_types as { name?: string } | null)?.name) ?? null,
       }))
       setRows(mapped)
       setLoading(false)
@@ -230,6 +242,7 @@ export default function PortfolioIndex() {
         highlight: r.highlight,
         lat: r.latitude as number,
         lng: r.longitude as number,
+        kind: homeKind(r.property_type),
       }))
   }, [rows, filter, query])
 
