@@ -5,6 +5,9 @@
 //   Leaflet tags are the same data-leaflet ones SFInvestorMap uses, so the library
 //   loads once whichever map mounts first.
 // - Carto light_all tiles (OpenStreetMap data; attribution kept, it is required).
+//   Carto serves a watermark without a key, so the key comes from the Cloudflare
+//   Pages variable VITE_CARTO_KEY, baked in at build like the Supabase vars. Until it
+//   is set, the map falls back to plain OpenStreetMap tiles rather than the watermark.
 // - Gold pins with gold clusters (Tim, 13 Oct 2026). The click on a pin opens a
 //   card, and the card links to the property page.
 // - Scroll-wheel zoom stays off until the map is clicked, so the page scrolls past it,
@@ -159,10 +162,18 @@ export default function PortfolioMap({ homes }: { homes: MapHome[] }) {
       if (dead || !hostRef.current || mapRef.current) return
       const L = (window as unknown as { L: LeafletNS }).L
       const map = L.map(hostRef.current, { scrollWheelZoom: false, zoomControl: true, worldCopyJump: true, dragging: !L.Browser.mobile })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
-        maxZoom: 19,
-      }).addTo(map)
+      const cartoKey = String(import.meta.env.VITE_CARTO_KEY ?? '').trim()
+      if (cartoKey) {
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(cartoKey), {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+          maxZoom: 19,
+        }).addTo(map)
+      } else {
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+          maxZoom: 19,
+        }).addTo(map)
+      }
       map.on('focus click', () => map.scrollWheelZoom.enable())
       // Trackpad pinch (ctrlKey wheel) zooms; a plain two-finger scroll scrolls the page.
       const el = hostRef.current
