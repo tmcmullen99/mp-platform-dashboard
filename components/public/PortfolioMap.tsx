@@ -126,6 +126,16 @@ function splitCore(homes: MapHome[]): { core: MapHome[]; far: MapHome[] } {
   return core.length ? { core, far } : { core: homes, far: [] }
 }
 
+/* Zoomed out, Leaflet draws the world several times side by side, but a marker sits
+   on one copy only: Tim saw the Bay Area on one world and Melbourne on the next. Each
+   pin is drawn on the real world and on two copies to each side, which covers every
+   copy visible at the lowest zoom on the widest layout. */
+const WORLD_COPIES = [-2, -1, 0, 1, 2]
+/* The longitude of the same place on the world copy closest to `ref`. */
+function nearLng(lng: number, ref: number): number {
+  return lng + 360 * Math.round((ref - lng) / 360)
+}
+
 const PIN_SVG =
   `<svg width="30" height="40" viewBox="0 0 30 40" aria-hidden="true">` +
   `<path class="mpm-pin-body" d="M15 38.5s12-13.4 12-22.9A12 12 0 0 0 3 15.6c0 9.5 12 22.9 12 22.9z" stroke="#fff" stroke-width="2"/>` +
@@ -175,7 +185,14 @@ export default function PortfolioMap({ homes: allHomes }: { homes: MapHome[] }) 
     loadCluster().then(() => {
       if (dead || !hostRef.current || mapRef.current) return
       const L = (window as unknown as { L: LeafletNS }).L
-      const map = L.map(hostRef.current, { scrollWheelZoom: false, zoomControl: true, worldCopyJump: true, dragging: !L.Browser.mobile })
+      /* Zoomed right out (Tim, 13 Oct 2026). The world repeats side by side, and every
+         copy now carries every pin (see WORLD_COPIES). The map stops zooming out once the
+         world is as tall as the map, and cannot be dragged past the poles into grey. */
+      const minZoom = Math.max(1, Math.ceil(Math.log2(Math.max(256, hostRef.current.clientHeight) / 256)))
+      const map = L.map(hostRef.current, {
+        scrollWheelZoom: false, zoomControl: true, worldCopyJump: true, dragging: !L.Browser.mobile,
+        minZoom, maxBounds: [[-85.05, -900], [85.05, 900]], maxBoundsViscosity: 1,
+      })
       const cartoKey = String(import.meta.env.VITE_CARTO_KEY ?? '').trim()
       if (cartoKey) {
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png?key=' + encodeURIComponent(cartoKey), {
@@ -250,15 +267,22 @@ export default function PortfolioMap({ homes: allHomes }: { homes: MapHome[] }) 
     })
     markersRef.current = {}
     homes.forEach((h) => {
-      const icon = L.divIcon({ className: 'mpm-pin', html: PIN_SVG, iconSize: [30, 40], iconAnchor: [15, 39], popupAnchor: [0, -34] })
-      markersRef.current[h.slug] = L.marker([h.lat, h.lng], { icon, title: h.name, keyboard: true, riseOnHover: true })
-        .bindPopup(cardHtml(h), { className: 'mpm-popup', maxWidth: 264, minWidth: 264, closeButton: true,
-          autoPanPaddingTopLeft: L.point(16, 16), autoPanPaddingBottomRight: L.point(16, 16) })
-        .addTo(group)
+      WORLD_COPIES.forEach((k) => {
+        const icon = L.divIcon({ className: 'mpm-pin', html: PIN_SVG, iconSize: [30, 40], iconAnchor: [15, 39], popupAnchor: [0, -34] })
+        /* Only the real-world pin takes keyboard focus; the copies are for the eye. */
+        const m = L.marker([h.lat, h.lng + k * 360], { icon, title: h.name, keyboard: k === 0, riseOnHover: true })
+          .bindPopup(cardHtml(h), { className: 'mpm-popup', maxWidth: 264, minWidth: 264, closeButton: true,
+            autoPanPaddingTopLeft: L.point(16, 16), autoPanPaddingBottomRight: L.point(16, 16) })
+          .addTo(group)
+        if (k === 0) markersRef.current[h.slug] = m
+      })
     })
     group.addTo(map)
     layerRef.current = group
-    const pts = (scope === 'all' ? homes : core).map((h) => [h.lat, h.lng])
+    /* "All locations" frames the short way round: Melbourne is fitted on the copy across
+       the Pacific from San Francisco (93 degrees away) rather than across Africa (267). */
+    const ref = core.length ? median(core.map((h) => h.lng)) : 0
+    const pts = (scope === 'all' ? homes : core).map((h) => [h.lat, nearLng(h.lng, ref)])
     if (pts.length === 1) map.setView(pts[0], 15)
     else if (pts.length > 1) map.fitBounds(pts, { padding: [36, 36], maxZoom: 15 })
   }, [homes, core, scope, state])

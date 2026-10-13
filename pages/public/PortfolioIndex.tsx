@@ -60,7 +60,8 @@ function statusTone(status: string | null): { fg: string; bg: string } {
 function homeKind(t: string | null): MapHome['kind'] {
   switch (t) {
     case 'Single Family Home': return 'sfh'
-    case 'Condo': case 'TIC': case 'Co-op': case 'Loft': return 'condo'
+    /* Townhouses with an HOA sit with the condos (Tim, 13 Oct 2026: 520 and 532 Hudson). */
+    case 'Condo': case 'TIC': case 'Co-op': case 'Loft': case 'Townhouse': return 'condo'
     default: return null
   }
 }
