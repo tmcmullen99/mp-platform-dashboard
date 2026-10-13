@@ -84,6 +84,8 @@ type Row = {
   status_name: string | null
   neighborhood_name: string | null
   property_type_name: string | null
+  highlight: string | null
+  represented_side: string | null
 }
 
 /* ============================== helpers ================================== */
@@ -177,7 +179,7 @@ export default function PropertyDetail() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, pin_code, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, listing_stage, statuses(name), neighborhoods(name), property_types(name)'
+          'slug, name, pin_code, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, listing_stage, highlight, represented_side, statuses(name), neighborhoods(name), property_types(name)'
         )
         .eq('slug', slug)
         .maybeSingle()
@@ -209,6 +211,8 @@ export default function PropertyDetail() {
         status_name: ((r.statuses as { name?: string } | null)?.name) ?? null,
         neighborhood_name: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
         property_type_name: ((r.property_types as { name?: string } | null)?.name) ?? null,
+        highlight: (r.highlight as string) ?? null,
+        represented_side: (r.represented_side as string) ?? null,
       })
       setLoading(false)
     }
@@ -239,6 +243,8 @@ export default function PropertyDetail() {
 
   const sold = isSold(p.listing_stage)
   const comingSoon = p.listing_stage === 'coming_soon'
+  // A purchase Tim made for a buyer reads as one: "Bought for", not "Sold for".
+  const boughtForBuyer = sold && p.represented_side === 'buyer'
 
   // Hero image + reveal layer (2nd distinct image powers the spotlight reveal).
   const heroImg = p.main_image ?? (p.images && p.images[0]) ?? null
@@ -274,8 +280,8 @@ export default function PropertyDetail() {
       <Hero
         name={p.name}
         pin={p.pin_code}
-        priceLabel={sold ? `Sold for ${money(p.price)}` : money(p.price)}
-        priceEyebrow={sold ? 'Sold price' : 'Offered at'}
+        priceLabel={boughtForBuyer ? `Bought for ${money(p.price)}` : sold ? `Sold for ${money(p.price)}` : money(p.price)}
+        priceEyebrow={boughtForBuyer ? 'Purchase price' : sold ? 'Sold price' : 'Offered at'}
         stage={stageLabel(p.listing_stage)}
         neighborhood={p.neighborhood_name}
         heroUrl={heroImg?.url ?? null}
@@ -742,6 +748,13 @@ function Overview({ p, sold }: { p: Row; sold: boolean }) {
           </Reveal>
         </div>
         <div className="md:col-span-8">
+          {p.highlight && (
+            <Reveal>
+              <p className="mp-display italic text-2xl sm:text-3xl leading-snug mb-8" style={{ color: NAVY }}>
+                {p.highlight}
+              </p>
+            </Reveal>
+          )}
           <Reveal>
             {p.description_html ? (
               <div className="mp-rte text-base sm:text-lg" dangerouslySetInnerHTML={{ __html: p.description_html }} />

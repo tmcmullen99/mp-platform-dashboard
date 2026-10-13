@@ -204,67 +204,121 @@ function PillButton({
   )
 }
 
-/* ------------------------------ coming soon ------------------------------ */
+/* ------------------------- coming soon · pending ------------------------- */
 /* Deliberately the SAME card as the track record — same radius, same shadow,
    same image height, same price/beds/hood stack. A second card style for the
    same object is how two sections of one page start looking like two sites.
    The only differences are the badge and the empty-photo panel. */
-function ComingSoon({ cards }: { cards: SoldCard[] }) {
+type PipelineKind = {
+  eyebrow: string
+  lead: string
+  accent: string
+  blurb: string
+  badge: string
+  badgeStyle: { background: string; color: string }
+}
+const SOON_KIND: PipelineKind = {
+  eyebrow: 'On the way',
+  lead: 'Coming',
+  accent: 'Soon.',
+  blurb: 'Homes preparing to list. Ask about any of them before they reach the open market.',
+  badge: 'Coming Soon',
+  badgeStyle: { background: NAVY, color: '#fff' },
+}
+const PENDING_KIND: PipelineKind = {
+  eyebrow: 'Under contract',
+  lead: 'Now',
+  accent: 'Pending.',
+  blurb: 'Homes under contract and on their way to the closing table.',
+  badge: 'Pending',
+  badgeStyle: { background: BLUEGRAY, color: NAVY },
+}
+
+function PipelineHead({ kind }: { kind: PipelineKind }) {
+  return (
+    <Reveal>
+      <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: BLUEGRAY }}>
+        {kind.eyebrow}
+      </div>
+      <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
+        {kind.lead} <span className="mp-serif font-normal" style={{ color: NAVY }}>{kind.accent}</span>
+      </h2>
+      <p className="text-lg leading-relaxed mt-4 max-w-2xl" style={{ color: INK }}>
+        {kind.blurb}
+      </p>
+    </Reveal>
+  )
+}
+
+function PipelineCard({ s, kind }: { s: SoldCard; kind: PipelineKind }) {
+  return (
+    <Link
+      to={`/listings/${s.slug}`}
+      className="group block rounded-[20px] overflow-hidden bg-white h-full"
+      style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
+    >
+      <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
+        {s.img ? (
+          <img src={s.img} alt={s.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="mp-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: BLUEGRAY }}>
+              Photography in progress
+            </span>
+          </div>
+        )}
+        <span
+          className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide"
+          style={kind.badgeStyle}
+        >
+          {kind.badge}
+        </span>
+      </div>
+      <div className="p-5">
+        <div className="mp-serif text-[22px]" style={{ color: NAVY }}>{money(s.price)}</div>
+        <div className="flex gap-3 text-[13px] mt-1.5" style={{ color: '#5a6578' }}>
+          {s.beds != null ? <span>{s.beds} bd</span> : null}
+          {s.baths != null ? <span>{s.baths} ba</span> : null}
+          {s.sqft != null ? <span>{s.sqft.toLocaleString()} sqft</span> : null}
+          {s.hood ? <span>{s.hood}</span> : null}
+        </div>
+        <div className="text-sm mt-1.5" style={{ color: BLUEGRAY }}>{s.name}</div>
+      </div>
+    </Link>
+  )
+}
+
+/* Coming Soon on the left, Pending on the right: two columns, one row.
+   The grid places each heading in row 1 and each set of cards in row 2, so the
+   cards line up across the columns even when one blurb wraps to a second line
+   and the other does not. On a phone the DOM order takes over and each heading
+   sits directly above its own cards. When only one side has homes, it takes the
+   full width with the three-across grid rather than leaving an empty column. */
+function ComingSoonPending({ soon, pending }: { soon: SoldCard[]; pending: SoldCard[] }) {
+  const both = soon.length > 0 && pending.length > 0
+  const cardsGrid = (n: number) =>
+    both ? (n > 1 ? 'grid sm:grid-cols-2 gap-6' : 'grid gap-6') : 'grid sm:grid-cols-2 lg:grid-cols-3 gap-6'
+  const sides: { kind: PipelineKind; cards: SoldCard[]; col: string }[] = [
+    { kind: SOON_KIND, cards: soon, col: 'lg:col-start-1' },
+    { kind: PENDING_KIND, cards: pending, col: 'lg:col-start-2' },
+  ].filter((x) => x.cards.length > 0)
   return (
     <section className="py-20 md:py-28 bg-white">
       <div className="max-w-6xl mx-auto px-6">
-        <Reveal>
-          <div className="mp-mono text-xs uppercase tracking-[0.22em] mb-3" style={{ color: BLUEGRAY }}>
-            On the way
-          </div>
-          <h2 className="text-[36px] md:text-[52px] leading-[1.05] font-semibold tracking-tight">
-            Coming <span className="mp-serif font-normal" style={{ color: NAVY }}>Soon.</span>
-          </h2>
-          <p className="text-lg leading-relaxed mt-4 max-w-2xl" style={{ color: INK }}>
-            Homes preparing to list. Ask about any of them before they reach the open market.
-          </p>
-        </Reveal>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-12">
-          {cards.map((s, i) => (
-            <Reveal key={s.slug} delay={0.06 * i}>
-              <Link
-                to={`/listings/${s.slug}`}
-                className="group block rounded-[20px] overflow-hidden bg-white h-full"
-                style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
-              >
-                <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
-                  {/* Sharp. The cover photograph is the invitation — the gate
-                      still holds the gallery, the figures and the address detail
-                      behind an email, which is where the value actually sits. */}
-                  {s.img ? (
-                    <img src={s.img} alt={s.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="mp-mono text-[11px] uppercase tracking-[0.18em]" style={{ color: BLUEGRAY }}>
-                        Photography in progress
-                      </span>
-                    </div>
-                  )}
-                  <span
-                    className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide"
-                    style={{ background: NAVY, color: '#fff' }}
-                  >
-                    Coming Soon
-                  </span>
-                </div>
-                <div className="p-5">
-                  <div className="mp-serif text-[22px]" style={{ color: NAVY }}>{money(s.price)}</div>
-                  <div className="flex gap-3 text-[13px] mt-1.5" style={{ color: '#5a6578' }}>
-                    {s.beds != null ? <span>{s.beds} bd</span> : null}
-                    {s.baths != null ? <span>{s.baths} ba</span> : null}
-                    {s.sqft != null ? <span>{s.sqft.toLocaleString()} sqft</span> : null}
-                    {s.hood ? <span>{s.hood}</span> : null}
-                  </div>
-                  <div className="text-sm mt-1.5" style={{ color: BLUEGRAY }}>{s.name}</div>
-                </div>
-              </Link>
-            </Reveal>
+        <div className={both ? 'grid lg:grid-cols-2 gap-x-10' : ''}>
+          {sides.map(({ kind, cards, col }, si) => (
+            <div key={kind.badge} className="contents">
+              <div className={both ? `${col} lg:row-start-1 ${si > 0 ? 'mt-16 lg:mt-0' : ''}` : ''}>
+                <PipelineHead kind={kind} />
+              </div>
+              <div className={`${both ? `${col} lg:row-start-2 ` : ''}${cardsGrid(cards.length)} mt-10 md:mt-12`}>
+                {cards.map((s, i) => (
+                  <Reveal key={s.slug} delay={0.06 * i}>
+                    <PipelineCard s={s} kind={kind} />
+                  </Reveal>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -277,6 +331,7 @@ export default function McMullenHome() {
   const [content, setContent] = useState<HomeContent | null>(null)
   const [sold, setSold] = useState<SoldCard[]>([])
   const [comingSoon, setComingSoon] = useState<SoldCard[]>([])
+  const [pending, setPending] = useState<SoldCard[]>([])
   // Live hero images for the "Same Developer" proof→mandate pair, keyed by slug,
   // so they auto-update once Huckleberry's photos are rehosted to Supabase.
   const [devImgs, setDevImgs] = useState<Record<string, string>>({})
@@ -325,14 +380,22 @@ export default function McMullenHome() {
         .order('price', { ascending: false, nullsFirst: false })
         .limit(6)
 
+      /* Pending sits beside coming soon, on the same card shape. */
+      const pendP = supabase
+        .from('properties')
+        .select('slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, statuses(name), neighborhoods(name)')
+        .eq('listing_stage', 'pending')
+        .order('price', { ascending: false, nullsFirst: false })
+        .limit(6)
+
       // Live hero images for the Same Developer pair.
       const devP = supabase
         .from('properties')
         .select('slug, main_image')
         .in('slug', ['4250-west-lake-blvd', '175-huckleberry-drive'])
 
-      const [{ data: cData }, { data: sData }, { data: dData }, { data: csData }] =
-        await Promise.all([contentP, soldP, devP, soonP])
+      const [{ data: cData }, { data: sData }, { data: dData }, { data: csData }, { data: pdData }] =
+        await Promise.all([contentP, soldP, devP, soonP, pendP])
       if (cancelled) return
 
       setContent(cData?.content ? claims(cData.content as HomeContent) : null)
@@ -366,7 +429,7 @@ export default function McMullenHome() {
          exist is the normal state of "coming soon", and dropping it would make
          the section silently disagree with the listings page. The card renders
          a labelled panel instead of an empty frame. */
-      setComingSoon((csData ?? []).map((r: Record<string, unknown>) => ({
+      const pipelineCard = (badge: string) => (r: Record<string, unknown>): SoldCard => ({
         slug: r.slug as string,
         name: r.name as string,
         price: (r.price as number) ?? null,
@@ -375,8 +438,10 @@ export default function McMullenHome() {
         sqft: (r.area_sqft as number) ?? null,
         hood: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
         img: ((r.main_image as { url?: string } | null)?.url) ?? null,
-        badge: 'Coming Soon',
-      })))
+        badge,
+      })
+      setComingSoon((csData ?? []).map(pipelineCard('Coming Soon')))
+      setPending((pdData ?? []).map(pipelineCard('Pending')))
 
       setLoading(false)
     }
@@ -723,8 +788,10 @@ export default function McMullenHome() {
         </div>
       </section>
 
-      {/* =========================== COMING SOON =========================== */}
-      {comingSoon.length > 0 && <ComingSoon cards={comingSoon} />}
+      {/* ===================== COMING SOON · PENDING ====================== */}
+      {(comingSoon.length > 0 || pending.length > 0) && (
+        <ComingSoonPending soon={comingSoon} pending={pending} />
+      )}
 
       {/* ============================= SERVICES ============================= */}
       <section className="max-w-6xl mx-auto px-6 py-20 md:py-28">

@@ -21,11 +21,13 @@ type PropertyRow = {
   status_name: string | null
   neighborhood_name: string | null
   listing_stage: string | null
+  highlight: string | null
+  represented_side: string | null
 }
 
-/* 'Coming Soon' is no longer a chip. It has its own section above the track
-   record, so leaving it here too would offer a filter that empties the grid
-   while the same two homes sit in full view further up the page. */
+/* 'Coming Soon' and 'Pending' are not chips. Each has its own row above the
+   track record, so a chip would offer a filter that empties the grid while the
+   same homes sit in full view further up the page. */
 const STATUS_ORDER = ['Active', 'New Construction', 'Off Market', '1031', 'Sold']
 
 function money(n: number | null): string {
@@ -42,9 +44,104 @@ function statusTone(status: string | null): { fg: string; bg: string } {
     case 'New Construction':
     case 'Coming Soon':
       return { fg: '#1d4ed8', bg: 'rgba(29,78,216,0.10)' }
+    case 'Pending':
+      return { fg: '#0D1B2A', bg: 'rgba(145,161,186,0.35)' }
     default:
       return { fg: '#273C46', bg: 'rgba(39,60,70,0.08)' }
   }
+}
+
+function sideLabel(side: string | null): string | null {
+  switch (side) {
+    case 'buyer': return 'Represented the buyer'
+    case 'seller': return 'Represented the seller'
+    case 'both': return 'Represented buyer & seller'
+    default: return null
+  }
+}
+
+/* Navy result panel for a sale with no photograph. The claim is the agent's own
+   line from properties.highlight, set when the sale is entered; nothing here
+   computes or embellishes it. */
+function ResultPanel({ row }: { row: PropertyRow }) {
+  return (
+    <div
+      className="w-full h-full flex flex-col justify-end p-6"
+      style={{ background: 'linear-gradient(160deg, #0D1B2A 0%, #1a2c40 100%)' }}
+    >
+      {row.neighborhood_name ? (
+        <div className="mp-mono text-[10px] uppercase tracking-[0.18em] text-[#91a1ba] mb-2">
+          {row.neighborhood_name}
+        </div>
+      ) : null}
+      <div className="mp-serif text-white text-[21px] leading-snug">{row.highlight}</div>
+    </div>
+  )
+}
+
+/* Coming Soon and Pending share one row shape: the same card the homepage
+   uses, so a listing looks the same wherever it appears. */
+function PipelineRow({
+  eyebrow, lead, accent, blurb, badge, badgeClass, rows,
+}: {
+  eyebrow: string
+  lead: string
+  accent: string
+  blurb: string
+  badge: string
+  badgeClass: string
+  rows: PropertyRow[]
+}) {
+  return (
+    <section className="max-w-6xl mx-auto px-6 pt-4 pb-16">
+      <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">
+        {eyebrow}
+      </div>
+      <h2 className="text-[30px] md:text-[40px] leading-[1.06] font-semibold tracking-tight">
+        {lead} <span className="mp-serif font-normal">{accent}</span>
+      </h2>
+      <p className="text-[15px] leading-relaxed mt-3 max-w-2xl text-[#4a5568]">{blurb}</p>
+
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
+        {rows.map((p) => (
+          <Link
+            key={p.slug}
+            to={`/listings/${p.slug}`}
+            className="group block rounded-[20px] overflow-hidden bg-white h-full"
+            style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
+          >
+            <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
+              {p.main_image?.url ? (
+                <img src={p.main_image.url} alt={p.main_image.alt ?? p.name}
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#7b8794]">
+                    Photography in progress
+                  </span>
+                </div>
+              )}
+              <span className={`absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide ${badgeClass}`}>
+                {badge}
+              </span>
+            </div>
+            <div className="p-5">
+              <div className="mp-serif text-[22px] text-[#0d1b2a]">{money(p.price)}</div>
+              <div className="flex gap-3 text-[13px] mt-1.5 text-[#5a6578]">
+                {p.bedrooms != null ? <span>{p.bedrooms} bd</span> : null}
+                {p.bathrooms != null ? <span>{p.bathrooms} ba</span> : null}
+                {p.area_sqft != null ? <span>{Math.round(p.area_sqft).toLocaleString()} sqft</span> : null}
+                {p.neighborhood_name ? <span>{p.neighborhood_name}</span> : null}
+              </div>
+              <div className="text-sm mt-1.5 text-[#7b8794]">{p.name}</div>
+            </div>
+          </Link>
+        ))}
+      </div>
+
+      <div className="mt-14 h-px" style={{ background: 'rgba(13,27,42,0.08)' }} />
+    </section>
+  )
 }
 
 export default function PortfolioIndex() {
@@ -55,6 +152,10 @@ export default function PortfolioIndex() {
     () => rows.filter((r) => r.listing_stage === 'coming_soon')
               .sort((a, b) => (b.price ?? 0) - (a.price ?? 0)),
     [rows])
+  const pending = useMemo(
+    () => rows.filter((r) => r.listing_stage === 'pending')
+              .sort((a, b) => (b.price ?? 0) - (a.price ?? 0)),
+    [rows])
   const [query, setQuery] = useState<string>('')
 
   useEffect(() => {
@@ -63,7 +164,7 @@ export default function PortfolioIndex() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, statuses(name), neighborhoods(name)'
+          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, highlight, represented_side, statuses(name), neighborhoods(name)'
         )
         .order('price', { ascending: false, nullsFirst: false })
       if (cancelled) return
@@ -78,6 +179,8 @@ export default function PortfolioIndex() {
         status_name: ((r.statuses as { name?: string } | null)?.name) ?? null,
         neighborhood_name: ((r.neighborhoods as { name?: string } | null)?.name) ?? null,
         listing_stage: (r.listing_stage as string) ?? null,
+        highlight: (r.highlight as string) ?? null,
+        represented_side: (r.represented_side as string) ?? null,
       }))
       setRows(mapped)
       setLoading(false)
@@ -100,10 +203,10 @@ export default function PortfolioIndex() {
      would make the visitor choose a field before they know which one holds what
      they remember. Terms are ANDed, so "bernal sold" narrows rather than widens. */
   const visible = useMemo(() => {
-    /* The grid is the track record: sold, off market, active. Coming soon is
-       rendered above it, so it is excluded here rather than appearing twice
-       under two different treatments on one page. */
-    const recordRows = rows.filter((r) => r.listing_stage !== 'coming_soon')
+    /* The grid is the track record: sold, off market, active. Coming soon and
+       pending are rendered above it, so they are excluded here rather than
+       appearing twice under two different treatments on one page. */
+    const recordRows = rows.filter((r) => r.listing_stage !== 'coming_soon' && r.listing_stage !== 'pending')
     const byStatus = filter === 'All' ? recordRows : recordRows.filter((r) => r.status_name === filter)
     const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
     if (!terms.length) return byStatus
@@ -194,60 +297,28 @@ export default function PortfolioIndex() {
         </div>
       </section>
 
-      {/* coming soon — its own section, above the record */}
+      {/* coming soon, then pending — each its own row, above the record */}
       {!loading && soon.length > 0 && (
-        <section className="max-w-6xl mx-auto px-6 pt-4 pb-16">
-          <div className="mp-mono text-xs uppercase tracking-[0.22em] text-[#273C46] mb-3">
-            On the way
-          </div>
-          <h2 className="text-[30px] md:text-[40px] leading-[1.06] font-semibold tracking-tight">
-            Coming <span className="mp-serif font-normal">Soon.</span>
-          </h2>
-          <p className="text-[15px] leading-relaxed mt-3 max-w-2xl text-[#4a5568]">
-            Homes preparing to list. Ask about any of them before they reach the open market.
-          </p>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8">
-            {soon.map((p) => (
-              <Link
-                key={p.slug}
-                to={`/listings/${p.slug}`}
-                className="group block rounded-[20px] overflow-hidden bg-white h-full"
-                style={{ boxShadow: '0 10px 40px rgba(13,27,42,0.08)' }}
-              >
-                <div className="relative h-[220px] overflow-hidden" style={{ background: '#eef1f5' }}>
-                  {/* Sharp. The cover photograph is the invitation — the gate
-                      still holds the gallery and the detail behind an email. */}
-                  {p.main_image?.url ? (
-                    <img src={p.main_image.url} alt={p.main_image.alt ?? p.name}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-[1.08]" />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <span className="mp-mono text-[11px] uppercase tracking-[0.18em] text-[#7b8794]">
-                        Photography in progress
-                      </span>
-                    </div>
-                  )}
-                  <span className="absolute top-4 left-4 text-[11px] font-semibold px-3.5 py-1.5 rounded-lg uppercase tracking-wide bg-[#0d1b2a] text-white">
-                    Coming Soon
-                  </span>
-                </div>
-                <div className="p-5">
-                  <div className="mp-serif text-[22px] text-[#0d1b2a]">{money(p.price)}</div>
-                  <div className="flex gap-3 text-[13px] mt-1.5 text-[#5a6578]">
-                    {p.bedrooms != null ? <span>{p.bedrooms} bd</span> : null}
-                    {p.bathrooms != null ? <span>{p.bathrooms} ba</span> : null}
-                    {p.area_sqft != null ? <span>{Math.round(p.area_sqft).toLocaleString()} sqft</span> : null}
-                    {p.neighborhood_name ? <span>{p.neighborhood_name}</span> : null}
-                  </div>
-                  <div className="text-sm mt-1.5 text-[#7b8794]">{p.name}</div>
-                </div>
-              </Link>
-            ))}
-          </div>
-
-          <div className="mt-14 h-px" style={{ background: 'rgba(13,27,42,0.08)' }} />
-        </section>
+        <PipelineRow
+          eyebrow="On the way"
+          lead="Coming"
+          accent="Soon."
+          blurb="Homes preparing to list. Ask about any of them before they reach the open market."
+          badge="Coming Soon"
+          badgeClass="bg-[#0d1b2a] text-white"
+          rows={soon}
+        />
+      )}
+      {!loading && pending.length > 0 && (
+        <PipelineRow
+          eyebrow="Under contract"
+          lead="Now"
+          accent="Pending."
+          blurb="Homes under contract and on their way to the closing table."
+          badge="Pending"
+          badgeClass="bg-[#91a1ba] text-[#0d1b2a]"
+          rows={pending}
+        />
       )}
 
       {/* grid */}
@@ -295,6 +366,9 @@ export default function PortfolioIndex() {
                 ? { fg: '#1d4ed8', bg: 'rgba(29,78,216,0.10)' }
                 : statusTone(p.status_name)
               const badge = comingSoon ? 'Coming Soon' : p.status_name
+              // The navy result panel needs a light badge; the tinted default
+              // is navy-on-navy there and disappears.
+              const onDark = !p.main_image?.url && !!p.highlight
               return (
                 <Link
                   key={p.slug}
@@ -310,11 +384,17 @@ export default function PortfolioIndex() {
                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                         style={comingSoon ? { filter: 'blur(8px)', transform: 'scale(1.08)' } : undefined}
                       />
+                    ) : p.highlight ? (
+                      /* No photograph, but a result worth leading with: the card
+                         opens on the outcome instead of an empty frame. */
+                      <ResultPanel row={p} />
                     ) : null}
                     {badge ? (
                       <span
                         className="absolute top-3 left-3 mp-mono text-[10px] uppercase tracking-[0.12em] px-2.5 py-1 rounded-full"
-                        style={{ color: tone.fg, background: tone.bg, backdropFilter: 'blur(6px)' }}
+                        style={onDark
+                          ? { color: '#fff', background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(6px)' }
+                          : { color: tone.fg, background: tone.bg, backdropFilter: 'blur(6px)' }}
                       >
                         {badge}
                       </span>
@@ -347,6 +427,14 @@ export default function PortfolioIndex() {
                           {p.bathrooms != null ? <span>{p.bathrooms} ba</span> : null}
                           {p.area_sqft != null ? <span>{Math.round(p.area_sqft).toLocaleString()} sqft</span> : null}
                         </div>
+                        {p.highlight && p.main_image?.url ? (
+                          <div className="mp-serif text-[15px] leading-snug text-[#0D1B2A] mt-3">{p.highlight}</div>
+                        ) : null}
+                        {sideLabel(p.represented_side) ? (
+                          <div className="mp-mono text-[10px] uppercase tracking-[0.14em] text-[#7b8794] mt-3">
+                            {sideLabel(p.represented_side)}
+                          </div>
+                        ) : null}
                       </>
                     )}
                   </div>
