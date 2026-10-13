@@ -57,6 +57,41 @@ const INQUIRY_URL =
 
 /* ============================== types ==================================== */
 type ImageJson = { url: string; alt: string | null }
+
+/* Case study: the components lifted from a deal's analysis (the plan, the
+   headline numbers, the comparable sales, a supporting table). Stored as
+   properties.case_study and entered by hand from the agent's own CMA, so every
+   figure on the page traces to a closed sale or to something the agent stated.
+   Each block renders only when it has content. */
+type CaseStep = { label: string; value: string; detail?: string }
+type CaseComp = {
+  address: string
+  sale_price: number
+  close_date: string
+  ppsf: number
+  sqft?: number
+  lot_sqft?: number
+  year_built?: number
+  list_price?: number
+  dom?: number
+  vs_ask_pct?: number
+  note?: string
+}
+type CaseTable = {
+  eyebrow?: string
+  title: string
+  intro?: string
+  columns: string[]
+  rows: string[][]
+  total?: { label: string; value: string }
+  note?: string
+}
+type CaseStudy = {
+  plan?: { eyebrow?: string; title?: string; intro?: string; steps: CaseStep[] }
+  numbers?: { eyebrow?: string; title?: string; intro?: string; items: { value: string; label: string }[] }
+  comps?: { eyebrow?: string; title?: string; intro?: string; items: CaseComp[]; footnote?: string }
+  tables?: CaseTable[]
+}
 type VideoJson = { url?: string; html?: string } | null
 
 type Row = {
@@ -86,6 +121,7 @@ type Row = {
   property_type_name: string | null
   highlight: string | null
   represented_side: string | null
+  case_study: CaseStudy | null
 }
 
 /* ============================== helpers ================================== */
@@ -179,7 +215,7 @@ export default function PropertyDetail() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, pin_code, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, listing_stage, highlight, represented_side, statuses(name), neighborhoods(name), property_types(name)'
+          'slug, name, pin_code, price, price_per_sqft, bedrooms, bathrooms, area_sqft, built_year, parking_description, monthly_hoa_fee, description_html, neighborhood_html, amenities_html, features_html, main_image, images, video, map_link, meta_description, listing_stage, highlight, represented_side, case_study, statuses(name), neighborhoods(name), property_types(name)'
         )
         .eq('slug', slug)
         .maybeSingle()
@@ -213,6 +249,7 @@ export default function PropertyDetail() {
         property_type_name: ((r.property_types as { name?: string } | null)?.name) ?? null,
         highlight: (r.highlight as string) ?? null,
         represented_side: (r.represented_side as string) ?? null,
+        case_study: (r.case_study && typeof r.case_study === 'object' ? (r.case_study as CaseStudy) : null),
       })
       setLoading(false)
     }
@@ -290,9 +327,13 @@ export default function PropertyDetail() {
 
       <Overview p={p} sold={sold} />
 
+      {p.case_study?.plan && <CasePlan plan={p.case_study.plan} />}
+
       {gallery.length > 0 && <Gallery name={p.name} images={gallery} onOpen={openLb} />}
 
       {ytId && <FilmSection ytId={ytId} posterUrl={heroImg?.url ?? null} />}
+
+      {p.case_study && <CaseEvidence cs={p.case_study} />}
 
       <FeaturesSpecs p={p} />
 
@@ -772,6 +813,195 @@ function Overview({ p, sold }: { p: Row; sold: boolean }) {
             </Reveal>
           )}
         </div>
+      </div>
+    </section>
+  )
+}
+
+/* ============================== case study ============================== */
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// 'YYYY-MM-DD' → '11 Mar 2026'. Split by hand: new Date() would read it as UTC
+// midnight and show the previous day west of Greenwich.
+function shortDate(iso: string): string {
+  const [y, m, d] = String(iso || '').split('-').map(Number)
+  if (!y || !m || !d) return iso
+  return `${d} ${MONTHS[m - 1]} ${y}`
+}
+function perFoot(n: number): string {
+  return '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function CaseHead({ eyebrow, title, intro }: { eyebrow?: string; title?: string; intro?: string }) {
+  if (!eyebrow && !title && !intro) return null
+  return (
+    <Reveal className="max-w-3xl">
+      {eyebrow && <div className="mp-mono text-xs uppercase tracking-widest" style={{ color: BLUEGRAY }}>{eyebrow}</div>}
+      {title && <h2 className="mt-4 mp-display text-3xl sm:text-5xl leading-tight" style={{ color: NAVY }}>{title}</h2>}
+      {intro && <p className="mt-5 text-base sm:text-lg leading-relaxed" style={{ color: `${INK}d9` }}>{intro}</p>}
+    </Reveal>
+  )
+}
+
+function CasePlan({ plan }: { plan: NonNullable<CaseStudy['plan']> }) {
+  const steps = Array.isArray(plan.steps) ? plan.steps.filter((s) => s && s.label && s.value) : []
+  if (!steps.length) return null
+  return (
+    <section id="plan" className="py-20 sm:py-28" style={{ background: CREAM }}>
+      <div className="max-w-6xl mx-auto px-6 sm:px-10">
+        <CaseHead eyebrow={plan.eyebrow ?? 'The plan'} title={plan.title} intro={plan.intro} />
+        <div className={`mt-14 grid gap-10 md:gap-8 ${steps.length >= 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+          {steps.map((s, i) => (
+            <Reveal key={`${s.label}-${i}`} delay={i * 110}>
+              <div className="pt-5" style={{ borderTop: `2px solid ${NAVY}` }}>
+                <div className="mp-mono text-[11px] uppercase tracking-widest" style={{ color: BLUEGRAY }}>
+                  {String(i + 1).padStart(2, '0')} · {s.label}
+                </div>
+                <div className="mt-3 mp-display text-4xl sm:text-5xl" style={{ color: LOGOBLUE }}>{s.value}</div>
+                {s.detail && <p className="mt-3 leading-relaxed" style={{ color: INK }}>{s.detail}</p>}
+              </div>
+            </Reveal>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function CompCard({ c }: { c: CaseComp }) {
+  const rows: { k: string; v: string }[] = []
+  if (c.sqft != null) rows.push({ k: 'Living area', v: `${c.sqft.toLocaleString()} sf` })
+  if (c.lot_sqft != null) rows.push({ k: 'Lot', v: `${c.lot_sqft.toLocaleString()} sf` })
+  if (c.year_built != null) rows.push({ k: 'Year built', v: String(c.year_built) })
+  if (c.list_price != null) rows.push({ k: 'Asked', v: money(c.list_price) })
+  if (c.dom != null) rows.push({ k: 'Days on market', v: String(c.dom) })
+  const over = c.vs_ask_pct != null && c.vs_ask_pct >= 100
+  return (
+    <div className="rounded-2xl bg-white p-6 h-full flex flex-col" style={{ border: `1px solid ${SAND}` }}>
+      {c.vs_ask_pct != null && (
+        <span
+          className="self-start mp-mono text-[10px] uppercase tracking-[0.14em] px-2.5 py-1 rounded-full"
+          style={over
+            ? { background: NAVY, color: '#fff' }
+            : { color: INK, border: `1px solid ${INK}59` }}
+        >
+          {c.vs_ask_pct.toFixed(1)}% of asking
+        </span>
+      )}
+      <h3 className="mt-4 mp-display text-2xl" style={{ color: NAVY }}>{c.address}</h3>
+      <div className="mt-3 flex items-baseline gap-1.5">
+        <span className="mp-display text-3xl" style={{ color: LOGOBLUE }}>{perFoot(c.ppsf)}</span>
+        <span className="mp-mono text-xs" style={{ color: `${INK}99` }}>/ sq ft</span>
+      </div>
+      <div className="text-sm mt-1" style={{ color: `${INK}b3` }}>
+        Sold {money(c.sale_price)} · {shortDate(c.close_date)}
+      </div>
+      {rows.length > 0 && (
+        <dl className="mt-5 text-sm">
+          {rows.map((r) => (
+            <div key={r.k} className="flex justify-between gap-4 py-2" style={{ borderBottom: `1px solid ${SAND}` }}>
+              <dt style={{ color: `${INK}b3` }}>{r.k}</dt>
+              <dd className="font-semibold" style={{ color: NAVY }}>{r.v}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      {c.note && <p className="mt-5 text-sm leading-relaxed" style={{ color: INK }}>{c.note}</p>}
+    </div>
+  )
+}
+
+function CaseTableBlock({ t }: { t: CaseTable }) {
+  const cols = Array.isArray(t.columns) ? t.columns : []
+  const rows = Array.isArray(t.rows) ? t.rows.filter(Array.isArray) : []
+  if (!cols.length || !rows.length) return null
+  return (
+    <div>
+      <CaseHead eyebrow={t.eyebrow} title={t.title} intro={t.intro} />
+      <Reveal className="mt-10">
+        {/* The table scrolls inside its own frame on a phone; the page never does. */}
+        <div className="overflow-x-auto rounded-2xl bg-white" style={{ border: `1px solid ${SAND}` }}>
+          <table className="w-full text-sm min-w-[560px]">
+            <thead>
+              <tr>
+                {cols.map((c, i) => (
+                  <th key={c + i}
+                    className={`mp-mono text-[10px] uppercase tracking-widest font-normal px-5 py-3.5 ${i === 0 ? 'text-left' : 'text-right'}`}
+                    style={{ color: BLUEGRAY, borderBottom: `1px solid ${SAND}` }}>
+                    {c}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, ri) => (
+                <tr key={ri} style={{ borderBottom: ri < rows.length - 1 ? `1px solid ${SAND}` : undefined }}>
+                  {cols.map((_, ci) => (
+                    <td key={ci}
+                      className={`px-5 py-3.5 ${ci === 0 ? 'text-left' : 'text-right'} ${ci === cols.length - 1 ? 'font-semibold' : ''}`}
+                      style={{ color: ci === 0 ? NAVY : INK }}>
+                      {r[ci] ?? ''}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+              {t.total && (
+                <tr style={{ borderTop: `2px solid ${NAVY}` }}>
+                  <td colSpan={Math.max(1, cols.length - 1)} className="px-5 py-4 font-semibold" style={{ color: NAVY }}>{t.total.label}</td>
+                  <td className="px-5 py-4 text-right mp-display text-xl" style={{ color: LOGOBLUE }}>{t.total.value}</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        {t.note && <p className="mt-4 text-sm leading-relaxed max-w-3xl" style={{ color: `${INK}b3` }}>{t.note}</p>}
+      </Reveal>
+    </div>
+  )
+}
+
+function CaseEvidence({ cs }: { cs: CaseStudy }) {
+  const nums = Array.isArray(cs.numbers?.items) ? cs.numbers!.items.filter((n) => n && n.value) : []
+  const comps = Array.isArray(cs.comps?.items) ? cs.comps!.items.filter((c) => c && c.address && c.ppsf != null) : []
+  const tables = Array.isArray(cs.tables) ? cs.tables : []
+  if (!nums.length && !comps.length && !tables.length) return null
+  return (
+    <section id="evidence" className="py-20 sm:py-28" style={{ background: PAPER }}>
+      <div className="max-w-6xl mx-auto px-6 sm:px-10 space-y-24">
+        {nums.length > 0 && (
+          <div>
+            <CaseHead eyebrow={cs.numbers?.eyebrow} title={cs.numbers?.title} intro={cs.numbers?.intro} />
+            <Reveal className="mt-10">
+              <div className={`grid grid-cols-2 ${nums.length >= 5 ? 'md:grid-cols-5' : nums.length === 4 ? 'md:grid-cols-4' : 'md:grid-cols-3'} gap-px rounded-2xl overflow-hidden`}
+                style={{ background: SAND, border: `1px solid ${SAND}` }}>
+                {nums.map((n, i) => (
+                  <div key={n.label + i}
+                    className={`bg-white py-8 px-4 text-center ${i === nums.length - 1 && nums.length % 2 === 1 ? 'col-span-2 md:col-span-1' : ''}`}>
+                    <div className="mp-display text-3xl sm:text-4xl" style={{ color: LOGOBLUE }}>{n.value}</div>
+                    <div className="mt-2 mp-mono text-[10px] uppercase tracking-widest leading-relaxed" style={{ color: `${INK}99` }}>{n.label}</div>
+                  </div>
+                ))}
+              </div>
+            </Reveal>
+          </div>
+        )}
+
+        {comps.length > 0 && (
+          <div>
+            <CaseHead eyebrow={cs.comps?.eyebrow} title={cs.comps?.title} intro={cs.comps?.intro} />
+            <div className="mt-10 grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              {comps.map((c, i) => (
+                <Reveal key={c.address + i} delay={(i % 3) * 80} className="h-full">
+                  <CompCard c={c} />
+                </Reveal>
+              ))}
+            </div>
+            {cs.comps?.footnote && (
+              <p className="mt-6 mp-mono text-[11px] leading-relaxed" style={{ color: `${INK}99` }}>{cs.comps.footnote}</p>
+            )}
+          </div>
+        )}
+
+        {tables.map((t, i) => <CaseTableBlock key={(t?.title || '') + i} t={t} />)}
       </div>
     </section>
   )
