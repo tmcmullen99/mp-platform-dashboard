@@ -7,6 +7,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { LogoWordmark } from '@/components/BrandLogo'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
+import PortfolioMap, { type MapHome } from '@/components/public/PortfolioMap'
 
 type ImageJson = { url: string; alt: string | null } | null
 
@@ -23,6 +24,8 @@ type PropertyRow = {
   listing_stage: string | null
   highlight: string | null
   represented_side: string | null
+  latitude: number | null
+  longitude: number | null
 }
 
 /* 'Coming Soon' and 'Pending' are not chips. Each has its own row above the
@@ -164,7 +167,7 @@ export default function PortfolioIndex() {
       const { data } = await supabase
         .from('properties')
         .select(
-          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, highlight, represented_side, statuses(name), neighborhoods(name)'
+          'slug, name, price, bedrooms, bathrooms, area_sqft, main_image, listing_stage, highlight, represented_side, latitude, longitude, statuses(name), neighborhoods(name)'
         )
         .order('price', { ascending: false, nullsFirst: false })
       if (cancelled) return
@@ -181,6 +184,8 @@ export default function PortfolioIndex() {
         listing_stage: (r.listing_stage as string) ?? null,
         highlight: (r.highlight as string) ?? null,
         represented_side: (r.represented_side as string) ?? null,
+        latitude: (r.latitude as number) ?? null,
+        longitude: (r.longitude as number) ?? null,
       }))
       setRows(mapped)
       setLoading(false)
@@ -196,6 +201,37 @@ export default function PortfolioIndex() {
     const ordered = STATUS_ORDER.filter((s) => present.has(s))
     return ['All', ...ordered]
   }, [rows])
+
+  /* The map shows every home that matches the chip and the search, Coming Soon
+     and Pending included: it is the whole portfolio in one place, where the grid
+     below is only the track record. */
+  const mapHomes = useMemo<MapHome[]>(() => {
+    const terms = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+    return rows
+      .filter((r) => r.latitude != null && r.longitude != null)
+      .filter((r) => filter === 'All' || r.status_name === filter)
+      .filter((r) => {
+        if (!terms.length) return true
+        const hay = [r.name, r.neighborhood_name, r.status_name].filter(Boolean).join(' ').toLowerCase()
+        return terms.every((t) => hay.includes(t))
+      })
+      .map((r) => ({
+        slug: r.slug,
+        name: r.name,
+        price: r.price,
+        bedrooms: r.bedrooms,
+        bathrooms: r.bathrooms,
+        area_sqft: r.area_sqft,
+        img: r.main_image?.url ?? null,
+        badge: r.listing_stage === 'coming_soon' ? 'Coming Soon'
+          : r.listing_stage === 'pending' ? 'Pending'
+          : r.status_name,
+        hood: r.neighborhood_name,
+        highlight: r.highlight,
+        lat: r.latitude as number,
+        lng: r.longitude as number,
+      }))
+  }, [rows, filter, query])
 
   /* Search matches address, neighbourhood and status together. Someone typing
      "cortland" wants the home; someone typing "bernal" wants the area; someone
@@ -319,6 +355,13 @@ export default function PortfolioIndex() {
           badgeClass="bg-[#91a1ba] text-[#0d1b2a]"
           rows={pending}
         />
+      )}
+
+      {/* map — above the grid of cards */}
+      {!loading && mapHomes.length > 0 && (
+        <section className="max-w-6xl mx-auto px-6 pb-14">
+          <PortfolioMap homes={mapHomes} />
+        </section>
       )}
 
       {/* grid */}
