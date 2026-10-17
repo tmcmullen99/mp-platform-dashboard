@@ -8,7 +8,16 @@
     "/proposal/*",
     "/r/*",
     "/about",
-    "/sitemap.xml"
+    "/sitemap.xml",
+    "/value/*",
+    "/showing/*",
+    "/strategy/*",
+    "/offering/*",
+    "/disclosures/*",
+    "/api/page-meet-slots",
+    "/api/page-meet-book",
+    "/api/tour-slots",
+    "/api/book-tour"
   ],
   "exclude": []
 }
