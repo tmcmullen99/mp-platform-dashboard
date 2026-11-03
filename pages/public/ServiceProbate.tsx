@@ -30,6 +30,7 @@ import { useState } from 'react'
 import { PublicNav, PublicFooter } from '@/components/public/PublicNav'
 import ServiceArticleFeed from '@/components/public/ServiceArticleFeed'
 import ProbateValuationForm from '@/components/public/ProbateValuationForm'
+import ProbateEstateFinder from '@/components/public/ProbateEstateFinder'
 import ProbateMeetScheduler from '@/components/public/ProbateMeetScheduler'
 import {
   MotionStyles,
@@ -254,6 +255,8 @@ function ProbateFilm() {
 
 export default function ServiceProbate() {
   const [open, setOpen] = useState<number | null>(0)
+  /* The probate letters' QR lands here with utm_campaign=probate (3 Nov 2026): offer the estate's own page. */
+  const fromLetter = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('utm_campaign') === 'probate'
 
   return (
     <div className="min-h-screen bg-white">
@@ -262,7 +265,8 @@ export default function ServiceProbate() {
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <ParallaxHero image={HERO_IMG} accent="blue" minH="82vh">
-        <div className="max-w-6xl mx-auto px-6 py-28">
+        <div className={'max-w-6xl mx-auto px-6 ' + (fromLetter ? 'pt-6 pb-28' : 'py-28')}>
+          {fromLetter ? <div className="mb-10"><ProbateEstateFinder /></div> : null}
           <Reveal>
             <p
               className="font-mono text-[11px] uppercase tracking-[0.22em] mb-5"
