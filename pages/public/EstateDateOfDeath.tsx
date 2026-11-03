@@ -9,7 +9,8 @@
 //   NO NAMES. probate_estate_page returns the property and the dates, never the deceased, the petitioner
 //     or the case number: a letter gets forwarded, photographed and mislaid.
 //   THE PAGE KEEPS STATE. Scan the same code again next week and it says the request is with Tim, then,
-//     once the valuation is published, opens it. Letters 3 to 6 point at the published valuation.
+//     once the valuation is published, opens it. Every probate letter's own code opens this page;
+//     letters 3 to 6 also print the published valuation's code on the back.
 //   THE TIMELINE IS THE LETTERS' OWN. "Everyone you might need" is the list printed on the back of every
 //     letter, read from letter 1, grouped by month, with the month the estate is in opened.
 //   Where the home sits in a city market with recorded sales, the sales before the date of death are shown,
@@ -194,6 +195,8 @@ function EstatePage({ p, token, onChange }: { p: Page; token: string; onChange: 
 
           {state === 'new' ? <RequestForm token={token} p={p} anchor={formRef} onDone={onChange} /> : null}
 
+          <Film />
+
           {state !== 'ready' ? <NextSteps p={p} state={state} effective={effective} /> : null}
 
           {p.sales && (p.sales.n > 0 || p.sales.withheld > 0) && state !== 'ready' ? <Sales s={p.sales} dod={effective} first={a.first} /> : null}
@@ -235,6 +238,27 @@ function EstatePage({ p, token, onChange }: { p: Page; token: string; onChange: 
         </div>
       ) : null}
     </div>
+  )
+}
+
+/* The one-minute film the probate letters carried on their front (28 Sep 2026). Letter 1's code opens this page now,
+   and the letter says the film is here. The same files as the service page's. */
+const FILM = 'https://campbellrealestatemarket.com/assets/probate-explainer'
+function Film() {
+  const [src, setSrc] = useState(() => {
+    const small = typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(max-width:760px)').matches
+    return FILM + (small ? '-720.mp4' : '-1080.mp4') + '?v=20260929a'
+  })
+  return (
+    <section className="mt-8">
+      <p className="font-mono text-[10.5px] uppercase tracking-[0.18em]" style={{ color: ACCENT }}>A little about me · 1 minute</p>
+      <h2 className="mt-1.5 font-serif text-[22px]" style={{ color: NAVY }}>How I help with the estate home</h2>
+      <div className="mt-3 overflow-hidden rounded-2xl" style={{ background: '#0e1118', aspectRatio: '16 / 9' }}>
+        <video src={src} controls playsInline preload="metadata" className="h-full w-full" style={{ objectFit: 'contain' }}
+          aria-label="How I help with the estate home, a one-minute film"
+          onError={() => { if (src.includes('-720.mp4')) setSrc(FILM + '-1080.mp4?v=20260929a') }} />
+      </div>
+    </section>
   )
 }
 
