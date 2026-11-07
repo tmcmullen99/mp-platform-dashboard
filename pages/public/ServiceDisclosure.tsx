@@ -36,7 +36,7 @@ import {
 } from 'lucide-react'
 
 const HERO_IMG =
-  'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site/175-huckleberry-drive/000.jpg'
+  'https://kumfuludrhoqirxvaqja.supabase.co/storage/v1/object/public/listing-photos/site/175-huckleberry-drive/winter-08-aerial-front.jpg'
 
 const GOLD = '#b8965a'
 

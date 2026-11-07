@@ -124,9 +124,9 @@ const SALES: Sale[] = [
   },
   {
     name: '175 Huckleberry Drive',
-    meta: '$9,950,000 · Jackson Hole',
+    meta: '$9,750,000 · Jackson Hole',
     href: '/listings/175-huckleberry-drive',
-    image: `${STORAGE}/175-huckleberry-drive/000.jpg`,
+    image: `${STORAGE}/175-huckleberry-drive/winter-08-aerial-front.jpg`,
     span: 'md:col-span-12',
     aspect: 'aspect-[16/10] md:aspect-[21/8]',
   },

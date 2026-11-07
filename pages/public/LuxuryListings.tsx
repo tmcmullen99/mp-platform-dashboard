@@ -180,7 +180,7 @@ export default function LuxuryListings() {
                 <h2 className="mt-4 text-white font-semibold tracking-tight text-[30px] md:text-[42px] leading-[1.1]">
                   175 Huckleberry Drive
                 </h2>
-                <p className="mt-2 text-lg" style={{ color: BLUEGRAY }}>Jackson Hole, WY · $9,950,000</p>
+                <p className="mt-2 text-lg" style={{ color: BLUEGRAY }}>Jackson Hole, WY · $9,750,000</p>
                 <p className="mt-5 leading-relaxed" style={{ color: 'rgba(255,255,255,0.72)' }}>
                   A custom estate currently marketed with this exact system — a dedicated property site, targeted outreach to a qualified high-net-worth audience, and tracked performance. This is what I’d build for your home.
                 </p>
