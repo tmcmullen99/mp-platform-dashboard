@@ -14,6 +14,7 @@
     "/strategy/*",
     "/offering/*",
     "/disclosures/*",
+    "/builders/*",
     "/api/page-meet-slots",
     "/api/page-meet-book",
     "/api/tour-slots",
