@@ -19,7 +19,7 @@
 // files are ever re-uploaded with corrected contents, swap these paths back.
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, MapPin, Search, ShieldCheck, X, Zap } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, LayoutDashboard, MapPin, Search, X, Zap } from 'lucide-react'
 import { cityMarket } from '@/lib/cityMarket'
 import { condoMarket } from '@/lib/condoMarket'
 
@@ -430,10 +430,11 @@ const TEAM_CITIES: { name: string; county: string; url: string }[] = [
 const TEAM_POINTS: { icon: typeof MapPin; title: string; line: string }[] = [
   { icon: MapPin, title: 'Lives where they sell',
     line: 'One agent per city, recruited from the people who already know which streets sell in a weekend and why.' },
-  { icon: Zap, title: 'Super-agent technology',
-    line: 'The Agent Desk spots the opportunities, writes the letters and tracks who is ready to talk, so the agent spends the day with clients.' },
-  { icon: ShieldCheck, title: 'A broker on every file',
-    line: 'Tim reviews every transaction before it closes, in every city.' },
+  /* Tim, 19 Nov 2026: the technology told as what the client gets, not how it works. */
+  { icon: Zap, title: 'Super-agent technology, working for you',
+    line: '10x the reach on every marketing campaign for your home, and your own client dashboard where you follow every comp report, showing, document and message as it happens.' },
+  { icon: LayoutDashboard, title: 'The Agent Desk',
+    line: "Every home, sale and owner in the market at your agent's fingertips. Campaigns go out in minutes, not days, so your home sells faster." },
 ]
 
 /* ---------------------- Buyer and seller folds (light) ---------------------- */
