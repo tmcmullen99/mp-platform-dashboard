@@ -434,7 +434,7 @@ const TEAM_POINTS: { icon: typeof MapPin; title: string; line: string }[] = [
   { icon: Zap, title: 'Super-agent technology, working for you',
     line: '10x the reach on every marketing campaign for your home, and your own client dashboard where you follow every comp report, showing, document and message as it happens.' },
   { icon: LayoutDashboard, title: 'The Agent Desk',
-    line: "Every home, sale and owner in the market at your agent's fingertips. Campaigns go out in minutes, not days, so your home sells faster." },
+    line: "Every home, sale and owner in the market at your agent's fingertips. It turns up off-market deals for buyers, and gets sellers' campaigns out in minutes, not days, so homes sell faster." },
 ]
 
 /* ---------------------- Buyer and seller folds (light) ---------------------- */
