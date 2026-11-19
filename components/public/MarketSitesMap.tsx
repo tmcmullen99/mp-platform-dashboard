@@ -93,7 +93,7 @@ function build(el: HTMLElement, sites: MarketSite[]): LeafletNS {
   }).addTo(map)
   map.attributionControl.setPrefix(false)
   L.control.zoom({ position: 'bottomright' }).addTo(map)
-  map.fitBounds(L.latLngBounds(sites.map((s) => [s.lat, s.lng])), { padding: [34, 34] })
+  map.fitBounds(L.latLngBounds(sites.map((s) => [s.lat, s.lng])), { padding: [42, 42] })
   map.once('click', () => map.scrollWheelZoom.enable())
 
   const hover = window.matchMedia('(hover: hover)').matches
@@ -174,7 +174,7 @@ export default function MarketSitesMap({ sites, cityNextHref }: { sites: MarketS
     <div className="lm-map relative isolate h-full w-full rounded-[2rem] overflow-hidden border border-white/10 bg-[#1b1b1b]">
       <style>{CSS}</style>
       <div ref={box} className="absolute inset-0" role="region" aria-label="Map of the Local Market sites" />
-      <div className="pointer-events-none absolute top-4 left-4 z-[1000] rounded-full bg-[#0b0d12]/85 border border-white/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-white/70">
+      <div className="pointer-events-none absolute top-4 right-4 z-[1000] rounded-full bg-[#0b0d12]/85 border border-white/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.22em] text-white/70">
         Local Market sites · {sites.length}
       </div>
       <a href={cityNextHref} target="_blank" rel="noopener noreferrer"
