@@ -504,85 +504,107 @@ const DEVELOPER_SAMPLES: { eyebrow: string; title: string; line: string; stats: 
     image: PLANS + '/16497-s-kennedy-road-los-gatos-13b902/rendering-approved-design.webp' },
 ]
 
-function ReportCard({ eyebrow, title, line, stats, image, primary, secondary }: {
-  eyebrow: string; title: string; line: string; stats: [string, string][]; image: string
-  primary: { href: string; label: string; download?: boolean }; secondary?: { href: string; label: string }
-}) {
-  return (
-    <div className={lightCard + ' h-full flex flex-col overflow-hidden'}>
-      <a href={primary.href} target="_blank" rel="noopener noreferrer" className="block h-[118px] overflow-hidden border-b border-[#d9e2f1] bg-[#F4F7FC]">
-        <img src={image} alt={title} loading="lazy" className="w-full h-full object-cover object-top" />
-      </a>
-      <div className="p-4 flex-1 flex flex-col">
-        <p className="text-[9.5px] uppercase tracking-[0.18em] text-[#6b7285]">{eyebrow}</p>
-        <h3 className="mt2-serif text-[1.15rem] leading-snug mt-1">{title}</h3>
-        <p className="hidden sm:block text-[12px] text-[#4a5163] mt-1.5 leading-relaxed">{line}</p>
-        <div className="grid grid-cols-2 gap-1.5 mt-3">
-          {stats.map(([v, k]) => (
-            <div key={k} className="rounded-lg bg-[#F4F7FC] border border-[#d9e2f1] px-2 py-1.5">
-              <div className="text-[13px] font-semibold" style={{ color: PERI }}>{v}</div>
-              <div className="text-[10px] text-[#6b7285] leading-tight">{k}</div>
-            </div>))}
-        </div>
-        <div className="mt-auto pt-3 flex flex-wrap items-center gap-3">
-          <a href={primary.href} target="_blank" rel="noopener noreferrer" {...(primary.download ? { download: true } : {})}
-             className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-[12px] font-medium text-white" style={{ background: PERI }}>
-            {primary.label} <ArrowRight size={13} />
-          </a>
-          {secondary && (
-            <a href={secondary.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] font-medium" style={{ color: PERI }}>
-              {secondary.label} <ArrowUpRight size={12} />
-            </a>)}
-        </div>
-      </div>
-    </div>
-  )
+/* Tim, 19 Nov 2026: each report walked through as the four things a client gets from Tim -
+   detail, review, analysis, advice. Every figure and sentence is taken from the delivered
+   report and the sample data above; nothing here is new. */
+type TourStep = { k: 'Detail' | 'Review' | 'Analysis' | 'Advice'; fig?: string; text: string }
+const TOUR_STEPS: Record<string, TourStep[]> = {
+  '420 Eureka Street': [
+    { k: 'Detail', fig: '289', text: 'pages of the disclosure package read.' },
+    { k: 'Review', fig: '80', text: 'condition score. No structural findings; the open items are the original pipes, ungrounded outlets and the garage fire wall.' },
+    { k: 'Analysis', fig: '$31.9–91.2k', text: 'for every open item, priced.' },
+    { k: 'Advice', text: 'Deduct the work from your ceiling, not your offer, and ask these 6 questions before you write.' },
+  ],
+  'A 1909 house in Bernal Heights': [
+    { k: 'Detail', fig: '241', text: 'pages of the disclosure package read.' },
+    { k: 'Review', fig: '68', text: 'condition score. A Section 1 pest report reaching the load path, and a downstairs bedroom with no permit.' },
+    { k: 'Analysis', fig: '$29–76k', text: 'to make it sound, with the work priced.' },
+    { k: 'Advice', text: 'Confirm these 4 things before you remove your contingencies.' },
+  ],
+  '1173 Malone Road': [
+    { k: 'Detail', text: 'A full plan set for a new house and ADU, read alongside land sales and finished new homes.' },
+    { k: 'Review', fig: '$1.91M', text: 'all-in cost to build the plans.' },
+    { k: 'Analysis', fig: '$3.80M', text: 'after-build value, run through an 11-slider residual model you can move yourself.' },
+    { k: 'Advice', text: 'At a 15% margin the land is worth $1.13M, about a third less than the ask.' },
+  ],
+  '16497 South Kennedy Road': [
+    { k: 'Detail', fig: '269', text: 'pages of the Town approval package read.' },
+    { k: 'Review', fig: '2.57 ac', text: 'on a 45% slope, with a final Town approval.' },
+    { k: 'Analysis', fig: '5', text: 'scenarios modelled. The ask needs a $6.55M after-build value to work.' },
+    { k: 'Advice', text: 'Priced for someone who builds it themselves, not for a merchant developer.' },
+  ],
 }
 
 function BuyerFold() {
-  /* Tim, 28 Sep 2026: the buying screen shows both kinds of buyer side by side: the two
-     disclosure reviews for buying to live in, the two feasibility reports for buying to build. */
+  /* Tim, 19 Nov 2026: redesigned to showcase the reports as a taste of working with Tim. One
+     report at a time, picked from a row of tabs; each is walked through as detail, review,
+     analysis and advice beside its first page or plan. */
+  const tour = [
+    ...DISCLOSURE_SAMPLES.map(d => ({
+      group: 'To live in it', dark: false, title: d.title, eyebrow: d.eyebrow, image: d.preview, fit: 'object-top',
+      primary: { href: d.pdf, label: 'Download the review', download: true },
+      secondary: d.cma ? { href: d.cma, label: 'Comp Report' } : undefined,
+    })),
+    ...DEVELOPER_SAMPLES.map(d => ({
+      group: 'To build on it', dark: true, title: d.title, eyebrow: d.eyebrow, image: d.image, fit: 'object-center',
+      primary: { href: d.href, label: 'Open the report', download: false },
+      secondary: undefined as { href: string; label: string } | undefined,
+    })),
+  ]
+  const [pick, setPick] = useState(0)
+  const r = tour[pick]
   return (
-    <div className="min-h-[100svh] flex flex-col justify-center py-14 md:py-16">
+    <div className="py-14 md:py-20">
       <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
-        <FoldHead eyebrow="If you're buying" lead="Every home is open to you." accent="Even the ones not for sale."
-          sub="Write an offer on any home in any market The Market runs, listed or not. Whatever you are buying it for, the analysis is built around your question. Here are four, as delivered." />
-        <Reveal>
-          <div className="mt-7 rounded-2xl bg-white border border-[#d9e2f1] px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2">
-            <span className="mt2-serif text-lg">Write an offer on the house you actually want</span>
-            {[['Listed', 'every active listing'], ['Coming Soon', 'before the MLS'], ['Not for sale', 'any address']].map(([a, b]) => (
-              <span key={a} className="text-[12.5px] text-[#4a5163]"><b className="text-[#1a1f2e]">{a}</b> · {b}</span>))}
-            <span className="hidden sm:inline text-[12px] text-[#6b7285] lg:ml-auto">Nothing is agreed until the owner signs.</span>
+        <FoldHead eyebrow="If you're buying" lead="Every page read." accent="Every number explained."
+          sub="Before you write an offer, Tim reads everything the seller hands over, prices what he finds and tells you plainly what to do about it. Four real reports, as delivered: pick one to see the detail, the review, the analysis and the advice." />
+
+        <div role="tablist" aria-label="Reports" className="mt-8 flex gap-2 overflow-x-auto -mx-6 px-6 sm:mx-0 sm:px-0 pb-1">
+          {tour.map((t, n) => (
+            <button key={t.title} type="button" role="tab" aria-selected={n === pick} onClick={() => setPick(n)}
+              className={'shrink-0 text-left rounded-2xl border px-4 py-2.5 transition-colors ' +
+                (n === pick ? 'bg-white border-[#4f82b9] shadow-[0_2px_12px_rgba(79,130,185,.18)]' : 'bg-white/60 border-[#d9e2f1] hover:bg-white')}>
+              <span className="flex items-center gap-1.5 text-[9.5px] uppercase tracking-[0.18em]" style={{ color: t.dark ? '#1a1f2e' : PERI }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ background: t.dark ? '#1a1f2e' : PERI }} />{t.group}
+              </span>
+              <span className="block mt2-serif text-[1.05rem] text-[#1a1f2e] mt-0.5 whitespace-nowrap">{t.title}</span>
+            </button>
+          ))}
+        </div>
+
+        <div key={r.title} role="tabpanel" className={lightCard + ' mt-4 overflow-hidden grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] mt2-blur'} style={{ animationDuration: '.5s' }}>
+          <div className="relative bg-[#F4F7FC] border-b lg:border-b-0 lg:border-r border-[#d9e2f1]">
+            <a href={r.primary.href} target="_blank" rel="noopener noreferrer" className="block h-[220px] sm:h-[300px] lg:h-full lg:min-h-[440px] overflow-hidden">
+              <img src={r.image} alt={r.title} className={'w-full h-full object-cover ' + r.fit} />
+            </a>
+            <span className="absolute top-3 left-3 rounded-full bg-white/90 border border-[#d9e2f1] px-3 py-1 text-[10px] uppercase tracking-[0.18em] text-[#1a1f2e]">As delivered</span>
           </div>
-        </Reveal>
-        <div className="grid lg:grid-cols-2 gap-6 mt-6">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full" style={{ background: PERI }} />
-              <span className="text-[11px] uppercase tracking-[0.22em] font-semibold" style={{ color: PERI }}>Buying to live in it · disclosure reviews</span>
-            </div>
-            <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-6 -mx-6 px-6 sm:mx-0 sm:px-0 pb-2 sm:pb-0">
-              {DISCLOSURE_SAMPLES.map((d, i) => (
-                <Reveal key={d.title} delay={0.05 * i} className="shrink-0 w-[78%] sm:w-auto snap-start">
-                  <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.preview}
-                    primary={{ href: d.pdf, label: 'Download PDF', download: true }}
-                    secondary={d.cma ? { href: d.cma, label: 'Comp Report' } : undefined} />
-                </Reveal>
+          <div className="p-5 md:p-7">
+            <p className="text-[10px] uppercase tracking-[0.18em] text-[#6b7285]">{r.eyebrow}</p>
+            <h3 className="mt2-serif text-2xl md:text-[1.9rem] leading-tight text-[#1a1f2e] mt-1">{r.title}</h3>
+            <ol className="mt-5 border-t border-[#eef2f9]">
+              {(TOUR_STEPS[r.title] || []).map((s, n) => (
+                <li key={s.k} className="grid sm:grid-cols-[96px_1fr] gap-1 sm:gap-4 py-3 border-b border-[#eef2f9] last:border-0">
+                  <span className="text-[10px] uppercase tracking-[0.16em] pt-1" style={{ color: PERI }}>
+                    {String(n + 1).padStart(2, '0')} · {s.k}
+                  </span>
+                  {s.k === 'Advice'
+                    ? <p className="mt2-serif text-[1.2rem] leading-snug text-[#1a1f2e]">{s.text}</p>
+                    : <p className="text-[13.5px] text-[#4a5163] leading-relaxed">
+                        {s.fig && <span className="text-[15px] font-semibold mr-1.5 text-[#1a1f2e]">{s.fig}</span>}{s.text}
+                      </p>}
+                </li>
               ))}
-            </div>
-          </div>
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-[#1a1f2e]" />
-              <span className="text-[11px] uppercase tracking-[0.22em] font-semibold text-[#1a1f2e]">Buying to build on it · feasibility reports</span>
-            </div>
-            <div className="flex sm:grid sm:grid-cols-2 gap-3 sm:gap-4 overflow-x-auto sm:overflow-visible snap-x snap-mandatory scroll-px-6 -mx-6 px-6 sm:mx-0 sm:px-0 pb-2 sm:pb-0">
-              {DEVELOPER_SAMPLES.map((d, i) => (
-                <Reveal key={d.title} delay={0.05 * (i + 2)} className="shrink-0 w-[78%] sm:w-auto snap-start">
-                  <ReportCard eyebrow={d.eyebrow} title={d.title} line={d.line} stats={d.stats} image={d.image}
-                    primary={{ href: d.href, label: 'Open the report' }} />
-                </Reveal>
-              ))}
+            </ol>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <a href={r.primary.href} target="_blank" rel="noopener noreferrer" {...(r.primary.download ? { download: true } : {})}
+                 className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-medium text-white" style={{ background: PERI }}>
+                {r.primary.label} <ArrowRight size={14} />
+              </a>
+              {r.secondary && (
+                <a href={r.secondary.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-medium" style={{ color: PERI }}>
+                  {r.secondary.label} <ArrowUpRight size={13} />
+                </a>)}
             </div>
           </div>
         </div>
@@ -595,6 +617,14 @@ function BuyerFold() {
                 {r.address} <b style={{ color: PERI }}>{r.score}</b> <ArrowUpRight size={12} className="text-[#6b7285]" />
               </a>
             ))}
+          </div>
+        </Reveal>
+        <Reveal delay={0.25}>
+          <div className="mt-6 rounded-2xl bg-white border border-[#d9e2f1] px-5 py-3.5 flex flex-wrap items-center gap-x-6 gap-y-2">
+            <span className="mt2-serif text-lg">Write an offer on the house you actually want</span>
+            {[['Listed', 'every active listing'], ['Coming Soon', 'before the MLS'], ['Not for sale', 'any address']].map(([a, b]) => (
+              <span key={a} className="text-[12.5px] text-[#4a5163]"><b className="text-[#1a1f2e]">{a}</b> · {b}</span>))}
+            <span className="hidden sm:inline text-[12px] text-[#6b7285] lg:ml-auto">Nothing is agreed until the owner signs.</span>
           </div>
         </Reveal>
       </div>
