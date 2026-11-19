@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, LayoutDashboard, MapPin, Search, X, Zap } from 'lucide-react'
 import { cityMarket } from '@/lib/cityMarket'
 import { condoMarket } from '@/lib/condoMarket'
+import MarketSitesMap, { type MarketSite } from '@/components/public/MarketSitesMap'
 
 /* --------------------------------- data ---------------------------------- */
 
@@ -416,22 +417,24 @@ function MarketFilm() {
 /* Every market site on the platform (Tim, 19 Nov 2026: "list all market sites"), from
    market_config in the city-market database, internal region rows left out. Each links to its
    own site; all thirteen were checked to load. Sites only, no agent names: add a name only
-   once that agent is licensed under Local Market Brokerage, Inc. */
+   once that agent is licensed under Local Market Brokerage, Inc.
+   Pins sit at each town's centre; the two condo markets at downtown San Francisco and Santa
+   Clara, the Eichler market at Palo Alto. */
 const LM_SITE = 'https://localmarketbrokerage.com'
-const TEAM_CITIES: { name: string; county: string; url: string }[] = [
-  { name: 'Campbell', county: 'Santa Clara', url: 'https://campbellrealestatemarket.com' },
-  { name: 'Los Gatos', county: 'Santa Clara', url: 'https://losgatosrealestatemarket.com' },
-  { name: 'Saratoga', county: 'Santa Clara', url: 'https://saratogarealestatemarket.com' },
-  { name: 'Willow Glen', county: 'Santa Clara', url: 'https://willowglenrealestatemarket.com' },
-  { name: 'Silicon Valley Condos', county: 'Santa Clara', url: 'https://siliconvalleycondomarket.com' },
-  { name: 'Eichler Homes', county: 'Bay Area', url: 'https://eichlermarket.com' },
-  { name: 'San Francisco Condos', county: 'San Francisco', url: 'https://sanfranciscocondomarket.com' },
-  { name: 'Half Moon Bay', county: 'San Mateo', url: 'https://halfmoonbayrealestatemarket.com' },
-  { name: 'Dublin', county: 'Alameda', url: 'https://dublinrealestatemarket.com' },
-  { name: 'Discovery Bay', county: 'Contra Costa', url: 'https://discoverybaymarket.com' },
-  { name: 'Petaluma', county: 'Sonoma', url: 'https://petalumarealestatemarket.com' },
-  { name: 'Penngrove', county: 'Sonoma', url: 'https://penngroverealestatemarket.com' },
-  { name: 'Carmel', county: 'Monterey', url: 'https://carmelrealestatemarket.com' },
+const TEAM_CITIES: MarketSite[] = [
+  { name: 'Campbell', county: 'Santa Clara', url: 'https://campbellrealestatemarket.com', lat: 37.2872, lng: -121.9500 },
+  { name: 'Los Gatos', county: 'Santa Clara', url: 'https://losgatosrealestatemarket.com', lat: 37.2358, lng: -121.9624 },
+  { name: 'Saratoga', county: 'Santa Clara', url: 'https://saratogarealestatemarket.com', lat: 37.2638, lng: -122.0230 },
+  { name: 'Willow Glen', county: 'Santa Clara', url: 'https://willowglenrealestatemarket.com', lat: 37.3091, lng: -121.8997 },
+  { name: 'Silicon Valley Condos', county: 'Santa Clara', url: 'https://siliconvalleycondomarket.com', lat: 37.3541, lng: -121.9552 },
+  { name: 'Eichler Homes', county: 'Bay Area', url: 'https://eichlermarket.com', lat: 37.4419, lng: -122.1430 },
+  { name: 'San Francisco Condos', county: 'San Francisco', url: 'https://sanfranciscocondomarket.com', lat: 37.7880, lng: -122.4074 },
+  { name: 'Half Moon Bay', county: 'San Mateo', url: 'https://halfmoonbayrealestatemarket.com', lat: 37.4636, lng: -122.4286 },
+  { name: 'Dublin', county: 'Alameda', url: 'https://dublinrealestatemarket.com', lat: 37.7022, lng: -121.9358 },
+  { name: 'Discovery Bay', county: 'Contra Costa', url: 'https://discoverybaymarket.com', lat: 37.9085, lng: -121.6002 },
+  { name: 'Petaluma', county: 'Sonoma', url: 'https://petalumarealestatemarket.com', lat: 38.2324, lng: -122.6367 },
+  { name: 'Penngrove', county: 'Sonoma', url: 'https://penngroverealestatemarket.com', lat: 38.2996, lng: -122.6667 },
+  { name: 'Carmel', county: 'Monterey', url: 'https://carmelrealestatemarket.com', lat: 36.5552, lng: -121.9233 },
 ]
 const TEAM_POINTS: { icon: typeof MapPin; title: string; line: string }[] = [
   { icon: MapPin, title: 'Lives where they sell',
@@ -907,8 +910,8 @@ export default function MeetTim() {
             who lives in each city. Copy left, Agent Desk film right, the held cities below. */}
         <div id="my-team" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
-          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 items-center">
-            <div>
+          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 lg:items-stretch">
+            <div className="self-center">
               <SectionHeader
                 eyebrow="My Team · Local Market Brokerage"
                 lead="It's hard to beat an agent"
@@ -943,27 +946,16 @@ export default function MeetTim() {
                 </div>
               </Reveal>
             </div>
-            <Reveal delay={0.1}>
-              <MarketFilm />
-            </Reveal>
-          </div>
-
-          <Reveal delay={0.1}>
-            <div className="mt-12 pt-6 border-t border-white/10 flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-white/40 mr-2">Local Market sites</span>
-              {TEAM_CITIES.map(c => (
-                <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer"
-                   className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12px] text-white/80 hover:border-white/30 hover:text-white transition-colors">
-                  {c.name}{c.county !== c.name && <span className="hidden sm:inline text-white/30">· {c.county}</span>}
-                  <ArrowUpRight size={11} className="text-white/30 group-hover:text-white/70" />
-                </a>
-              ))}
-              <a href={LM_SITE + '/cities/'} target="_blank" rel="noopener noreferrer"
-                 className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-[12px] text-white/50 hover:text-white hover:border-white/40 transition-colors">
-                Your city next <ArrowRight size={11} />
-              </a>
+            {/* Film on top, then the map of every site filling the column (Tim, 19 Nov 2026). */}
+            <div className="flex flex-col gap-4">
+              <Reveal delay={0.1}>
+                <MarketFilm />
+              </Reveal>
+              <Reveal delay={0.15} className="h-[360px] lg:h-auto lg:flex-1 lg:min-h-[300px]">
+                <MarketSitesMap sites={TEAM_CITIES} cityNextHref={LM_SITE + '/cities/'} />
+              </Reveal>
             </div>
-          </Reveal>
+          </div>
         </div>
         </div>
 
