@@ -413,19 +413,25 @@ function MarketFilm() {
   )
 }
 
-/* The cities held on Local Market today (the-market repo, data/cities.json, status "claimed",
-   19 Nov 2026). Each links to its own market site. Cities only, no agent names: add a name
-   only once that agent is licensed under Local Market Brokerage, Inc. */
+/* Every market site on the platform (Tim, 19 Nov 2026: "list all market sites"), from
+   market_config in the city-market database, internal region rows left out. Each links to its
+   own site; all thirteen were checked to load. Sites only, no agent names: add a name only
+   once that agent is licensed under Local Market Brokerage, Inc. */
 const LM_SITE = 'https://localmarketbrokerage.com'
 const TEAM_CITIES: { name: string; county: string; url: string }[] = [
-  { name: 'San Francisco', county: 'San Francisco', url: 'https://sanfranciscocondomarket.com' },
   { name: 'Campbell', county: 'Santa Clara', url: 'https://campbellrealestatemarket.com' },
   { name: 'Los Gatos', county: 'Santa Clara', url: 'https://losgatosrealestatemarket.com' },
   { name: 'Saratoga', county: 'Santa Clara', url: 'https://saratogarealestatemarket.com' },
+  { name: 'Willow Glen', county: 'Santa Clara', url: 'https://willowglenrealestatemarket.com' },
+  { name: 'Silicon Valley Condos', county: 'Santa Clara', url: 'https://siliconvalleycondomarket.com' },
+  { name: 'Eichler Homes', county: 'Bay Area', url: 'https://eichlermarket.com' },
+  { name: 'San Francisco Condos', county: 'San Francisco', url: 'https://sanfranciscocondomarket.com' },
   { name: 'Half Moon Bay', county: 'San Mateo', url: 'https://halfmoonbayrealestatemarket.com' },
+  { name: 'Dublin', county: 'Alameda', url: 'https://dublinrealestatemarket.com' },
   { name: 'Discovery Bay', county: 'Contra Costa', url: 'https://discoverybaymarket.com' },
   { name: 'Petaluma', county: 'Sonoma', url: 'https://petalumarealestatemarket.com' },
   { name: 'Penngrove', county: 'Sonoma', url: 'https://penngroverealestatemarket.com' },
+  { name: 'Carmel', county: 'Monterey', url: 'https://carmelrealestatemarket.com' },
 ]
 const TEAM_POINTS: { icon: typeof MapPin; title: string; line: string }[] = [
   { icon: MapPin, title: 'Lives where they sell',
@@ -944,7 +950,7 @@ export default function MeetTim() {
 
           <Reveal delay={0.1}>
             <div className="mt-12 pt-6 border-t border-white/10 flex flex-wrap items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.25em] text-white/40 mr-2">Local Market cities today</span>
+              <span className="text-[10px] uppercase tracking-[0.25em] text-white/40 mr-2">Local Market sites</span>
               {TEAM_CITIES.map(c => (
                 <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer"
                    className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12px] text-white/80 hover:border-white/30 hover:text-white transition-colors">
