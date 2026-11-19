@@ -19,7 +19,7 @@
 // files are ever re-uploaded with corrected contents, swap these paths back.
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, MapPin, Search, X } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, Building2, Check, ChevronDown, Home, MapPin, Search, ShieldCheck, X, Zap } from 'lucide-react'
 import { cityMarket } from '@/lib/cityMarket'
 import { condoMarket } from '@/lib/condoMarket'
 
@@ -367,8 +367,12 @@ function RotatingRole() {
 
 /* ---------------------------------- page ---------------------------------- */
 
-/* ------------------------- The Market: film + demos ----------------------- */
-const TM_FILM = 'https://themarketbrokerage.com/assets/films/the-market'
+/* ------------------------- My Team: the Agent Desk film -------------------- */
+/* Tim, 19 Nov 2026: the Agent Desk film replaces "The Market" film. Same files the brokerage
+   site plays (the-market repo, assets/films/desk-*); ?v matches its FILM_VER so a replaced
+   film is not served stale from Cloudflare. */
+const TM_FILM = 'https://themarketbrokerage.com/assets/films/desk'
+const TM_FILM_V = '?v=2026-10-29.2'
 
 function MarketFilm() {
   const ref = useRef<HTMLVideoElement>(null)
@@ -378,8 +382,8 @@ function MarketFilm() {
     <div className="relative rounded-[2rem] overflow-hidden border border-white/10 bg-[#0e1118]" style={{ aspectRatio: '16 / 9' }}>
       <video
         ref={ref}
-        src={TM_FILM + (small ? '-720.mp4' : '-1080.mp4')}
-        poster={TM_FILM + '-poster.jpg'}
+        src={TM_FILM + (small ? '-720.mp4' : '-1080.mp4') + TM_FILM_V}
+        poster={TM_FILM + '-poster.jpg' + TM_FILM_V}
         controls={playing}
         playsInline
         preload="metadata"
@@ -389,7 +393,7 @@ function MarketFilm() {
       {!playing && (
         <button
           type="button"
-          aria-label="Play the film: The Market"
+          aria-label="Play the film: The Agent Desk"
           onClick={() => { setPlaying(true); ref.current?.play().catch(() => {}) }}
           className="absolute inset-0 flex items-end justify-start p-6 md:p-8 text-left"
           style={{ background: 'linear-gradient(to top, rgba(10,12,16,.85), rgba(10,12,16,.1) 60%)' }}
@@ -399,8 +403,8 @@ function MarketFilm() {
               <span style={{ width: 0, height: 0, marginLeft: 4, borderLeft: '16px solid #111', borderTop: '10px solid transparent', borderBottom: '10px solid transparent' }} />
             </span>
             <span>
-              <span className="block text-[10px] uppercase tracking-[0.25em] text-white/60">Watch · The Market</span>
-              <span className="block mt2-serif text-xl md:text-2xl text-white">Every home. Every market.</span>
+              <span className="block text-[10px] uppercase tracking-[0.25em] text-white/60">Watch · The Agent Desk</span>
+              <span className="block mt2-serif text-xl md:text-2xl text-white">The desk behind every agent.</span>
             </span>
           </span>
         </button>
@@ -408,6 +412,29 @@ function MarketFilm() {
     </div>
   )
 }
+
+/* The cities held on Local Market today (the-market repo, data/cities.json, status "claimed",
+   19 Nov 2026). Each links to its own market site. Cities only, no agent names: add a name
+   only once that agent is licensed under Local Market Brokerage, Inc. */
+const LM_SITE = 'https://localmarketbrokerage.com'
+const TEAM_CITIES: { name: string; county: string; url: string }[] = [
+  { name: 'San Francisco', county: 'San Francisco', url: 'https://sanfranciscocondomarket.com' },
+  { name: 'Campbell', county: 'Santa Clara', url: 'https://campbellrealestatemarket.com' },
+  { name: 'Los Gatos', county: 'Santa Clara', url: 'https://losgatosrealestatemarket.com' },
+  { name: 'Saratoga', county: 'Santa Clara', url: 'https://saratogarealestatemarket.com' },
+  { name: 'Half Moon Bay', county: 'San Mateo', url: 'https://halfmoonbayrealestatemarket.com' },
+  { name: 'Discovery Bay', county: 'Contra Costa', url: 'https://discoverybaymarket.com' },
+  { name: 'Petaluma', county: 'Sonoma', url: 'https://petalumarealestatemarket.com' },
+  { name: 'Penngrove', county: 'Sonoma', url: 'https://penngroverealestatemarket.com' },
+]
+const TEAM_POINTS: { icon: typeof MapPin; title: string; line: string }[] = [
+  { icon: MapPin, title: 'Lives where they sell',
+    line: 'One agent per city, recruited from the people who already know which streets sell in a weekend and why.' },
+  { icon: Zap, title: 'Super-agent technology',
+    line: 'The Agent Desk spots the opportunities, writes the letters and tracks who is ready to talk, so the agent spends the day with clients.' },
+  { icon: ShieldCheck, title: 'A broker on every file',
+    line: 'Tim reviews every transaction before it closes, in every city.' },
+]
 
 /* ---------------------- Buyer and seller folds (light) ---------------------- */
 const PERI = '#4f82b9'  // McMullen blue (LOGO_BLUE)
@@ -586,27 +613,40 @@ const ANALYSIS_ROWS: [string, string, string][] = [
 ]
 
 function AnalysisFold() {
+  /* Tim, 19 Nov 2026: "reduce size". The five-row table became two compact cards side by
+     side, each led by its question in the display face; the fold no longer fills the screen.
+     Phones still get only the question and the output, as before. */
+  const [question, ...rows] = ANALYSIS_ROWS
+  const sides = [
+    { label: 'Buying to live in it', color: PERI, col: 1 },
+    { label: 'Buying to build on it', color: '#1a1f2e', col: 2 },
+  ] as const
   return (
-    <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20 border-t border-[#d9e2f1]">
+    <div className="py-14 md:py-16 border-t border-[#d9e2f1]">
       <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
         <FoldHead eyebrow="Same market, different buyer" lead="An owner and a builder" accent="need different answers."
           sub="A Comp Report is not one template. Tim builds it around the question the buyer is actually asking, which is why the same street can produce two very different numbers." />
-        <Reveal delay={0.06}>
-          <div className={lightCard + ' mt-10 overflow-hidden'}>
-            <div className="hidden md:grid grid-cols-[180px_1fr_1fr] text-[11px] uppercase tracking-[0.2em] border-b border-[#d9e2f1]">
-              <div className="p-4" />
-              <div className="p-4 font-semibold" style={{ color: PERI }}>Buying to live in it</div>
-              <div className="p-4 font-semibold text-[#1a1f2e]">Buying to build on it</div>
-            </div>
-            {ANALYSIS_ROWS.map(([k, a, b]) => (
-              <div key={k} className={'grid md:grid-cols-[180px_1fr_1fr] border-b border-[#eef2f9] last:border-0 ' + (k === 'The question' || k === 'The output' ? '' : 'hidden md:grid')}>
-                <div className="px-4 pt-4 md:py-4 text-[11px] uppercase tracking-[0.18em] text-[#6b7285]">{k}</div>
-                <div className="px-4 py-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1" style={{ color: PERI }}>To live in</span>{a}</div>
-                <div className="px-4 pb-4 pt-2 md:py-4 text-[13px] text-[#1a1f2e] leading-relaxed md:bg-[#F9FBFE]"><span className="md:hidden text-[10px] uppercase tracking-[0.15em] block mb-1 text-[#6b7285]">To build on</span>{b}</div>
+        <div className="grid md:grid-cols-2 gap-4 mt-7">
+          {sides.map((s, n) => (
+            <Reveal key={s.label} delay={0.06 * n}>
+              <div className={lightCard + ' h-full p-5'}>
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full" style={{ background: s.color }} />
+                  <span className="text-[10.5px] uppercase tracking-[0.2em] font-semibold" style={{ color: s.color }}>{s.label}</span>
+                </div>
+                <p className="mt2-serif text-[1.2rem] leading-snug text-[#1a1f2e] mt-2 md:min-h-[3.3rem]">{question[s.col]}</p>
+                <dl className="mt-3 border-t border-[#eef2f9]">
+                  {rows.map(r => (
+                    <div key={r[0]} className={'grid-cols-[104px_1fr] gap-3 py-2 border-b border-[#eef2f9] last:border-0 ' + (r[0] === 'The output' ? 'grid' : 'hidden md:grid')}>
+                      <dt className="text-[10px] uppercase tracking-[0.16em] text-[#6b7285] pt-0.5">{r[0]}</dt>
+                      <dd className="text-[12.5px] text-[#4a5163] leading-snug">{r[s.col]}</dd>
+                    </div>
+                  ))}
+                </dl>
               </div>
-            ))}
-          </div>
-        </Reveal>
+            </Reveal>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -652,8 +692,8 @@ export default function MeetTim() {
             </span>
           </a>
           <span className="hidden sm:block w-px h-5 bg-white/10 mx-1" />
-          <a href="#the-market" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors">
-            The Market
+          <a href="#my-team" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors whitespace-nowrap">
+            My Team
           </a>
           <a href="#sales" className="text-xs sm:text-sm rounded-full px-3 sm:px-4 py-1.5 sm:py-2 text-white/50 hover:text-white hover:bg-white/5 transition-colors">
             Sales
@@ -820,42 +860,73 @@ export default function MeetTim() {
         </div>
       </section>
 
-      {/* ----------------------- THE MARKET BROKERAGE ----------------------- */}
-      {/* Tim, 28 Sep 2026: replaces "Six marketplaces". Tim is the founding broker of The
-          Market; the section says what that gives his clients - one account that reaches every
-          market the platform runs - with the brokerage's own film and a plain view of the four
-          things a client can do. Public wording: "Comp Report", never "CMA". */}
-      {/* Two full folds (Tim, 28 Sep 2026): the film and the promise on the first, the four
-          things a client can do on the second. "The machine behind every marketplace" was
-          removed to make room. */}
+      {/* ------------------------------- MY TEAM ------------------------------ */}
+      {/* My Team on the dark fold, then the buyer and seller folds on the light band.
+          Public wording: "Comp Report", never "CMA". The section keeps id="the-market" so
+          older links to /meet-tim#the-market still land here. */}
       <section id="the-market" className="scroll-mt-20">
-        <div className="min-h-[100svh] flex flex-col justify-center py-16 md:py-20">
+        {/* My Team (Tim, 19 Nov 2026): replaces "Founding Broker". Promotes Local Market
+            Brokerage: founded 2026, technology that turns agents into super agents, one agent
+            who lives in each city. Copy left, Agent Desk film right, the held cities below. */}
+        <div id="my-team" className="py-16 md:py-24 scroll-mt-20">
         <div className="max-w-[1200px] w-full mx-auto px-6 md:px-10 lg:px-16">
-          <SectionHeader
-            eyebrow="Founding Broker"
-            lead="Building 1 Top Agent"
-            accent="in every market in California"
-            sub="Tim is the founding broker of The Market. His clients are not limited to what is listed: every home in every market it runs is open to a written offer, and every owner can test a price without a sign, a showing or a public record. One free account, with Tim as your broker, opens all of it."
-          />
-
-          <div className="grid lg:grid-cols-[1.35fr_1fr] gap-8 lg:gap-12 items-center mt-10 lg:mt-12">
-            <Reveal>
-              <MarketFilm />
-            </Reveal>
+          <div className="grid lg:grid-cols-[1fr_1.1fr] gap-10 lg:gap-14 items-center">
+            <div>
+              <SectionHeader
+                eyebrow="My Team · Local Market Brokerage"
+                lead="It's hard to beat an agent"
+                accent="who lives where they sell."
+                sub="In 2026 Tim founded Local Market Brokerage on best-in-class technology and automation that turns good agents into super agents. It recruits the best agent in every city, so wherever you are buying or selling around the Bay, your agent knows the market from their own front porch."
+              />
+              <Reveal delay={0.08}>
+                <div className="mt-8 space-y-4">
+                  {TEAM_POINTS.map(p => (
+                    <div key={p.title} className="flex gap-4">
+                      <span className="shrink-0 w-9 h-9 rounded-full border border-white/10 bg-white/[0.04] flex items-center justify-center text-[#89AACC]">
+                        <p.icon size={16} />
+                      </span>
+                      <div>
+                        <div className="text-sm text-white">{p.title}</div>
+                        <p className="text-[13px] text-white/45 leading-relaxed mt-0.5">{p.line}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </Reveal>
+              <Reveal delay={0.12}>
+                <div className="flex flex-wrap gap-3 mt-8">
+                  <a href={LM_SITE} target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-2 rounded-full bg-white text-black px-5 py-2.5 text-sm font-medium hover:bg-white/90 transition-colors">
+                    Visit Local Market <ArrowUpRight size={16} />
+                  </a>
+                  <a href={LM_SITE + '/cities/'} target="_blank" rel="noopener noreferrer"
+                     className="inline-flex items-center gap-2 rounded-full border border-white/20 text-white px-5 py-2.5 text-sm hover:border-white/50 transition-colors">
+                    Agents: is your city open? <ArrowUpRight size={16} />
+                  </a>
+                </div>
+              </Reveal>
+            </div>
             <Reveal delay={0.1}>
-              <div className="flex flex-wrap gap-3">
-                <a href="https://themarketbrokerage.com" target="_blank" rel="noopener noreferrer"
-                   className="inline-flex items-center gap-2 rounded-full bg-white text-black px-5 py-2.5 text-sm font-medium hover:bg-white/90 transition-colors">
-                  Visit The Market <ArrowUpRight size={16} />
-                </a>
-                <a href="#work-with-tim"
-                   className="inline-flex items-center gap-2 rounded-full border border-white/20 text-white px-5 py-2.5 text-sm hover:border-white/50 transition-colors">
-                  Work with Tim <ArrowRight size={16} />
-                </a>
-              </div>
+              <MarketFilm />
             </Reveal>
           </div>
 
+          <Reveal delay={0.1}>
+            <div className="mt-12 pt-6 border-t border-white/10 flex flex-wrap items-center gap-2">
+              <span className="text-[10px] uppercase tracking-[0.25em] text-white/40 mr-2">Local Market cities today</span>
+              {TEAM_CITIES.map(c => (
+                <a key={c.name} href={c.url} target="_blank" rel="noopener noreferrer"
+                   className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-[12px] text-white/80 hover:border-white/30 hover:text-white transition-colors">
+                  {c.name}{c.county !== c.name && <span className="hidden sm:inline text-white/30">· {c.county}</span>}
+                  <ArrowUpRight size={11} className="text-white/30 group-hover:text-white/70" />
+                </a>
+              ))}
+              <a href={LM_SITE + '/cities/'} target="_blank" rel="noopener noreferrer"
+                 className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-white/20 px-3 py-1.5 text-[12px] text-white/50 hover:text-white hover:border-white/40 transition-colors">
+                Your city next <ArrowRight size={11} />
+              </a>
+            </div>
+          </Reveal>
         </div>
         </div>
 
